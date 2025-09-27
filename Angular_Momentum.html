@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Angular Momentum Simulation (Three.js)</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #111;
+            color: #eee;
+            overflow: hidden; /* Prevent scrollbars */
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #444;
+            max-width: 320px;
+        }
+        h1 {
+            margin-top: 0;
+            font-size: 1.5em;
+            color: #00aaff;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 10px;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            font-size: 1em;
+        }
+        #info-panel {
+            margin-top: 20px;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+        code {
+            background-color: #222;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        /* <!-- ADDED --> Style for the credit line */
+        #credit-line {
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid #444;
+            font-size: 0.8em;
+            text-align: right;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="container"></div>
+
+    <div id="ui-panel">
+        <h1>Angular Momentum</h1>
+        <label for="l-value-selector">Select Azimuthal Quantum Number (l):</label>
+        <select id="l-value-selector">
+            <option value="0">l = 0 (s orbital)</option>
+            <option value="1" selected>l = 1 (p orbital)</option>
+            <option value="2">l = 2 (d orbital)</option>
+            <option value="3">l = 3 (f orbital)</option>
+        </select>
+        <div id="info-panel">
+            <!-- Info will be populated by JavaScript -->
+        </div>
+        
+        <!-- ADDED --> The credit line div
+        <div id="credit-line">
+            Created by Dr. Devender Garg
+        </div>
+    </div>
+
+    <!-- Import Three.js and OrbitControls -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Basic Setup ---
+        let scene, camera, renderer, controls;
+        const container = document.getElementById('container');
+        const lSelector = document.getElementById('l-value-selector');
+        const infoPanel = document.getElementById('info-panel');
+
+        // Store current simulation objects to easily remove them
+        let currentObjects = [];
+
+        // Define a color palette for the cones (m_l states)
+        const stateColors = [
+            0xff6347, // Tomato
+            0xffa500, // Orange
+            0xffff00, // Yellow
+            0x32cd32, // LimeGreen
+            0x00ced1, // DarkTurquoise
+            0x1e90ff, // DodgerBlue
+            0x9370db, // MediumPurple
+        ];
+
+        // --- Core Functions ---
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(4, 3, 5);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 10, 7.5);
+            scene.add(directionalLight);
+
+            // Z-Axis Helper (Axis of Quantization)
+            const zAxisHelper = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 0, 1), 
+                new THREE.Vector3(0, 0, -4), 
+                8, 0xaaaaaa, 0.3, 0.1);
+            scene.add(zAxisHelper);
+            
+            // Event Listeners
+            lSelector.addEventListener('change', runSimulation);
+            window.addEventListener('resize', onWindowResize);
+
+            // Initial Simulation
+            runSimulation();
+
+            // Start Animation Loop
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function clearScene() {
+            currentObjects.forEach(obj => {
+                // Proper disposal to prevent memory leaks
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) obj.material.dispose();
+                scene.remove(obj);
+            });
+            currentObjects = [];
+        }
+
+        // --- Simulation Logic ---
+        function runSimulation() {
+            clearScene();
+
+            const l = parseInt(lSelector.value);
+            
+            // In our units, we set h-bar (ħ) = 1
+            const L_mag = Math.sqrt(l * (l + 1));
+
+            // Generate possible m_l values
+            const m_l_values = [];
+            for (let i = -l; i <= l; i++) {
+                m_l_values.push(i);
+            }
+            
+            // Update UI Info
+            updateInfoPanel(l, L_mag, m_l_values);
+
+            // Handle l=0 case (spherically symmetric)
+            if (l === 0) {
+                const dotGeometry = new THREE.BufferGeometry();
+                dotGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3));
+                const dotMaterial = new THREE.PointsMaterial({ size: 0.15, color: stateColors[3] });
+                const dot = new THREE.Points(dotGeometry, dotMaterial);
+                scene.add(dot);
+                currentObjects.push(dot);
+                return;
+            }
+
+            // Create cones for each m_l value
+            m_l_values.forEach((m_l, index) => {
+                const L_z = m_l; // since ħ = 1
+                const color = stateColors[index + 3 - l]; // Center the color palette
+
+                // Create the particle cone
+                const cone = createParticleCone(L_mag, L_z, color);
+                scene.add(cone);
+                currentObjects.push(cone);
+
+                // Create a representative L vector
+                const L_vector = createLVector(L_mag, L_z, color);
+                scene.add(L_vector);
+                currentObjects.push(L_vector);
+            });
+        }
+        
+        function createParticleCone(L_mag, L_z, color) {
+            const numParticles = 10000;
+            const positions = [];
+
+            // The radius of the circle traced by the tip of the L vector
+            const r_xy = Math.sqrt(L_mag**2 - L_z**2);
+
+            for (let i = 0; i < numParticles; i++) {
+                // Get a random point along the slant height of the cone
+                const h_factor = Math.random();
+                
+                // The position on the cone surface is proportional to h_factor
+                const current_L_z = L_z * h_factor;
+                const current_r_xy = r_xy * h_factor;
+
+                // Random angle for the precession
+                const theta = Math.random() * 2 * Math.PI;
+
+                const x = current_r_xy * Math.cos(theta);
+                const y = current_r_xy * Math.sin(theta);
+                const z = current_L_z;
+
+                positions.push(x, y, z);
+            }
+            
+            // Special case for m_l = 0, which is a disk, not a cone
+            if (Math.abs(L_z) < 1e-6) {
+                 // The logic already creates a disk, but we can add more particles to the center for density
+                 for (let i=0; i < numParticles / 2; i++) {
+                     const r = Math.random() * r_xy;
+                     const theta = Math.random() * 2 * Math.PI;
+                     positions.push(r * Math.cos(theta), r * Math.sin(theta), 0);
+                 }
+            }
+
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            
+            const material = new THREE.PointsMaterial({
+                color: color,
+                size: 0.03,
+                transparent: true,
+                opacity: 0.7,
+                blending: THREE.AdditiveBlending // Gives a nice glow effect
+            });
+
+            return new THREE.Points(geometry, material);
+        }
+
+        function createLVector(L_mag, L_z, color) {
+            const r_xy = Math.sqrt(L_mag**2 - L_z**2);
+            
+            // We'll draw the vector in the x-z plane for simplicity
+            const direction = new THREE.Vector3(r_xy, 0, L_z);
+            
+            // ArrowHelper(dir, origin, length, hex, headLength, headWidth)
+            const arrow = new THREE.ArrowHelper(
+                direction.normalize(),
+                new THREE.Vector3(0, 0, 0),
+                L_mag,
+                color,
+                0.2, // head length
+                0.1  // head width
+            );
+            return arrow;
+        }
+
+        function updateInfoPanel(l, L_mag, m_l_values) {
+            infoPanel.innerHTML = `
+                <p>Magnitude of L: <br>
+                <code>|L| = ħ * &radic;(l(l+1))</code> <br>
+                <code>|L| ≈ ${L_mag.toFixed(3)} ħ</code>
+                </p>
+                <p>Allowed m<sub>l</sub> values:<br>
+                (Projection of L on z-axis)<br>
+                <code>m<sub>l</sub> = { ${m_l_values.join(', ')} }</code>
+                </p>
+            `;
+        }
+
+        // --- Start the App ---
+        init();
+    </script>
+
+</body>
+</html>
