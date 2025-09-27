@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Standing Wave Simulator</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --primary-color: #e94560;
+            --secondary-color: #0f3460;
+            --text-color: #f0f0f0;
+            --node-color: #ff3366;
+            --wave1-color: #33d1ff; /* Cyan for Wave 1 */
+            --wave2-color: #a0ff33; /* Lime for Wave 2 */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px 0;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background-color: var(--secondary-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .theory-text {
+            max-width: 650px;
+            margin: 0 auto 1.5rem auto;
+            line-height: 1.6;
+            font-size: 1rem;
+            color: #ccc;
+        }
+
+        canvas {
+            background-color: #16213e;
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 3 / 1;
+        }
+
+        .controls {
+            margin-top: 1.5rem;
+            display: grid;
+            grid-template-areas:
+                "nodes-label"
+                "nodes-slider"
+                "nodes-display"
+                "speed-label"
+                "speed-slider"
+                "speed-display"
+                "checkboxes"
+                "button";
+            justify-items: center;
+            gap: 1rem;
+        }
+        
+        #nodes-label { grid-area: nodes-label; }
+        #nodes-slider { grid-area: nodes-slider; }
+        #nodes-display { grid-area: nodes-display; }
+        #speed-label { grid-area: speed-label; margin-top: 0.5rem;}
+        #speed-slider { grid-area: speed-slider; }
+        #speed-display { grid-area: speed-display; }
+        .checkbox-controls { grid-area: checkboxes; }
+        #pause-button { grid-area: button; }
+
+        label {
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 80%;
+            max-width: 400px;
+            height: 8px;
+            background: #16213e;
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.8;
+            transition: opacity .2s;
+        }
+
+        input[type="range"]:hover {
+            opacity: 1;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--primary-color);
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--primary-color);
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .value-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .checkbox-controls {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            font-size: 0.9em;
+        }
+        .checkbox-controls label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        #pause-button {
+            padding: 10px 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--text-color);
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        #pause-button:hover {
+            background-color: #d83a56;
+        }
+        #pause-button:active {
+            transform: scale(0.98);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Advanced Standing Wave Simulator</h1>
+        <p class="theory-text">A standing wave is formed by the superposition of two identical waves traveling in opposite directions. Use the controls below to see how it works.</p>
+
+        <canvas id="waveCanvas"></canvas>
+        <div class="controls">
+            <label for="nodes-slider" id="nodes-label">Number of Nodes:</label>
+            <input type="range" id="nodes-slider" min="2" max="10" value="3">
+            <span id="nodes-display" class="value-display">3 Nodes</span>
+            
+            <label for="speed-slider" id="speed-label">Animation Speed:</label>
+            <input type="range" id="speed-slider" min="0" max="0.1" value="0.025" step="0.0025">
+            <span id="speed-display" class="value-display">1.0x</span>
+
+            <div class="checkbox-controls">
+                <label><input type="checkbox" id="showWave1"> <span style="color: var(--wave1-color);">Right-Moving Wave</span></label>
+                <label><input type="checkbox" id="showWave2"> <span style="color: var(--wave2-color);">Left-Moving Wave</span></label>
+                <label><input type="checkbox" id="showStanding" checked> <span style="color: var(--primary-color); font-weight:bold;">Standing Wave</span></label>
+            </div>
+
+            <button id="pause-button">Pause</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Elements ---
+            const canvas = document.getElementById('waveCanvas');
+            const ctx = canvas.getContext('2d');
+            const nodesSlider = document.getElementById('nodes-slider');
+            const nodesDisplay = document.getElementById('nodes-display');
+            const speedSlider = document.getElementById('speed-slider');
+            const speedDisplay = document.getElementById('speed-display');
+            const pauseButton = document.getElementById('pause-button');
+            const showWave1Check = document.getElementById('showWave1');
+            const showWave2Check = document.getElementById('showWave2');
+            const showStandingCheck = document.getElementById('showStanding');
+            
+            // --- Configuration & State ---
+            const NODE_RADIUS = 5;
+            let time = 0;
+            let isPaused = false;
+            let oscillationSpeed = parseFloat(speedSlider.value);
+
+            // --- Canvas Setup ---
+            function setupCanvas() {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+            }
+
+            // --- Helper function to draw any wave ---
+            function drawWave(waveFunction, color, lineWidth) {
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = lineWidth;
+                ctx.moveTo(0, waveFunction(0));
+                
+                const canvasWidth = canvas.clientWidth;
+                for (let x = 1; x < canvasWidth; x++) {
+                    ctx.lineTo(x, waveFunction(x));
+                }
+                ctx.stroke();
+            }
+            
+            // --- The Main Animation Loop ---
+            function animate() {
+                const numNodes = parseInt(nodesSlider.value, 10);
+                const showWave1 = showWave1Check.checked;
+                const showWave2 = showWave2Check.checked;
+                const showStanding = showStandingCheck.checked;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                const canvasWidth = canvas.clientWidth;
+                const canvasHeight = canvas.clientHeight;
+                const centerY = canvasHeight / 2;
+                const STANDING_WAVE_AMPLITUDE = canvasHeight * 0.4;
+                const COMPONENT_AMPLITUDE = STANDING_WAVE_AMPLITUDE / 2;
+                const numLoops = numNodes - 1;
+                const k = numLoops * Math.PI / canvasWidth;
+
+                const rightMovingWave = x => centerY - COMPONENT_AMPLITUDE * Math.sin(k * x - time);
+                const leftMovingWave = x => centerY - COMPONENT_AMPLITUDE * Math.sin(k * x + time);
+                const standingWave = x => centerY - (
+                    COMPONENT_AMPLITUDE * Math.sin(k * x - time) +
+                    COMPONENT_AMPLITUDE * Math.sin(k * x + time)
+                );
+
+                if (showWave1) drawWave(rightMovingWave, getComputedStyle(document.documentElement).getPropertyValue('--wave1-color'), 2);
+                if (showWave2) drawWave(leftMovingWave, getComputedStyle(document.documentElement).getPropertyValue('--wave2-color'), 2);
+                
+                if (showStanding) {
+                    drawWave(standingWave, getComputedStyle(document.documentElement).getPropertyValue('--primary-color'), 4);
+                    
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--node-color');
+                    for (let i = 0; i < numNodes; i++) {
+                        const nodeX = (canvasWidth / numLoops) * i;
+                        ctx.beginPath();
+                        ctx.arc(nodeX, centerY, NODE_RADIUS, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                }
+
+                if (!isPaused) time += oscillationSpeed;
+                
+                requestAnimationFrame(animate);
+            }
+
+            // --- Event Listeners ---
+            nodesSlider.addEventListener('input', (event) => {
+                nodesDisplay.textContent = `${event.target.value} Nodes`;
+            });
+
+            speedSlider.addEventListener('input', (event) => {
+                oscillationSpeed = parseFloat(event.target.value);
+                const speedMultiplier = (oscillationSpeed / 0.025).toFixed(1);
+                speedDisplay.textContent = `${speedMultiplier}x`;
+            });
+
+            pauseButton.addEventListener('click', () => {
+                isPaused = !isPaused;
+                pauseButton.textContent = isPaused ? 'Resume' : 'Pause';
+            });
+
+            window.addEventListener('resize', setupCanvas);
+
+            // --- Start the Animation ---
+            setupCanvas();
+            animate();
+        });
+    </script>
+
+</body>
+</html>
