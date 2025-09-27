@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group and Phase Velocity Explorer</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --primary-color: #e94560; /* Red for Superposition */
+            --secondary-color: #0f3460;
+            --text-color: #f0f0f0;
+            --text-muted: #aaa;
+            --wave1-color: #33d1ff; /* Cyan */
+            --wave2-color: #a0ff33; /* Lime Green */
+            --envelope-color: rgba(200, 200, 200, 0.6);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .main-container {
+            width: 90%;
+            max-width: 900px;
+            background-color: var(--secondary-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        h1 { color: var(--primary-color); }
+        .explanation { color: var(--text-muted); line-height: 1.6; margin: -1rem auto 1.5rem auto; max-width: 700px; }
+
+        canvas {
+            border: 2px solid var(--primary-color);
+            background-color: #16213e;
+            border-radius: 8px;
+            width: 100%;
+            /* The 'height: auto' rule will respect the new, taller aspect ratio set in the HTML */
+            height: auto;
+            display: block;
+        }
+
+        .canvas-label { font-weight: bold; margin: 1rem 0 0.5rem 0; font-size: 1.1em; }
+        .info-panel {
+            width: 100%; box-sizing: border-box; padding: 15px; background-color: #16213e;
+            border-radius: 8px; margin: 1rem 0;
+        }
+        .info-panel h3 { margin: 0 0 10px 0; color: var(--primary-color); }
+        .velocity-display { font-size: 1.2em; font-weight: bold; font-family: 'Courier New', Courier, monospace; }
+
+        .controls-container { display: grid; grid-template-columns: 1fr auto; gap: 20px; margin-top: 1rem; }
+        .sliders { display: flex; flex-direction: column; gap: 15px; }
+        .control-group { text-align: left; }
+        label { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 500; }
+        input[type="range"] { width: 100%; -webkit-appearance: none; height: 8px; background: #16213e; border-radius: 5px; outline: none; opacity: 0.8; transition: opacity .2s; cursor: pointer; }
+        input[type="range"]:hover { opacity: 1; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; background: var(--primary-color); border-radius: 50%; }
+        
+        .actions { display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center; }
+        button { background-color: var(--primary-color); color: white; border: none; border-radius: 5px; padding: 10px 15px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; min-width: 120px; }
+        button:hover { background-color: #d83a56; }
+        .presets button { background-color: transparent; border: 1px solid var(--primary-color); font-size: 0.8em; padding: 5px 10px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <h1>Group and Phase Velocity Explorer</h1>
+        <p class="explanation">
+            This simulation shows how a wave packet is formed by two slightly different waves.
+            <b>Phase Velocity </b> is the speed of the individual ripples (carrier wave).
+            <b>Group Velocity </b> is the speed of the overall packet shape (the envelope).
+        </p>
+
+        <div class="canvas-label">Wave 1 (Cyan) & Wave 2 (Green)</div>
+        <!-- CHANGED: Increased height attribute for a taller canvas -->
+        <canvas id="canvasComponents" width="800" height="300"></canvas>
+        
+        <div class="canvas-label">Superposition (Red) & Envelope (Gray)</div>
+        <!-- CHANGED: Increased height attribute for a taller canvas -->
+        <canvas id="canvasSuperposition" width="800" height="400"></canvas>
+        
+        <div class="info-panel">
+            <h3>Dispersion Relation: ω = k<sup>n</sup></h3>
+            <div class="velocity-display">
+                <span style="color: var(--primary-color);">Phase Velocity: <span id="vp-value">1.00</span></span> | 
+                <span style="color: var(--envelope-color);">Group Velocity : <span id="vg-value">1.00</span></span>
+            </div>
+        </div>
+
+        <div class="controls-container">
+            <div class="sliders">
+                <div class="control-group">
+                    <label for="k0">Central Wavenumber (k₀): <span id="k0-value">0.1</span></label>
+                    <input type="range" id="k0" min="0.05" max="0.5" value="0.1" step="0.01">
+                </div>
+                <div class="control-group">
+                    <label for="delta_k">Wavenumber Spread (Δk): <span id="delta_k-value">0.01</span></label>
+                    <input type="range" id="delta_k" min="0.005" max="0.05" value="0.01" step="0.001">
+                </div>
+                <div class="control-group">
+                    <label for="dispersion_n">Dispersion Exponent (n): <span id="dispersion_n-value">1.0</span></label>
+                    <input type="range" id="dispersion_n" min="0.5" max="2.5" value="1.0" step="0.01">
+                </div>
+            </div>
+            <div class="actions">
+                <button id="pauseButton">Pause</button>
+                <div class="presets">
+                    <button data-n="1.0">No Dispersion</button>
+                    <button data-n="2.0">Normal</button>
+                    <button data-n="0.5">Anomalous</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvasComponents = document.getElementById('canvasComponents');
+            const ctxComponents = canvasComponents.getContext('2d');
+            const canvasSuperposition = document.getElementById('canvasSuperposition');
+            const ctxSuperposition = canvasSuperposition.getContext('2d');
+            const width = canvasComponents.width;
+            
+            const k0Slider = document.getElementById('k0');
+            const delta_kSlider = document.getElementById('delta_k');
+            const dispersion_nSlider = document.getElementById('dispersion_n');
+            
+            const k0Value = document.getElementById('k0-value');
+            const delta_kValue = document.getElementById('delta_k-value');
+            const dispersion_nValue = document.getElementById('dispersion_n-value');
+            const vpValue = document.getElementById('vp-value');
+            const vgValue = document.getElementById('vg-value');
+            
+            const pauseButton = document.getElementById('pauseButton');
+
+            let time = 0;
+            let isPaused = false;
+            let AMPLITUDE; // Will be calculated dynamically
+
+            function dispersionRelation(k, n) {
+                return Math.pow(Math.abs(k), n);
+            }
+
+            function drawWave(ctx, k, omega, color, lineWidth = 2) {
+                const height = ctx.canvas.height;
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = lineWidth;
+                ctx.moveTo(0, height / 2 + AMPLITUDE * Math.sin(-omega * time));
+                for (let x = 1; x < width; x++) {
+                    ctx.lineTo(x, height / 2 + AMPLITUDE * Math.sin(k * x - omega * time));
+                }
+                ctx.stroke();
+            }
+
+            function drawSuperposition(ctx, k1, w1, k2, w2) {
+                const height = ctx.canvas.height;
+                ctx.beginPath();
+                ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+                ctx.lineWidth = 3;
+                ctx.moveTo(0, height / 2 + (AMPLITUDE * Math.sin(-w1 * time) + AMPLITUDE * Math.sin(-w2 * time)));
+                for (let x = 1; x < width; x++) {
+                    ctx.lineTo(x, height / 2 + (AMPLITUDE * Math.sin(k1 * x - w1 * time) + AMPLITUDE * Math.sin(k2 * x - w2 * time)));
+                }
+                ctx.stroke();
+            }
+
+            function drawEnvelope(ctx, dk, dw) {
+                const height = ctx.canvas.height;
+                const envelopeAmplitude = 2 * AMPLITUDE;
+                ctx.beginPath();
+                ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--envelope-color');
+                ctx.lineWidth = 2;
+                ctx.setLineDash([8, 8]);
+                for(let sign = -1; sign <= 1; sign += 2) {
+                     ctx.moveTo(0, height / 2 + sign * envelopeAmplitude * Math.cos(-dw/2 * time));
+                     for (let x = 1; x < width; x++) {
+                        ctx.lineTo(x, height / 2 + sign * envelopeAmplitude * Math.cos(dk/2 * x - dw/2 * time));
+                     }
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            function animate() {
+                // Adjust amplitude based on canvas height to prevent clipping
+                AMPLITUDE = canvasComponents.height * 0.22; 
+
+                const k0 = parseFloat(k0Slider.value);
+                const delta_k = parseFloat(delta_kSlider.value);
+                const n = parseFloat(dispersion_nSlider.value);
+
+                k0Value.textContent = k0.toFixed(2);
+                delta_kValue.textContent = delta_k.toFixed(3);
+                dispersion_nValue.textContent = n.toFixed(2);
+
+                const k1 = k0 - delta_k, k2 = k0 + delta_k;
+                const omega1 = dispersionRelation(k1, n), omega2 = dispersionRelation(k2, n);
+                
+                const omega0 = dispersionRelation(k0, n);
+                const phase_velocity = k0 === 0 ? 0 : omega0 / k0;
+                const group_velocity = (k2 - k1) === 0 ? 0 : (omega2 - omega1) / (k2 - k1);
+                
+                vpValue.textContent = phase_velocity.toFixed(2);
+                vgValue.textContent = group_velocity.toFixed(2);
+
+                [ctxComponents, ctxSuperposition].forEach(ctx => ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height));
+
+                drawWave(ctxComponents, k1, omega1, getComputedStyle(document.documentElement).getPropertyValue('--wave1-color'));
+                drawWave(ctxComponents, k2, omega2, getComputedStyle(document.documentElement).getPropertyValue('--wave2-color'));
+
+                // Use a different amplitude for the main canvas to fill the space
+                const superpositionAmplitude = canvasSuperposition.height * 0.22;
+                const tempAmp = AMPLITUDE;
+                AMPLITUDE = superpositionAmplitude;
+                drawEnvelope(ctxSuperposition, k2 - k1, omega2 - omega1);
+                drawSuperposition(ctxSuperposition, k1, omega1, k2, omega2);
+                AMPLITUDE = tempAmp; // Restore original amplitude
+
+                if (!isPaused) time += 1;
+                requestAnimationFrame(animate);
+            }
+
+            pauseButton.addEventListener('click', () => {
+                isPaused = !isPaused;
+                pauseButton.textContent = isPaused ? 'Resume' : 'Pause';
+            });
+            
+            document.querySelectorAll('.presets button').forEach(button => {
+                button.addEventListener('click', () => {
+                    const nValue = button.getAttribute('data-n');
+                    dispersion_nSlider.value = nValue;
+                    dispersion_nSlider.dispatchEvent(new Event('input'));
+                });
+            });
+
+            [k0Slider, delta_kSlider, dispersion_nSlider].forEach(slider => {
+                slider.addEventListener('input', () => { if(isPaused) animate(); });
+            });
+
+            animate();
+        });
+    </script>
+
+</body>
+</html>
