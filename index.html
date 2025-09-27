@@ -3,151 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My HTML App Collection</title>
+    <title>Quantum Leaps - Science Apps</title>
     <style>
-        /* Basic styling for a modern look */
         :root {
-            --sidebar-bg: #f4f4f9;
-            --content-bg: #ffffff;
-            --text-color: #333;
-            --accent-color: #007bff;
-            --hover-bg: #e2e6ea;
+            --bg-color: #f4f7f9;
+            --header-color: #2c3e50;
+            --text-color: #34495e;
+            --accent-color: #3498db;
+            --card-bg: #ffffff;
+            --card-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            --card-hover-shadow: 0 6px 12px rgba(0,0,0,0.15);
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            height: 100vh;
             margin: 0;
-            background-color: var(--content-bg);
+            background-color: var(--bg-color);
             color: var(--text-color);
         }
-        #sidebar {
-            width: 280px;
-            background-color: var(--sidebar-bg);
-            border-right: 1px solid #ddd;
+
+        /* --- View 1: Home Screen --- */
+        #home-screen {
+            max-width: 900px;
+            margin: 0 auto;
             padding: 20px;
-            overflow-y: auto;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+            text-align: center;
         }
-        #sidebar h2 {
-            margin-top: 0;
+        #home-screen header h1 {
+            font-size: 3em;
+            color: var(--header-color);
+            margin-bottom: 0;
+        }
+        #home-screen .subtitle {
+            font-size: 1.2em;
+            margin-top: 5px;
+            color: #7f8c8d;
+        }
+        .welcome-message {
+            margin: 40px 0;
+        }
+        #app-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .app-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: 500;
+            border: 1px solid #e0e0e0;
+        }
+        .app-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--card-hover-shadow);
             color: var(--accent-color);
-            border-bottom: 2px solid var(--accent-color);
-            padding-bottom: 10px;
         }
-        #content {
-            flex-grow: 1;
+        #home-screen footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #7f8c8d;
+        }
+
+        /* --- View 2: App Viewer --- */
+        #app-viewer {
             display: flex;
             flex-direction: column;
+            height: 100vh;
+            width: 100%;
+        }
+        .app-viewer-nav {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+        .back-button {
+            background: none;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 8px 15px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-right: 20px;
+            transition: background-color 0.2s;
+        }
+        .back-button:hover {
+            background-color: #f0f0f0;
+        }
+        #app-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--header-color);
         }
         #appFrame {
-            width: 100%;
-            height: 100%;
+            flex-grow: 1;
             border: none;
         }
-        #file-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        #file-list li {
-            padding: 12px 15px;
-            cursor: pointer;
-            border-radius: 5px;
-            margin-bottom: 5px;
-            transition: background-color 0.2s ease-in-out;
-            font-weight: 500;
-        }
-        #file-list li:hover {
-            background-color: var(--hover-bg);
-        }
-        #loading-message {
-            color: #777;
+
+        /* Utility class to hide elements */
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
 <body>
 
-    <div id="sidebar">
-        <h2>My Projects</h2>
-        <ul id="file-list">
-            <li id="loading-message">Loading project list...</li>
-        </ul>
+    <!-- This is the main screen with the welcome message and app list -->
+    <div id="home-screen">
+        <header>
+            <h1>Quantum Leaps</h1>
+            <p class="subtitle">A Collection of Interactive Science Applications</p>
+        </header>
+
+        <main>
+            <div class="welcome-message">
+                <h2>Welcome!</h2>
+                <p>Explore the projects below. Click on any card to launch the application.</p>
+            </div>
+            <div id="app-list">
+                <p id="loading-message">Loading projects from GitHub...</p>
+            </div>
+        </main>
+
+        <footer>
+            <p>Created by Dr. Devender Garg</p>
+        </footer>
     </div>
 
-    <div id="content">
-        <iframe id="appFrame" src="" title="App Content">
-            <p>Your browser does not support iframes. Please update it to view the content.</p>
-        </iframe>
+    <!-- This is the container for the app viewer, hidden by default -->
+    <div id="app-viewer" class="hidden">
+        <nav class="app-viewer-nav">
+            <button id="back-button" class="back-button">&larr; Back to List</button>
+            <span id="app-title"></span>
+        </nav>
+        <iframe id="appFrame" title="App Content"></iframe>
     </div>
+
 
     <script>
         // ================================================================
-        // CONFIGURE THIS SECTION
+        // CONFIGURATION - ALREADY SET FOR YOU
         // ================================================================
-        // Replace with your actual GitHub username and repository name.
         const GITHUB_USERNAME = 'devendergarg'; 
         const GITHUB_REPO = 'quantumleaps';
         // ================================================================
 
-        const fileListElement = document.getElementById('file-list');
-        const appFrameElement = document.getElementById('appFrame');
+        // Get references to the main screen elements
+        const homeScreen = document.getElementById('home-screen');
+        const appViewer = document.getElementById('app-viewer');
+        const appListContainer = document.getElementById('app-list');
         const loadingMessage = document.getElementById('loading-message');
+        const appFrame = document.getElementById('appFrame');
+        const backButton = document.getElementById('back-button');
+        const appTitle = document.getElementById('app-title');
 
-        // This function fetches the file list from your GitHub repository.
-        async function generateFileListFromGitHub() {
-            // The URL for the GitHub API to get the contents of your repo's main folder.
+        // --- Core GitHub Fetching Logic (Unchanged) ---
+        async function generateAppList() {
             const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/`;
-
             try {
                 const response = await fetch(apiUrl);
-                if (!response.ok) {
-                    throw new Error(`GitHub API error: ${response.status} - Check if username, repo name, and public visibility are correct.`);
-                }
+                if (!response.ok) { throw new Error(`GitHub API error: ${response.status}`); }
                 const files = await response.json();
-
-                // Clear the "Loading..." message
-                fileListElement.innerHTML = ''; 
-
-                // Filter for .html files, and exclude this index.html file itself.
+                
+                loadingMessage.style.display = 'none'; // Hide loading message
+                
                 const htmlFiles = files.filter(file => file.type === 'file' && file.name.endsWith('.html') && file.name !== 'index.html');
 
                 if (htmlFiles.length === 0) {
-                    fileListElement.innerHTML = '<li>No other projects found.</li>';
+                    appListContainer.innerHTML = '<p>No projects found in the repository.</p>';
                     return;
                 }
 
-                // Create a clickable list item for each HTML file found.
                 htmlFiles.forEach(file => {
                     const fileName = file.name;
-                    const listItem = document.createElement('li');
-
-                    // Make the display name prettier (e.g., "weather_app.html" -> "Weather App")
-                    const displayName = fileName
-                        .replace('.html', '')      // Remove extension
-                        .replace(/_/g, ' ')         // Replace underscores with spaces
-                        .replace(/-/g, ' ')         // Replace hyphens with spaces
-                        .replace(/\b\w/g, l => l.toUpperCase()); // Capitalize first letter of each word
-
-                    listItem.textContent = displayName;
+                    const displayName = fileName.replace('.html', '').replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                     
-                    // Add an event listener to load the clicked file into the iframe
-                    listItem.addEventListener('click', () => {
-                        appFrameElement.src = fileName;
+                    const appCard = document.createElement('div');
+                    appCard.className = 'app-card';
+                    appCard.textContent = displayName;
+                    
+                    // Add click event to switch views
+                    appCard.addEventListener('click', () => {
+                        showApp(fileName, displayName);
                     });
-
-                    fileListElement.appendChild(listItem);
+                    
+                    appListContainer.appendChild(appCard);
                 });
 
             } catch (error) {
                 console.error('Failed to fetch file list:', error);
                 loadingMessage.textContent = 'Error loading projects.';
-                fileListElement.appendChild(loadingMessage);
             }
         }
+        
+        // --- View Switching Logic ---
+        
+        // Function to show a specific app
+        function showApp(fileName, displayName) {
+            // Set the iframe source and the title
+            appFrame.src = fileName;
+            appTitle.textContent = displayName;
+            
+            // Hide the home screen and show the app viewer
+            homeScreen.classList.add('hidden');
+            appViewer.classList.remove('hidden');
+        }
 
-        // Run the function as soon as the window loads.
-        window.onload = generateFileListFromGitHub;
+        // Function to go back to the home screen
+        function showHomeScreen() {
+            // Hide the app viewer and show the home screen
+            appViewer.classList.add('hidden');
+            homeScreen.classList.remove('hidden');
+            
+            // Clear the iframe to stop any running scripts
+            appFrame.src = 'about:blank';
+            appTitle.textContent = '';
+        }
+
+        // Add event listener for the back button
+        backButton.addEventListener('click', showHomeScreen);
+
+        // Run the app list generator when the page loads
+        window.onload = generateAppList;
     </script>
 
 </body>
