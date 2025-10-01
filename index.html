@@ -59,14 +59,11 @@
         
         .app-card {
             background-color: var(--card-bg); border-radius: 8px; padding: 20px; box-shadow: var(--card-shadow); cursor: pointer; text-align: center; font-size: 1.2em; font-weight: 500; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; min-height: 120px; word-break: break-word; 
-            
-            /* MODIFIED: Add animation properties */
             opacity: 0;
             transform: translateY(20px);
             transition: opacity 0.4s ease, transform 0.4s ease, box-shadow 0.2s ease, background-color 0.3s ease, color 0.3s ease;
         }
         
-        /* NEW: Class to trigger the animation */
         .app-card.loaded {
             opacity: 1;
             transform: translateY(0);
@@ -181,7 +178,6 @@
                 }
                 
                 availableApps = [];
-                // MODIFIED: Added index to forEach
                 htmlFiles.forEach((file, index) => {
                     const fileName = file.name;
                     const displayName = fileName.replace('.html', '').replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -194,11 +190,9 @@
                     appCard.addEventListener('click', () => { window.location.hash = fileName; });
                     appListContainer.appendChild(appCard);
 
-                    // NEW: Trigger the staggered animation
                     setTimeout(() => {
                         appCard.classList.add('loaded');
-                    }, index * 50); // 50ms delay between each card
-
+                    }, index * 50);
                 });
 
             } catch (error) {
@@ -207,28 +201,50 @@
             }
         }
         
-        function showApp(fileName, displayName) {
-            appFrame.src = fileName;
+        // MODIFIED: This function is now async to handle fetch
+        async function showApp(fileName, displayName) {
+            // Update UI immediately for responsiveness
             breadcrumbAppTitle.textContent = displayName;
             homeScreen.classList.add('hidden');
             appViewer.classList.remove('hidden');
+
+            // Set a temporary loading state
+            appFrame.srcdoc = `<style>body{display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:${document.documentElement.classList.contains('dark-mode') ? '#a0aec0' : '#34495e'};}</style><body>Loading...</body>`;
+
+            try {
+                // Fetch the content without navigating
+                const response = await fetch(fileName);
+                if (!response.ok) throw new Error(`Failed to load ${fileName}`);
+                const htmlContent = await response.text();
+                // Inject content using srcdoc to avoid history entry
+                appFrame.srcdoc = htmlContent;
+            } catch (error) {
+                console.error("Failed to load app content:", error);
+                appFrame.srcdoc = `<style>body{font-family:sans-serif;padding:2rem;color:red;}</style><h2>Failed to load application</h2><p>${error.message}</p>`;
+            }
         }
 
         function showHomeScreen() {
             appViewer.classList.add('hidden');
             homeScreen.classList.remove('hidden');
-            appFrame.src = 'about:blank';
+            // MODIFIED: Use srcdoc for consistency
+            appFrame.srcdoc = ''; 
             breadcrumbAppTitle.textContent = '';
         }
 
-        function handleRouteChange() {
+        // MODIFIED: This function is now async to await showApp
+        async function handleRouteChange() {
             const appName = window.location.hash.substring(1); 
             const app = availableApps.find(app => app.fileName === appName);
-            if (app) { showApp(app.fileName, app.displayName); } 
-            else { showHomeScreen(); }
+            if (app) { 
+                await showApp(app.fileName, app.displayName); 
+            } else { 
+                showHomeScreen(); 
+            }
         }
         
         breadcrumbHomeLink.addEventListener('click', (event) => { event.preventDefault(); window.location.hash = ''; });
+        // MODIFIED: The event listener callback can be async
         window.addEventListener('hashchange', handleRouteChange);
 
         // --- Theme Toggle Logic ---
@@ -264,7 +280,7 @@
             else if (prefersDark) { applyTheme('dark'); }
             
             await generateAppList();
-            handleRouteChange();
+            await handleRouteChange();
         });
     </script>
 
