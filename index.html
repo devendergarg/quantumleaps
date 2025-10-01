@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale_1.0">
     <title>Quantum Leaps - Science Apps</title>
     <style>
         :root {
@@ -79,7 +79,7 @@
         #home-screen footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--border-color); color: var(--subtle-text-color); transition: border-color 0.3s ease, color 0.3s ease; }
 
         #app-viewer { display: flex; flex-direction: column; height: 100vh; width: 100%; }
-        .app-viewer-nav { display: flex; align-items: center; padding: 10px 20px; background-color: var(--nav-bg); box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; transition: background-color 0.3s ease; }
+        .app-viewer-nav { display: flex; align-items: center; padding: 10px 20px; background-color: var(--nav-bg); box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; transition: background-color 0.3s ease, opacity 0.3s ease; }
         #appFrame { flex-grow: 1; border: none; }
         
         #breadcrumb-nav { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; font-size: 1.1em; width: 100%; overflow: hidden; }
@@ -154,12 +154,15 @@
         // --- Element References ---
         const homeScreen = document.getElementById('home-screen');
         const appViewer = document.getElementById('app-viewer');
+        const appViewerNav = document.querySelector('.app-viewer-nav');
         const appListContainer = document.getElementById('app-list');
         const appFrame = document.getElementById('appFrame');
         const breadcrumbHomeLink = document.getElementById('breadcrumb-home-link');
         const breadcrumbAppTitle = document.getElementById('breadcrumb-app-title');
         
         let availableApps = [];
+        // NEW: Flag to track internal navigation
+        let hasNavigatedFromHome = false;
 
         async function generateAppList() {
             const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/`;
@@ -187,7 +190,13 @@
                     const appCard = document.createElement('div');
                     appCard.className = 'app-card';
                     appCard.textContent = displayName;
-                    appCard.addEventListener('click', () => { window.location.hash = fileName; });
+
+                    // MODIFIED: Set the navigation flag on click
+                    appCard.addEventListener('click', () => { 
+                        hasNavigatedFromHome = true;
+                        window.location.hash = fileName; 
+                    });
+
                     appListContainer.appendChild(appCard);
 
                     setTimeout(() => {
@@ -201,22 +210,24 @@
             }
         }
         
-        // MODIFIED: This function is now async to handle fetch
         async function showApp(fileName, displayName) {
-            // Update UI immediately for responsiveness
+            // MODIFIED: Check the flag to decide if breadcrumbs should show
+            if (hasNavigatedFromHome) {
+                appViewerNav.classList.remove('hidden');
+            } else {
+                appViewerNav.classList.add('hidden');
+            }
+            
             breadcrumbAppTitle.textContent = displayName;
             homeScreen.classList.add('hidden');
             appViewer.classList.remove('hidden');
 
-            // Set a temporary loading state
             appFrame.srcdoc = `<style>body{display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:${document.documentElement.classList.contains('dark-mode') ? '#a0aec0' : '#34495e'};}</style><body>Loading...</body>`;
 
             try {
-                // Fetch the content without navigating
                 const response = await fetch(fileName);
                 if (!response.ok) throw new Error(`Failed to load ${fileName}`);
                 const htmlContent = await response.text();
-                // Inject content using srcdoc to avoid history entry
                 appFrame.srcdoc = htmlContent;
             } catch (error) {
                 console.error("Failed to load app content:", error);
@@ -225,14 +236,15 @@
         }
 
         function showHomeScreen() {
+            // MODIFIED: Reset the flag when returning home
+            hasNavigatedFromHome = false;
+
             appViewer.classList.add('hidden');
             homeScreen.classList.remove('hidden');
-            // MODIFIED: Use srcdoc for consistency
             appFrame.srcdoc = ''; 
             breadcrumbAppTitle.textContent = '';
         }
 
-        // MODIFIED: This function is now async to await showApp
         async function handleRouteChange() {
             const appName = window.location.hash.substring(1); 
             const app = availableApps.find(app => app.fileName === appName);
@@ -244,7 +256,6 @@
         }
         
         breadcrumbHomeLink.addEventListener('click', (event) => { event.preventDefault(); window.location.hash = ''; });
-        // MODIFIED: The event listener callback can be async
         window.addEventListener('hashchange', handleRouteChange);
 
         // --- Theme Toggle Logic ---
