@@ -20,8 +20,6 @@
             background-color: var(--bg-color);
             color: var(--text-color);
         }
-
-        /* --- View 1: Home Screen --- */
         #home-screen {
             max-width: 900px;
             margin: 0 auto;
@@ -70,8 +68,6 @@
             border-top: 1px solid #ddd;
             color: #7f8c8d;
         }
-
-        /* --- View 2: App Viewer --- */
         #app-viewer {
             display: flex;
             flex-direction: column;
@@ -108,8 +104,6 @@
             flex-grow: 1;
             border: none;
         }
-
-        /* Utility class to hide elements */
         .hidden {
             display: none !important;
         }
@@ -117,13 +111,11 @@
 </head>
 <body>
 
-    <!-- This is the main screen with the welcome message and app list -->
     <div id="home-screen">
         <header>
             <h1>Quantum Leaps</h1>
             <p class="subtitle">A Collection of Interactive Science Applications</p>
         </header>
-
         <main>
             <div class="welcome-message">
                 <h2>Welcome!</h2>
@@ -133,13 +125,11 @@
                 <p id="loading-message">Loading projects from GitHub...</p>
             </div>
         </main>
-
         <footer>
             <p>Created by Dr. Devender Garg</p>
         </footer>
     </div>
 
-    <!-- This is the container for the app viewer, hidden by default -->
     <div id="app-viewer" class="hidden">
         <nav class="app-viewer-nav">
             <button id="back-button" class="back-button">&larr; Back to List</button>
@@ -148,16 +138,14 @@
         <iframe id="appFrame" title="App Content"></iframe>
     </div>
 
-
     <script>
         // ================================================================
-        // CONFIGURATION - ALREADY SET FOR YOU
+        // CONFIGURATION
         // ================================================================
         const GITHUB_USERNAME = 'devendergarg'; 
         const GITHUB_REPO = 'quantumleaps';
         // ================================================================
 
-        // Get references to the main screen elements
         const homeScreen = document.getElementById('home-screen');
         const appViewer = document.getElementById('app-viewer');
         const appListContainer = document.getElementById('app-list');
@@ -165,8 +153,11 @@
         const appFrame = document.getElementById('appFrame');
         const backButton = document.getElementById('back-button');
         const appTitle = document.getElementById('app-title');
+        
+        // NEW: We will store the list of available apps to validate hashes
+        let availableApps = [];
 
-        // --- Core GitHub Fetching Logic (Unchanged) ---
+        // --- Core GitHub Fetching Logic (Slightly modified) ---
         async function generateAppList() {
             const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/`;
             try {
@@ -174,7 +165,7 @@
                 if (!response.ok) { throw new Error(`GitHub API error: ${response.status}`); }
                 const files = await response.json();
                 
-                loadingMessage.style.display = 'none'; // Hide loading message
+                loadingMessage.style.display = 'none';
                 
                 const htmlFiles = files.filter(file => file.type === 'file' && file.name.endsWith('.html') && file.name !== 'index.html');
 
@@ -182,18 +173,24 @@
                     appListContainer.innerHTML = '<p>No projects found in the repository.</p>';
                     return;
                 }
+                
+                // NEW: Clear and populate the availableApps array
+                availableApps = [];
 
                 htmlFiles.forEach(file => {
                     const fileName = file.name;
                     const displayName = fileName.replace('.html', '').replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                     
+                    // NEW: Store the app info
+                    availableApps.push({ fileName, displayName });
+                    
                     const appCard = document.createElement('div');
                     appCard.className = 'app-card';
                     appCard.textContent = displayName;
                     
-                    // Add click event to switch views
+                    // MODIFIED: Click event now just changes the URL hash
                     appCard.addEventListener('click', () => {
-                        showApp(fileName, displayName);
+                        window.location.hash = fileName;
                     });
                     
                     appListContainer.appendChild(appCard);
@@ -207,33 +204,53 @@
         
         // --- View Switching Logic ---
         
-        // Function to show a specific app
         function showApp(fileName, displayName) {
-            // Set the iframe source and the title
             appFrame.src = fileName;
             appTitle.textContent = displayName;
-            
-            // Hide the home screen and show the app viewer
             homeScreen.classList.add('hidden');
             appViewer.classList.remove('hidden');
         }
 
-        // Function to go back to the home screen
         function showHomeScreen() {
-            // Hide the app viewer and show the home screen
             appViewer.classList.add('hidden');
             homeScreen.classList.remove('hidden');
-            
-            // Clear the iframe to stop any running scripts
             appFrame.src = 'about:blank';
             appTitle.textContent = '';
         }
 
-        // Add event listener for the back button
-        backButton.addEventListener('click', showHomeScreen);
+        // NEW: A "Router" function to handle URL hash changes
+        function handleRouteChange() {
+            const appName = window.location.hash.substring(1); // Get hash without the '#'
+            
+            // Find the app in our list of available apps
+            const app = availableApps.find(app => app.fileName === appName);
 
-        // Run the app list generator when the page loads
-        window.onload = generateAppList;
+            if (app) {
+                // If a valid app name is in the hash, show it
+                showApp(app.fileName, app.displayName);
+            } else {
+                // Otherwise, show the home screen
+                showHomeScreen();
+            }
+        }
+
+        // MODIFIED: The back button now just clears the URL hash
+        backButton.addEventListener('click', () => {
+            window.location.hash = '';
+        });
+
+        // NEW: Listen for hash changes (e.g., browser back button)
+        window.addEventListener('hashchange', handleRouteChange);
+
+        // MODIFIED: Page load logic
+        // We use DOMContentLoaded which is faster than onload
+        window.addEventListener('DOMContentLoaded', async () => {
+            // First, fetch the list of apps from GitHub
+            await generateAppList();
+            
+            // Then, handle the initial route based on the URL hash
+            handleRouteChange();
+        });
     </script>
 
 </body>
