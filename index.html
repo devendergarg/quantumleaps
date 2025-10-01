@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale_1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quantum Leaps - Science Apps</title>
     <style>
         :root {
@@ -80,7 +80,7 @@
 
         #app-viewer { display: flex; flex-direction: column; height: 100vh; width: 100%; }
         .app-viewer-nav { display: flex; align-items: center; padding: 10px 20px; background-color: var(--nav-bg); box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; transition: background-color 0.3s ease, opacity 0.3s ease; }
-        #appFrame { flex-grow: 1; border: none; }
+        #appFrame { flex-grow: 1; border: none; background-color: var(--card-bg); }
         
         #breadcrumb-nav { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; font-size: 1.1em; width: 100%; overflow: hidden; }
         #breadcrumb-nav li { display: inline-block; }
@@ -161,7 +161,6 @@
         const breadcrumbAppTitle = document.getElementById('breadcrumb-app-title');
         
         let availableApps = [];
-        // NEW: Flag to track internal navigation
         let hasNavigatedFromHome = false;
 
         async function generateAppList() {
@@ -190,15 +189,11 @@
                     const appCard = document.createElement('div');
                     appCard.className = 'app-card';
                     appCard.textContent = displayName;
-
-                    // MODIFIED: Set the navigation flag on click
                     appCard.addEventListener('click', () => { 
                         hasNavigatedFromHome = true;
                         window.location.hash = fileName; 
                     });
-
                     appListContainer.appendChild(appCard);
-
                     setTimeout(() => {
                         appCard.classList.add('loaded');
                     }, index * 50);
@@ -211,18 +206,15 @@
         }
         
         async function showApp(fileName, displayName) {
-            // MODIFIED: Check the flag to decide if breadcrumbs should show
             if (hasNavigatedFromHome) {
                 appViewerNav.classList.remove('hidden');
             } else {
                 appViewerNav.classList.add('hidden');
             }
-            
             breadcrumbAppTitle.textContent = displayName;
             homeScreen.classList.add('hidden');
             appViewer.classList.remove('hidden');
-
-            appFrame.srcdoc = `<style>body{display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:${document.documentElement.classList.contains('dark-mode') ? '#a0aec0' : '#34495e'};}</style><body>Loading...</body>`;
+            appFrame.srcdoc = `<style>body{display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:${document.documentElement.classList.contains('dark-mode') ? '#a0aec0' : '#34495e'};background-color: transparent;}</style><body>Loading...</body>`;
 
             try {
                 const response = await fetch(fileName);
@@ -236,9 +228,7 @@
         }
 
         function showHomeScreen() {
-            // MODIFIED: Reset the flag when returning home
             hasNavigatedFromHome = false;
-
             appViewer.classList.add('hidden');
             homeScreen.classList.remove('hidden');
             appFrame.srcdoc = ''; 
@@ -285,11 +275,21 @@
 
         // --- Initial Load Logic ---
         window.addEventListener('DOMContentLoaded', async () => {
+            // Apply theme first, as it's synchronous and affects appearance
             const savedTheme = localStorage.getItem('theme');
             const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
             if (savedTheme) { applyTheme(savedTheme); } 
             else if (prefersDark) { applyTheme('dark'); }
             
+            // --- MODIFIED: Pre-emptive Routing to prevent flash ---
+            if (window.location.hash.substring(1)) {
+                // If there's a hash, immediately show the app viewer frame
+                // This prevents the home screen from flashing
+                homeScreen.classList.add('hidden');
+                appViewer.classList.remove('hidden');
+            }
+            // --- End of Modification ---
+
             await generateAppList();
             await handleRouteChange();
         });
