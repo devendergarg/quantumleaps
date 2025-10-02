@@ -18,6 +18,7 @@
             position: absolute;
             top: 0;
             left: 0;
+            z-index: 1;
         }
         #title-container {
             position: absolute;
@@ -27,6 +28,7 @@
             text-align: center;
             pointer-events: none;
             width: 100%;
+            z-index: 3;
         }
         h1 {
             margin: 0;
@@ -46,6 +48,7 @@
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
+            z-index: 3;
         }
         #ui-content {
             transition: opacity 0.3s ease;
@@ -84,9 +87,7 @@
             color: #aaa;
         }
         #ui-toggle {
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px solid #555;
+            margin-bottom: 15px;
             text-align: center;
             color: #00aaff;
             font-weight: bold;
@@ -98,6 +99,62 @@
         }
         .content-hidden {
             display: none;
+        }
+        
+        /* --- Checkbox Styles --- */
+        #label-toggle-container {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            font-size: 0.9em;
+        }
+        #toggle-labels-checkbox {
+            margin-right: 10px;
+            width: 16px;
+            height: 16px;
+        }
+        #label-toggle-container label {
+            margin-bottom: 0;
+            font-weight: normal;
+            color: #ddd;
+            cursor: pointer;
+        }
+
+        /* --- Label Styles --- */
+        #labels-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .world-label {
+            position: absolute;
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            text-shadow: 0 0 5px #000;
+            transform: translate(-50%, -50%); /* Center the label on the point */
+        }
+        .vector-label {
+            font-size: 1.4em;
+            font-weight: bold;
+        }
+        .projection-label {
+            font-size: 1.1em;
+            color: #ccc;
+        }
+        #z-axis-label {
+            position: absolute;
+            z-index: 2; /* Ensure it's on top */
+            color: #aaaaaa;
+            font-size: 1.2em;
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            pointer-events: none;
+            transform: translate(-50%, -100%); /* Center horizontally, place above the point */
+            text-shadow: 0 0 5px #000;
         }
 
         /* --- Mobile-friendly layout --- */
@@ -118,6 +175,8 @@
 </head>
 <body>
 
+    <div id="labels-container"></div>
+    <div id="z-axis-label"></div>
     <div id="container"></div>
 
     <div id="title-container">
@@ -125,14 +184,20 @@
     </div>
 
     <div id="ui-panel">
+        <div id="ui-toggle">Hide Controls</div>
         <div id="ui-content">
-            <label for="l-value-selector">Select Azimuthal Quantum Number (l):</label>
+            <label for="l-value-selector">Select Quantum Number (l or s):</label>
             <select id="l-value-selector">
+                <option value="0.5">s = 1/2 (Electron Spin)</option>
                 <option value="0">l = 0 (s orbital)</option>
                 <option value="1" selected>l = 1 (p orbital)</option>
                 <option value="2">l = 2 (d orbital)</option>
                 <option value="3">l = 3 (f orbital)</option>
             </select>
+            <div id="label-toggle-container">
+                <input type="checkbox" id="toggle-labels-checkbox" checked>
+                <label for="toggle-labels-checkbox">Show Vector & Projection Labels</label>
+            </div>
             <div id="info-panel">
                 <!-- Info will be populated by JavaScript -->
             </div>
@@ -140,7 +205,6 @@
                 Created by Dr. Devender Garg
             </div>
         </div>
-        <div id="ui-toggle">Hide Controls</div>
     </div>
 
     <script type="importmap">
@@ -162,10 +226,16 @@
         const infoPanel = document.getElementById('info-panel');
         const uiContent = document.getElementById('ui-content');
         const uiToggle = document.getElementById('ui-toggle');
+        const zAxisLabelElement = document.getElementById('z-axis-label');
+        const labelsContainer = document.getElementById('labels-container');
+        const toggleLabelsCheckbox = document.getElementById('toggle-labels-checkbox');
         
         const sceneCenter = new THREE.Vector3(0, 0, 0);
+        const zAxisLabelPosition = new THREE.Vector3(0, 0, 4.3); // Position in 3D space for the z-axis label
 
         let currentObjects = [];
+        let vectorLabels = [];
+        let projectionLabels = [];
         const stateColors = [ 0xff6347, 0xffa500, 0xffff00, 0x32cd32, 0x00ced1, 0x1e90ff, 0x9370db ];
 
         function init() {
@@ -182,6 +252,7 @@
             camera.lookAt(sceneCenter);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setClearColor(0x111111, 1);
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             container.appendChild(renderer.domElement);
@@ -206,9 +277,23 @@
                 uiContent.classList.toggle('content-hidden');
                 uiToggle.textContent = uiContent.classList.contains('content-hidden') ? 'Show Controls' : 'Hide Controls';
             });
+            toggleLabelsCheckbox.addEventListener('change', toggleLabelVisibility);
 
             runSimulation();
             animate();
+        }
+
+        function toggleLabelVisibility() {
+            labelsContainer.style.display = toggleLabelsCheckbox.checked ? 'block' : 'none';
+        }
+
+        function updateLabelPosition(element, position, camera, renderer) {
+            const screenPosition = position.clone().project(camera);
+            const x = (screenPosition.x * 0.5 + 0.5) * renderer.domElement.clientWidth;
+            const y = (-screenPosition.y * 0.5 + 0.5) * renderer.domElement.clientHeight;
+            element.style.left = `${x}px`;
+            element.style.top = `${y}px`;
+            element.style.display = screenPosition.z < 1 ? 'block' : 'none';
         }
 
         function animate() {
@@ -217,6 +302,22 @@
             currentObjects.forEach(obj => {
                 obj.rotation.z = time;
             });
+
+            // Always update the permanent Z-axis label position
+            updateLabelPosition(zAxisLabelElement, zAxisLabelPosition, camera, renderer);
+
+            // Update other labels only if they are visible
+            if (toggleLabelsCheckbox.checked) {
+                vectorLabels.forEach(label => {
+                    const worldPosition = label.initialTip.clone().applyQuaternion(label.object.quaternion);
+                    updateLabelPosition(label.element, worldPosition, camera, renderer);
+                });
+
+                projectionLabels.forEach(label => {
+                    updateLabelPosition(label.element, label.position, camera, renderer);
+                });
+            }
+
             controls.update();
             renderer.render(scene, camera);
         }
@@ -226,8 +327,15 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
+        
+        function clearOtherLabels() {
+            labelsContainer.innerHTML = '';
+            vectorLabels = [];
+            projectionLabels = [];
+        }
 
         function clearScene() {
+            clearOtherLabels();
             currentObjects.forEach(obj => {
                 obj.traverse(child => {
                     if (child.geometry) child.geometry.dispose();
@@ -241,15 +349,23 @@
         function runSimulation() {
             clearScene();
 
-            const l = parseInt(lSelector.value);
-            const L_mag = Math.sqrt(l * (l + 1));
-            const m_l_values = [];
-            for (let i = -l; i <= l; i++) {
-                m_l_values.push(i);
+            const q_num = parseFloat(lSelector.value);
+            const isSpin = q_num === 0.5;
+            const vec_symbol = isSpin ? 'S' : 'L';
+            const L_mag = Math.sqrt(q_num * (q_num + 1));
+            let m_values = [];
+            const labeled_m_values = new Set();
+
+            if (isSpin) {
+                m_values = [-0.5, 0.5];
+            } else {
+                for (let i = -q_num; i <= q_num; i++) {
+                    m_values.push(i);
+                }
             }
-            updateInfoPanel(l, L_mag, m_l_values);
+            updateInfoPanel(q_num, L_mag, m_values, isSpin);
             
-            if (l === 0) {
+            if (q_num === 0) {
                 const dotGeometry = new THREE.BufferGeometry();
                 dotGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3));
                 const dotMaterial = new THREE.PointsMaterial({ size: 0.15, color: stateColors[3] });
@@ -259,9 +375,14 @@
                 return;
             }
 
-            m_l_values.forEach((m_l, index) => {
-                const L_z = m_l;
-                const color = stateColors[index + 3 - l];
+            m_values.forEach((m_val, index) => {
+                const L_z = m_val;
+                let color;
+                if (isSpin) {
+                    color = m_val > 0 ? stateColors[4] : stateColors[2];
+                } else {
+                    color = stateColors[index + 3 - q_num];
+                }
                 const stateGroup = new THREE.Group();
                 const cone = createParticleCone(L_mag, L_z, color);
                 const L_vector = createLVector(L_mag, L_z, color);
@@ -269,7 +390,38 @@
                 stateGroup.add(L_vector);
                 simulationGroup.add(stateGroup);
                 currentObjects.push(stateGroup);
+
+                // --- Create Vector Label ---
+                const r_xy = Math.sqrt(L_mag**2 - L_z**2);
+                const initialTipPosition = new THREE.Vector3(r_xy, 0, L_z).multiplyScalar(1.1); // Slightly outside the tip
+                const vecLabelDiv = document.createElement('div');
+                vecLabelDiv.className = 'world-label vector-label';
+                vecLabelDiv.innerHTML = vec_symbol;
+                // *** BUG FIX HERE ***: Pad the hex string to ensure it's always 6 digits
+                vecLabelDiv.style.color = `#${color.toString(16).padStart(6, '0')}`;
+                labelsContainer.appendChild(vecLabelDiv);
+                vectorLabels.push({ object: stateGroup, initialTip: initialTipPosition, element: vecLabelDiv });
+
+                // --- Create Projection Label (if not already created for this m_val) ---
+                if (!labeled_m_values.has(m_val)) {
+                    const projLabelDiv = document.createElement('div');
+                    projLabelDiv.className = 'world-label projection-label';
+                    if (isSpin) {
+                        projLabelDiv.innerHTML = m_val > 0 ? '+ħ/2' : '-ħ/2';
+                    } else {
+                        projLabelDiv.innerHTML = `${m_val}ħ`;
+                    }
+                    labelsContainer.appendChild(projLabelDiv);
+                    projectionLabels.push({
+                        position: new THREE.Vector3(0.3, 0, m_val),
+                        element: projLabelDiv
+                    });
+                    labeled_m_values.add(m_val);
+                }
             });
+
+            // Set initial visibility based on checkbox state
+            toggleLabelVisibility();
         }
         
         function createParticleCone(L_mag, L_z, color) {
@@ -309,15 +461,26 @@
             return arrow;
         }
 
-        function updateInfoPanel(l, L_mag, m_l_values) {
+        function updateInfoPanel(q_num, L_mag, m_values, isSpin) {
+            const symbol = isSpin ? 's' : 'l';
+            const vec_symbol = isSpin ? 'S' : 'L';
+            const m_symbol = isSpin ? 'm<sub>s</sub>' : 'm<sub>l</sub>';
+            const z_axis_label_text = isSpin ? 'S<sub>z</sub>' : 'L<sub>z</sub>';
+
+            const m_values_display = isSpin 
+                ? m_values.map(v => v > 0 ? `+1/2` : `-1/2`).join(', ')
+                : m_values.join(', ');
+
+            zAxisLabelElement.innerHTML = z_axis_label_text;
+
             infoPanel.innerHTML = `
-                <p>Magnitude of L: <br>
-                <code>|L| = ħ * &radic;(l(l+1))</code> <br>
-                <code>|L| ≈ ${L_mag.toFixed(3)} ħ</code>
+                <p>Magnitude of ${vec_symbol}: <br>
+                <code>|${vec_symbol}| = ħ * &radic;(${symbol}(${symbol}+1))</code> <br>
+                <code>|${vec_symbol}| ≈ ${L_mag.toFixed(3)} ħ</code>
                 </p>
-                <p>Allowed m<sub>l</sub> values:<br>
-                (Projection of L on z-axis)<br>
-                <code>m<sub>l</sub> = { ${m_l_values.join(', ')} }</code>
+                <p>Allowed ${m_symbol} values:<br>
+                (Projection of ${vec_symbol} on z-axis)<br>
+                <code>${m_symbol} = { ${m_values_display} }</code>
                 </p>
             `;
         }
