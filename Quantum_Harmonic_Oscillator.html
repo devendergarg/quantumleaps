@@ -24,7 +24,7 @@
             border-radius: 8px; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.4); 
             position: relative; 
-            cursor: pointer; /* MODIFIED: Add pointer cursor */
+            cursor: pointer;
         }
         canvas { display: block; width: 100%; height: auto; }
         #phaseCanvas { display: none; } /* Hide phase canvas by default */
@@ -39,13 +39,15 @@
         label { display: block; margin-bottom: 8px; font-weight: 500; }
         .param-display { font-family: monospace; font-weight: bold; color: var(--highlight-color); }
         hr { border-color: var(--primary-color); margin: 25px 0; }
-        .selector-group { display: flex; gap: 10px; margin-bottom: 15px; }
-        .selector-btn { flex: 1; padding: 10px; font-size: 0.9em; font-weight: 500; background-color: transparent; color: var(--text-color); border: 2px solid var(--primary-color); border-radius: 5px; cursor: pointer; transition: all 0.2s ease-in-out; }
+        .selector-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .selector-btn { flex: 1; padding: 10px; font-size: 0.9em; font-weight: 500; background-color: transparent; color: var(--text-color); border: 2px solid var(--primary-color); border-radius: 5px; cursor: pointer; transition: all 0.2s ease-in-out; min-width: 80px; }
         .selector-btn:hover { background-color: var(--primary-color); }
         .selector-btn.active { background-color: var(--highlight-color); border-color: var(--highlight-color); color: #fff; box-shadow: 0 0 10px rgba(233, 69, 96, 0.5); }
         .simulation-controls { display: flex; gap: 10px; margin-bottom: 20px; }
-        .sim-button { flex: 1; padding: 12px; border: none; border-radius: 5px; background-color: var(--primary-color); color: var(--text-color); cursor: pointer; font-size: 1em; transition: background-color 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .sim-button { flex: 1; padding: 12px; border: none; border-radius: 5px; background-color: var(--primary-color); color: var(--text-color); cursor: pointer; font-size: 1em; transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
         .sim-button:hover { background-color: #1a4a8a; }
+        .sim-button:disabled { background-color: #0a2140; color: #aaa; cursor: not-allowed; }
+        .sim-button:disabled:hover { background-color: #0a2140; }
         .sim-button svg { width: 18px; height: 18px; fill: currentColor; }
         #timeDisplay { margin-top: 10px; font-family: monospace; }
         input[type=range] { -webkit-appearance: none; background: transparent; width: 100%; }
@@ -53,6 +55,7 @@
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: var(--highlight-color); margin-top: -6px; }
         .toggle-group { display: flex; justify-content: space-around; align-items: center; }
         .toggle-group label { display: flex; align-items: center; cursor: pointer; margin-bottom: 0; }
+        .toggle-group label.disabled { opacity: 0.5; cursor: not-allowed; }
         .toggle-group input[type="checkbox"] { display: none; }
         .toggle-group .custom-checkbox { width: 20px; height: 20px; border: 2px solid var(--primary-color); border-radius: 4px; margin-right: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
         .toggle-group .custom-checkbox svg { width: 14px; height: 14px; fill: #fff; opacity: 0; transform: scale(0.5); transition: all 0.2s; }
@@ -89,14 +92,15 @@
                 </div>
             </div>
             <h2>State Parameters</h2>
-            <div class="control-group"> <label>State Type:</label> <div class="selector-group"> <button class="selector-btn state-btn active" data-state="coherent">Coherent</button> <button class="selector-btn state-btn" data-state="squeezed">Squeezed</button> <button class="selector-btn state-btn" data-state="number">Number</button> </div> </div>
+            <div class="control-group"> <label>State Type:</label> <div class="selector-group"> <button class="selector-btn state-btn active" data-state="coherent">Coherent</button> <button class="selector-btn state-btn" data-state="squeezed">Squeezed</button> <button class="selector-btn state-btn" data-state="number">Number</button> <button class="selector-btn state-btn" data-state="thermal">Thermal</button> </div> </div>
             <div id="numberControls" class="control-group" style="display:none;"> <label for="nSlider">Quantum Number n = <span id="nValue" class="param-display">1</span></label> <input type="range" id="nSlider" min="0" max="15" value="1" step="1"> </div>
             <div id="coherentControls" class="control-group"> <label for="alphaReSlider">Re(α) = <span id="alphaReValue" class="param-display">2.0</span></label> <input type="range" id="alphaReSlider" min="-4" max="4" value="2" step="0.1"> <label for="alphaImSlider">Im(α) = <span id="alphaImValue" class="param-display">0.0</span></label> <input type="range" id="alphaImSlider" min="-4" max="4" value="0" step="0.1"> </div>
             <div id="squeezedControls" class="control-group" style="display:none;"> <label for="squeezeAlphaReSlider">Re(α) = <span id="squeezeAlphaReValue" class="param-display">2.0</span></label> <input type="range" id="squeezeAlphaReSlider" min="-4" max="4" value="2" step="0.1"> <label for="squeezeAlphaImSlider">Im(α) = <span id="squeezeAlphaImValue" class="param-display">0.0</span></label> <input type="range" id="squeezeAlphaImSlider" min="-4" max="4" value="0" step="0.1"> <label for="squeezeRSlider">Squeezing r = <span id="squeezeRValue" class="param-display">0.8</span></label> <input type="range" id="squeezeRSlider" min="-1.5" max="1.5" value="0.8" step="0.1"> </div>
+            <div id="thermalControls" class="control-group" style="display:none;"> <label for="avgNSlider">Average Number &lt;n&gt; = <span id="avgNValue" class="param-display">1.0</span></label> <input type="range" id="avgNSlider" min="0.1" max="10" value="1.0" step="0.1"> </div>
             <div id="positionPlotControls">
                 <hr>
                 <h2>Plot Visibility</h2>
-                <div class="control-group toggle-group"> <label for="probCheck"> <input type="checkbox" id="probCheck" checked> <span class="custom-checkbox"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span> <span id="prob-label">|Ψ|²</span> </label> <label for="reCheck"> <input type="checkbox" id="reCheck" checked> <span class="custom-checkbox"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span> <span id="re-label">Re(Ψ)</span> </label> <label for="imCheck"> <input type="checkbox" id="imCheck" checked> <span class="custom-checkbox"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span> <span id="im-label">Im(Ψ)</span> </label> </div>
+                <div class="control-group toggle-group"> <label for="probCheck" id="prob-check-label"> <input type="checkbox" id="probCheck" checked> <span class="custom-checkbox"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span> <span id="prob-label">|Ψ|²</span> </label> <label for="reCheck" id="re-check-label"> <input type="checkbox" id="reCheck" checked> <span class="custom-checkbox"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span> <span id="re-label">Re(Ψ)</span> </label> <label for="imCheck" id="im-check-label"> <input type="checkbox" id="imCheck" checked> <span class="custom-checkbox"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span> <span id="im-label">Im(Ψ)</span> </label> </div>
             </div>
             <hr>
             <h2>Simulation Controls</h2>
@@ -113,14 +117,14 @@
                 <li><strong>Position Space Plot:</strong> This is the standard view of the wavefunction Ψ(x) at different positions x.
                     <ul>
                     <li><code style="color: var(--accent-color-3);">|Ψ|²</code> &mdash; <strong>Probability Density:</strong> Shows the probability of finding the particle at a certain position.</li>
-                    <li><code style="color: var(--accent-color-1);">Re(Ψ)</code> &amp; <code style="color: var(--accent-color-2);">Im(Ψ)</code> &mdash; <strong>Real & Imaginary Parts:</strong> The two components of the complex wavefunction. Their oscillation drives the system's evolution.</li>
+                    <li><code style="color: var(--accent-color-1);">Re(Ψ)</code> &amp; <code style="color: var(--accent-color-2);">Im(Ψ)</code> &mdash; <strong>Real & Imaginary Parts:</strong> The two components of the complex wavefunction. Their oscillation drives the system's evolution. For thermal states, these are not shown as the state has no defined phase.</li>
                     </ul>
                 </li>
                  <li><strong>Phase Space Plot:</strong> This view shows the state in terms of both position (x-axis) and momentum (y-axis). The cloud of particles represents the <strong>Wigner quasi-probability distribution</strong>.
                     <ul>
                     <li>A dense cloud means a high probability of finding the particle with that combination of position and momentum.</li>
                     <li><span style="color: var(--highlight-color);">Red particles</span> indicate positive probability regions.</li>
-                    <li><span style="color: var(--accent-color-1);">Blue particles</span> indicate "negative probability" regions, a purely quantum feature where the Wigner function is negative.</li>
+                    <li><span style="color: var(--accent-color-1);">Blue particles</span> indicate "negative probability" regions, a purely quantum feature where the Wigner function is negative. Thermal states are always positive.</li>
                     </ul>
                 </li>
             </ul>
@@ -128,22 +132,24 @@
             <p><strong>Coherent State |α&gt;:</strong> A "quasi-classical" state. Its particle cloud in phase space is a simple circle that orbits the center, just like a classical pendulum. It has minimum uncertainty.</p>
             <p><strong>Squeezed State:</strong> A state where uncertainty in one variable (e.g., position) is reduced ("squeezed") at the expense of increasing the uncertainty in another (momentum). Its particle cloud in phase space is an ellipse that rotates and breathes as it orbits.</p>
             <p><strong>Number State |n&gt;:</strong> A stationary state with a definite energy. Its phase space distribution is a static ring-like structure. The "negative probability" regions are very prominent here. The particle cloud does not move or vibrate.</p>
+            <p><strong>Thermal State:</strong> A <em>mixed state</em> representing a system in thermal equilibrium. It's an incoherent mixture of number states. In phase space, it's a circular, fuzzy blob centered at the origin, representing classical-like uncertainty due to heat. It is a stationary state whose width depends on the average number of quanta &lt;n&gt; (temperature).</p>
         </div>
     </section>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements & State ---
-    const canvasWrapper = document.querySelector('.canvas-wrapper'); // MODIFIED: Get wrapper element
+    const canvasWrapper = document.querySelector('.canvas-wrapper');
     const qhoCanvas = document.getElementById('qhoCanvas'), qhoCtx = qhoCanvas.getContext('2d');
     const phaseCanvas = document.getElementById('phaseCanvas'), phaseCtx = phaseCanvas.getContext('2d');
     const W = qhoCanvas.width, H = qhoCanvas.height;
     const stateButtons = document.querySelectorAll('.state-btn'), viewButtons = document.querySelectorAll('.view-btn');
     const probCheck = document.getElementById('probCheck'), reCheck = document.getElementById('reCheck'), imCheck = document.getElementById('imCheck');
+    const reCheckLabel = document.getElementById('re-check-label'), imCheckLabel = document.getElementById('im-check-label');
     const playPauseBtn = document.getElementById('playPauseBtn'), resetBtn = document.getElementById('resetBtn'), playIcon = document.getElementById('playIcon'), pauseIcon = document.getElementById('pauseIcon'), playPauseText = document.getElementById('playPauseText');
-    const controlGroups = { number: document.getElementById('numberControls'), coherent: document.getElementById('coherentControls'), squeezed: document.getElementById('squeezedControls') };
-    const valueDisplays = { n: document.getElementById('nValue'), alphaRe: document.getElementById('alphaReValue'), alphaIm: document.getElementById('alphaImValue'), squeezeAlphaRe: document.getElementById('squeezeAlphaReValue'), squeezeAlphaIm: document.getElementById('squeezeAlphaImValue'), squeezeR: document.getElementById('squeezeRValue') };
-    const descriptionContainer = document.getElementById('descriptionContainer'), timeValue = document.getElementById('timeValue'), explanationToggle = document.getElementById('explanationToggle');
+    const controlGroups = { number: document.getElementById('numberControls'), coherent: document.getElementById('coherentControls'), squeezed: document.getElementById('squeezedControls'), thermal: document.getElementById('thermalControls') };
+    const valueDisplays = { n: document.getElementById('nValue'), alphaRe: document.getElementById('alphaReValue'), alphaIm: document.getElementById('alphaImValue'), squeezeAlphaRe: document.getElementById('squeezeAlphaReValue'), squeezeAlphaIm: document.getElementById('squeezeAlphaImValue'), squeezeR: document.getElementById('squeezeRValue'), avgN: document.getElementById('avgNValue') };
+    const descriptionContainer = document.getElementById('descriptionContainer'), timeValue = document.getElementById('timeValue'), explanationToggle = document.getElementById('explanationToggle'), timeDisplay = document.getElementById('timeDisplay');
     const allSliders = document.querySelectorAll('input[type="range"]');
     const computedStyles = getComputedStyle(document.documentElement), colors = { re: computedStyles.getPropertyValue('--accent-color-1').trim(), im: computedStyles.getPropertyValue('--accent-color-2').trim(), prob: computedStyles.getPropertyValue('--accent-color-3').trim(), highlight: computedStyles.getPropertyValue('--highlight-color').trim() };
     
@@ -151,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const plotVisibility = { prob: true, re: true, im: true };
     const precomputedNumberStates = [];
     let cachedInitialParticles = null; 
+    const MAX_N_PRECOMPUTE = 30;
 
     // --- Position Space Constants ---
     const xMin = -10, xMax = 10, yMin = -2, yMax = 12, numPoints = 600, dx = (xMax - xMin) / numPoints, WAVEFUNCTION_TARGET_HEIGHT = H / 4.5;
@@ -178,12 +185,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     function calculateWavefunction(params, t) {
-        if (params.type === 'number') {
+        if (params.type === 'thermal') {
+            const avgN = params.avgN;
+            if (avgN < 1e-6) {
+                const prob_density = precomputedNumberStates[0].map(val => val * val);
+                return { is_mixed_state: true, prob_density: prob_density };
+            }
+            const beta = Math.log(1 + 1 / avgN);
+            let probabilities = Array(MAX_N_PRECOMPUTE + 1).fill(0).map((_, n) => Math.exp(-n * beta));
+            const sumP = probabilities.reduce((a, b) => a + b, 0);
+            probabilities = probabilities.map(p => p / sumP);
+            const prob_density = Array(numPoints).fill(0);
+            for (let i = 0; i < numPoints; i++) {
+                for (let n = 0; n <= MAX_N_PRECOMPUTE; n++) {
+                    const psi_n_val = precomputedNumberStates[n][i];
+                    prob_density[i] += probabilities[n] * psi_n_val * psi_n_val;
+                }
+            }
+            return { is_mixed_state: true, prob_density: prob_density };
+        } else if (params.type === 'number') {
             const psi_n_spatial = precomputedNumberStates[params.n];
             const phase = -(params.n + 0.5) * t;
             const cos_p = Math.cos(phase), sin_p = Math.sin(phase);
             return psi_n_spatial.map(val => ({ re: val * cos_p, im: val * sin_p }));
-        } else {
+        } else { // Coherent or Squeezed
             let psi = Array(numPoints).fill({ re: 0, im: 0 });
             const x0 = Math.sqrt(2)*params.alphaRe, p0 = Math.sqrt(2)*params.alphaIm, r = params.r;
             const xt = x0*Math.cos(t) + p0*Math.sin(t), pt = p0*Math.cos(t) - x0*Math.sin(t);
@@ -197,14 +222,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     function getWignerFunction(params, t) {
-        const { type, n, alphaRe, alphaIm, r } = params;
+        const { type, n, alphaRe, alphaIm, r, avgN } = params;
         const x0 = Math.sqrt(2) * alphaRe, p0 = Math.sqrt(2) * alphaIm;
         const xt = x0 * Math.cos(t) + p0 * Math.sin(t);
         const pt = p0 * Math.cos(t) - x0 * Math.sin(t);
 
         if (type === 'number') {
             return (x, p) => ((-1)**n / Math.PI) * Math.exp(-(x*x + p*p)) * laguerreL(n, 2*(x*x+p*p));
-        } else {
+        } else if (type === 'thermal') {
+            if (avgN < 1e-6) { return (x, p) => (1 / Math.PI) * Math.exp(-(x * x + p * p)); }
+            const beta = Math.log(1 + 1 / avgN);
+            const tanh_beta_half = Math.tanh(beta / 2);
+            return (x, p) => (tanh_beta_half / Math.PI) * Math.exp(-tanh_beta_half * (x * x + p * p));
+        } else { // Coherent or Squeezed
             const cosh2r = Math.cosh(2*r), sinh2r = Math.sinh(2*r), cos2t = Math.cos(2*t), sin2t = Math.sin(2*t);
             const var_x = 0.5 * (cosh2r - sinh2r * cos2t);
             const var_p = 0.5 * (cosh2r + sinh2r * cos2t);
@@ -245,14 +275,28 @@ document.addEventListener('DOMContentLoaded', () => {
         qhoCtx.strokeStyle = '#333'; qhoCtx.lineWidth = 1; qhoCtx.beginPath();
         qhoCtx.moveTo(0, toScreenY(0)); qhoCtx.lineTo(W, toScreenY(0)); qhoCtx.stroke();
     }
-    function drawWavefunction(psi, params) {
-        const stationary_psi_t0 = calculateWavefunction(params, 0);
-        let maxProb = stationary_psi_t0.reduce((max, p) => Math.max(max, C.mag2(p)), 0);
-        const maxAmplitude = Math.sqrt(maxProb);
-        const yScaleWF = (maxAmplitude > 1e-9) ? (WAVEFUNCTION_TARGET_HEIGHT / maxAmplitude) * ((yMax - yMin) / H) : 1;
-        if (plotVisibility.prob) { const yScaleProb = yScaleWF * yScaleWF; qhoCtx.fillStyle = `${colors.prob}99`; qhoCtx.beginPath(); qhoCtx.moveTo(toScreenX(xMin), toScreenY(0)); psi.forEach((p, i) => qhoCtx.lineTo(toScreenX(xMin + i*dx), toScreenY(C.mag2(p) * yScaleProb))); qhoCtx.lineTo(toScreenX(xMax), toScreenY(0)); qhoCtx.closePath(); qhoCtx.fill(); }
-        if (plotVisibility.re) { qhoCtx.strokeStyle = colors.re; qhoCtx.lineWidth = 2; qhoCtx.beginPath(); psi.forEach((p, i) => { const x = toScreenX(xMin + i*dx), y = toScreenY(p.re*yScaleWF); if (i===0) qhoCtx.moveTo(x,y); else qhoCtx.lineTo(x,y); }); qhoCtx.stroke(); }
-        if (plotVisibility.im) { qhoCtx.strokeStyle = colors.im; qhoCtx.lineWidth = 2; qhoCtx.beginPath(); psi.forEach((p, i) => { const x = toScreenX(xMin + i*dx), y = toScreenY(p.im*yScaleWF); if (i===0) qhoCtx.moveTo(x,y); else qhoCtx.lineTo(x,y); }); qhoCtx.stroke(); }
+    function drawWavefunction(psi_data, params) {
+        if (psi_data.is_mixed_state) { // Thermal State
+            const prob_density = psi_data.prob_density;
+            let maxProb = prob_density.reduce((max, p) => Math.max(max, p), 0);
+            if (maxProb < 1e-9) maxProb = 1.0;
+            const yScaleProb = (WAVEFUNCTION_TARGET_HEIGHT / maxProb) * ((yMax - yMin) / H);
+            if (plotVisibility.prob) {
+                qhoCtx.fillStyle = `${colors.prob}99`; qhoCtx.beginPath();
+                qhoCtx.moveTo(toScreenX(xMin), toScreenY(0));
+                prob_density.forEach((p, i) => qhoCtx.lineTo(toScreenX(xMin + i * dx), toScreenY(p * yScaleProb)));
+                qhoCtx.lineTo(toScreenX(xMax), toScreenY(0)); qhoCtx.closePath(); qhoCtx.fill();
+            }
+        } else { // Pure States
+            const psi = psi_data;
+            const stationary_psi_t0 = calculateWavefunction(params, 0);
+            let maxProb = stationary_psi_t0.reduce((max, p) => Math.max(max, C.mag2(p)), 0);
+            const maxAmplitude = Math.sqrt(maxProb);
+            const yScaleWF = (maxAmplitude > 1e-9) ? (WAVEFUNCTION_TARGET_HEIGHT / maxAmplitude) * ((yMax - yMin) / H) : 1;
+            if (plotVisibility.prob) { const yScaleProb = yScaleWF * yScaleWF; qhoCtx.fillStyle = `${colors.prob}99`; qhoCtx.beginPath(); qhoCtx.moveTo(toScreenX(xMin), toScreenY(0)); psi.forEach((p, i) => qhoCtx.lineTo(toScreenX(xMin + i*dx), toScreenY(C.mag2(p) * yScaleProb))); qhoCtx.lineTo(toScreenX(xMax), toScreenY(0)); qhoCtx.closePath(); qhoCtx.fill(); }
+            if (plotVisibility.re) { qhoCtx.strokeStyle = colors.re; qhoCtx.lineWidth = 2; qhoCtx.beginPath(); psi.forEach((p, i) => { const x = toScreenX(xMin + i*dx), y = toScreenY(p.re*yScaleWF); if (i===0) qhoCtx.moveTo(x,y); else qhoCtx.lineTo(x,y); }); qhoCtx.stroke(); }
+            if (plotVisibility.im) { qhoCtx.strokeStyle = colors.im; qhoCtx.lineWidth = 2; qhoCtx.beginPath(); psi.forEach((p, i) => { const x = toScreenX(xMin + i*dx), y = toScreenY(p.im*yScaleWF); if (i===0) qhoCtx.moveTo(x,y); else qhoCtx.lineTo(x,y); }); qhoCtx.stroke(); }
+        }
     }
     function drawPhaseSpaceScene() {
         phaseCtx.fillStyle = '#0c0c14'; phaseCtx.fillRect(0, 0, W, H);
@@ -262,8 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
         phaseCtx.font = "12px sans-serif"; phaseCtx.fillStyle = '#666'; phaseCtx.fillText("x (position)", W - 80, toPhaseScreenY(0) - 10); phaseCtx.fillText("p (momentum)", toPhaseScreenX(0) + 10, 20);
     }
     function drawPhaseSpaceParticles(particles) {
-        const positiveColor = `${colors.highlight}b3`;
-        const negativeColor = `${colors.re}b3`;
+        const positiveColor = `${colors.highlight}b3`; const negativeColor = `${colors.re}b3`;
         for (const p of particles) {
             phaseCtx.fillStyle = p.isPositive ? positiveColor : negativeColor;
             phaseCtx.fillRect(toPhaseScreenX(p.x), toPhaseScreenY(p.p), 2, 2);
@@ -273,9 +316,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Main Loop & Update Logic ---
     function getCurrentParams() {
         const type = simState.currentState;
-        if (type === 'number') { return { type, n: parseInt(document.getElementById('nSlider').value), alphaRe:0, alphaIm:0, r:0 }; }
-        if (type === 'coherent') { return { type, n:0, alphaRe: parseFloat(document.getElementById('alphaReSlider').value), alphaIm: parseFloat(document.getElementById('alphaImSlider').value), r: 0 }; }
-        if (type === 'squeezed') { return { type, n:0, alphaRe: parseFloat(document.getElementById('squeezeAlphaReSlider').value), alphaIm: parseFloat(document.getElementById('squeezeAlphaImSlider').value), r: parseFloat(document.getElementById('squeezeRSlider').value) }; }
+        if (type === 'number') { return { type, n: parseInt(document.getElementById('nSlider').value) }; }
+        if (type === 'coherent') { return { type, alphaRe: parseFloat(document.getElementById('alphaReSlider').value), alphaIm: parseFloat(document.getElementById('alphaImSlider').value), r: 0 }; }
+        if (type === 'squeezed') { return { type, alphaRe: parseFloat(document.getElementById('squeezeAlphaReSlider').value), alphaIm: parseFloat(document.getElementById('squeezeAlphaImSlider').value), r: parseFloat(document.getElementById('squeezeRSlider').value) }; }
+        if (type === 'thermal') { return { type, avgN: parseFloat(document.getElementById('avgNSlider').value) }; }
     }
     function updateUIValues() {
         const params = getCurrentParams();
@@ -283,6 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         valueDisplays.alphaRe.textContent = (params.alphaRe ?? 0).toFixed(1); valueDisplays.alphaIm.textContent = (params.alphaIm ?? 0).toFixed(1);
         valueDisplays.squeezeAlphaRe.textContent = (params.alphaRe ?? 0).toFixed(1); valueDisplays.squeezeAlphaIm.textContent = (params.alphaIm ?? 0).toFixed(1);
         valueDisplays.squeezeR.textContent = (params.r ?? 0).toFixed(1);
+        valueDisplays.avgN.textContent = (params.avgN ?? 0).toFixed(1);
         timeValue.textContent = simState.time.toFixed(2);
     }
     
@@ -291,32 +336,24 @@ document.addEventListener('DOMContentLoaded', () => {
         updateUIValues();
 
         if (simState.currentView === 'position') {
-            const current_psi = calculateWavefunction(params, simState.time);
+            const current_psi_data = calculateWavefunction(params, simState.time);
             drawPositionScene();
-            drawWavefunction(current_psi, params);
-        } else { // OPTIMIZED Phase Space View
+            drawWavefunction(current_psi_data, params);
+        } else { 
             if (cachedInitialParticles === null) {
                 const Wigner_t0 = getWignerFunction(params, 0);
                 cachedInitialParticles = generateParticlesFromWigner(Wigner_t0, NUM_PARTICLES);
             }
             
             let particlesToDraw;
-            
-            if (params.type === 'number') {
-                particlesToDraw = cachedInitialParticles.map(p => ({
-                    x: p.x0, p: p.p0, isPositive: p.isPositive
-                }));
-            } else {
-                const t = simState.time;
-                const cos_t = Math.cos(t);
-                const sin_t = Math.sin(t);
-                particlesToDraw = cachedInitialParticles.map(p => {
-                    const x_t = p.x0 * cos_t + p.p0 * sin_t;
-                    const p_t = p.p0 * cos_t - p.x0 * sin_t;
-                    return { x: x_t, p: p_t, isPositive: p.isPositive };
-                });
-            }
+            const isStationary = params.type === 'number' || params.type === 'thermal';
 
+            if (isStationary) {
+                particlesToDraw = cachedInitialParticles.map(p => ({ x: p.x0, p: p.p0, isPositive: p.isPositive }));
+            } else {
+                const t = simState.time, cos_t = Math.cos(t), sin_t = Math.sin(t);
+                particlesToDraw = cachedInitialParticles.map(p => ({ x: p.x0 * cos_t + p.p0 * sin_t, p: p.p0 * cos_t - p.x0 * sin_t, isPositive: p.isPositive }));
+            }
             drawPhaseSpaceScene();
             drawPhaseSpaceParticles(particlesToDraw);
         }
@@ -333,18 +370,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- Event Handlers ---
-    function invalidateCache() {
-        cachedInitialParticles = null;
-    }
+    function invalidateCache() { cachedInitialParticles = null; }
     function playSimulation() { if (simState.isRunning) return; simState.isRunning = true; playPauseText.textContent = 'Pause'; playIcon.style.display = 'none'; pauseIcon.style.display = 'block'; simState.lastTimestamp = performance.now(); simState.animationFrameId = requestAnimationFrame(simulationLoop); }
     function pauseSimulation() { if (!simState.isRunning) return; simState.isRunning = false; playPauseText.textContent = 'Play'; playIcon.style.display = 'block'; pauseIcon.style.display = 'none'; cancelAnimationFrame(simState.animationFrameId); }
-    function togglePlayPause() { simState.isRunning ? pauseSimulation() : playSimulation(); }
+    function togglePlayPause() { const state = simState.currentState; if (state === 'number' || state === 'thermal') return; simState.isRunning ? pauseSimulation() : playSimulation(); }
     function resetTime() { simState.time = 0; if (!simState.isRunning) redrawCurrentState(); }
+    function updateControlAvailability(state) {
+        const isStationary = (state === 'number' || state === 'thermal');
+        playPauseBtn.disabled = isStationary;
+        resetBtn.disabled = isStationary;
+        timeDisplay.style.visibility = isStationary ? 'hidden' : 'visible';
+        
+        reCheck.disabled = (state === 'thermal'); reCheckLabel.classList.toggle('disabled', state === 'thermal');
+        imCheck.disabled = (state === 'thermal'); imCheckLabel.classList.toggle('disabled', state === 'thermal');
+        
+        document.getElementById('label-re').style.display = (state === 'thermal') ? 'none' : 'block';
+        document.getElementById('label-im').style.display = (state === 'thermal') ? 'none' : 'block';
+
+        if (state === 'thermal') {
+            reCheck.checked = false; plotVisibility.re = false;
+            imCheck.checked = false; plotVisibility.im = false;
+        }
+
+        if (isStationary) {
+            pauseSimulation();
+            resetTime();
+        }
+    }
     function handleStateChange(newState) {
         simState.currentState = newState;
         invalidateCache();
         stateButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.state === newState));
         Object.keys(controlGroups).forEach(key => controlGroups[key].style.display = (key === newState) ? 'block' : 'none');
+        updateControlAvailability(newState);
         if (!simState.isRunning) redrawCurrentState();
     }
     function handleViewChange(newView) {
@@ -360,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     playPauseBtn.addEventListener('click', togglePlayPause);
     resetBtn.addEventListener('click', resetTime);
-    canvasWrapper.addEventListener('click', togglePlayPause); // MODIFIED: Add click listener to wrapper
+    canvasWrapper.addEventListener('click', togglePlayPause);
     stateButtons.forEach(button => button.addEventListener('click', () => handleStateChange(button.dataset.state)));
     viewButtons.forEach(button => button.addEventListener('click', () => handleViewChange(button.dataset.view)));
     allSliders.forEach(slider => { 
@@ -379,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Initialization ---
-    precomputeAllNumberStates(15);
+    precomputeAllNumberStates(MAX_N_PRECOMPUTE);
     handleStateChange('coherent');
     playSimulation();
 });
