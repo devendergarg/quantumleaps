@@ -139,9 +139,6 @@
                 <li><strong>Number Space Plot:</strong> This shows the probability `P(n)` of finding the system in the n-th energy eigenstate (a "Number State" `|n>`).
                     <ul>
                     <li>The horizontal axis is the quantum number `n`, and the vertical axis is the probability.</li>
-                    <!-- MODIFICATION START: Corrected description of Number Space dynamics -->
-                    <li>For all of these states (Coherent, Squeezed, Number, and Thermal), this probability distribution is <strong>static</strong> for a freely evolving oscillator.</li>
-                    <!-- MODIFICATION END -->
                     </ul>
                 </li>
                 <li><strong>Position Space Plot:</strong> This is the standard view of the wavefunction Ψ(x) at different positions x.
@@ -185,10 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const plotVisibility = { prob: true, re: true, im: true };
     const precomputedNumberStates = [];
     let cachedInitialParticles = null; 
-    // --- MODIFICATION START: Added cache for number state probabilities ---
-    let cachedNumberProbabilities = null;
-    // --- MODIFICATION END ---
-    const MAX_N_PRECOMPUTE = 60;
+    let cachedNumberData = null; 
+    const MAX_N_PRECOMPUTE = 100; // Increased for higher <n>
 
     // --- Position Space Constants ---
     const xMin = -10, xMax = 10, yMin = -2, yMax = 12, numPoints = 600, dx = (xMax - xMin) / numPoints, WAVEFUNCTION_TARGET_HEIGHT = H / 4.5;
@@ -210,6 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (maxN === 0) return;
         precomputedNumberStates[1] = x_grid.map((x, i) => Math.sqrt(2) * x * precomputedNumberStates[0][i]);
         for (let n = 1; n < maxN; n++) {
+            if (!precomputedNumberStates[n]) continue;
             const psi_n_minus_1 = precomputedNumberStates[n];
             const psi_n_minus_2 = precomputedNumberStates[n - 1];
             precomputedNumberStates[n + 1] = x_grid.map((x, i) => Math.sqrt(2 / (n + 1)) * x * psi_n_minus_1[i] - Math.sqrt(n / (n + 1)) * psi_n_minus_2[i]);
@@ -246,10 +242,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return psi.map(p => ({ re: p.re*normFactor, im: p.im*normFactor }));
         }
     }
-    function calculateNumberStateProbabilities(params, t) {
-        // --- MODIFICATION START: Implement caching to enforce static probabilities ---
-        if (cachedNumberProbabilities) return cachedNumberProbabilities;
-        // --- MODIFICATION END ---
+    function calculateNumberStateProbabilities(params) {
+        if (cachedNumberData) return cachedNumberData;
 
         const probabilities = new Array(MAX_N_PRECOMPUTE + 1).fill(0);
         if (params.type === 'number') {
@@ -263,25 +257,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 const sumP = p_unnormalized.reduce((a, b) => a + b, 0);
                 for(let n=0; n<probabilities.length; n++) probabilities[n] = p_unnormalized[n]/sumP;
             }
-        } else { // Coherent & Squeezed - numerical projection
-            // --- MODIFICATION START: Always calculate at t=0 for P(n) as it is time-independent ---
-            const psi_t0 = calculateWavefunction(params, 0); // Use t=0
-            // --- MODIFICATION END ---
+        } else { 
+            const psi_t0 = calculateWavefunction(params, 0); 
             for (let n = 0; n <= MAX_N_PRECOMPUTE; n++) {
                 let overlap = { re: 0, im: 0 };
                 const psi_n = precomputedNumberStates[n];
                 if (!psi_n) continue;
                 for (let i = 0; i < numPoints; i++) {
-                    overlap.re += psi_n[i] * psi_t0[i].re * dx; // use psi_t0
-                    overlap.im += psi_n[i] * psi_t0[i].im * dx; // use psi_t0
+                    overlap.re += psi_n[i] * psi_t0[i].re * dx;
+                    overlap.im += psi_n[i] * psi_t0[i].im * dx;
                 }
                 probabilities[n] = C.mag2(overlap);
             }
         }
-        // --- MODIFICATION START: Store the calculated probabilities in the cache ---
-        cachedNumberProbabilities = probabilities;
-        // --- MODIFICATION END ---
-        return probabilities;
+        
+        let mean_n = 0;
+        let mean_n_squared = 0;
+        for (let n = 0; n < probabilities.length; n++) {
+            const p = probabilities[n] || 0;
+            mean_n += n * p;
+            mean_n_squared += n * n * p;
+        }
+        const variance_n = mean_n_squared - mean_n * mean_n;
+        
+        const numberData = { probabilities, mean: mean_n, variance: variance_n };
+        cachedNumberData = numberData;
+        return numberData;
     }
     function getWignerFunction(params, t) {
         const { type, n, alphaRe, alphaIm, r, avgN } = params;
@@ -326,27 +327,89 @@ document.addEventListener('DOMContentLoaded', () => {
             if (plotVisibility.im) { qhoCtx.strokeStyle = colors.im; qhoCtx.lineWidth = 2; qhoCtx.beginPath(); psi_data.forEach((p, i) => { if (i===0) qhoCtx.moveTo(i/numPoints*W, toScreenY(p.im*yScaleWF)); else qhoCtx.lineTo(i/numPoints*W, toScreenY(p.im*yScaleWF)); }); qhoCtx.stroke(); }
         }
     }
-    function drawPhaseSpaceScene() { phaseCtx.fillStyle = '#0c0c14'; phaseCtx.fillRect(0, 0, W, H); phaseCtx.strokeStyle = '#333'; phaseCtx.lineWidth = 1; const toX=x=>(x-xMin)/(xMax-xMin)*W, toY=p=>H-(p-pMin)/(pMax-pMin)*H; phaseCtx.beginPath(); phaseCtx.moveTo(toX(xMin), toY(0)); phaseCtx.lineTo(toX(xMax), toY(0)); phaseCtx.stroke(); phaseCtx.beginPath(); phaseCtx.moveTo(toX(0), toY(pMin)); phaseCtx.lineTo(toX(0), toY(pMax)); phaseCtx.stroke(); phaseCtx.font = "12px sans-serif"; phaseCtx.fillStyle = '#666'; phaseCtx.fillText("x (position)", W - 80, toY(0) - 10); phaseCtx.fillText("p (momentum)", toX(0) + 10, 20); }
+    function drawPhaseSpaceScene() { 
+        phaseCtx.fillStyle = '#0c0c14'; phaseCtx.fillRect(0, 0, W, H); 
+        phaseCtx.strokeStyle = '#333'; phaseCtx.lineWidth = 1; 
+        const toX=x=>(x-xMin)/(xMax-xMin)*W, toY=p=>H-(p-pMin)/(pMax-pMin)*H; 
+        phaseCtx.beginPath(); phaseCtx.moveTo(toX(xMin), toY(0)); phaseCtx.lineTo(toX(xMax), toY(0)); phaseCtx.stroke(); 
+        phaseCtx.beginPath(); phaseCtx.moveTo(toX(0), toY(pMin)); phaseCtx.lineTo(toX(0), toY(pMax)); phaseCtx.stroke(); 
+        phaseCtx.font = "16px monospace"; 
+        phaseCtx.fillStyle = '#ccc'; 
+        phaseCtx.textAlign = 'start';
+        phaseCtx.fillText("x (position)", W - 120, toY(0) - 15); 
+        phaseCtx.fillText("p (momentum)", toX(0) + 15, 25); 
+    }
     function drawPhaseSpaceParticles(particles) { const posCol = `${colors.highlight}b3`, negCol = `${colors.re}b3`; const toX=x=>(x-xMin)/(xMax-xMin)*W, toY=p=>H-(p-pMin)/(pMax-pMin)*H; for (const p of particles) { phaseCtx.fillStyle = p.isPositive ? posCol : negCol; phaseCtx.fillRect(toX(p.x), toY(p.p), 2, 2); } }
-    function drawNumberSpace(probabilities) {
-        const max_n_display = 40, padding = 60;
+    
+    // --- MODIFICATION START: Entire function updated for dynamic axes ---
+    function drawNumberSpace(numberData) {
+        const { probabilities, mean, variance } = numberData;
+        const padding = 60;
+
+        // --- DYNAMIC AXIS LOGIC ---
+        // Dynamic X-Axis
+        const max_n_display = Math.max(25, Math.ceil(mean) + 15);
+        
+        // Dynamic Y-Axis
+        const maxProb = Math.max(...probabilities, 0);
+        const yMax = maxProb < 0.5 ? 0.5 : 1.0;
+        
         numberCtx.fillStyle = '#0c0c14'; numberCtx.fillRect(0, 0, W, H);
         numberCtx.strokeStyle = '#333'; numberCtx.lineWidth = 1;
         numberCtx.beginPath(); numberCtx.moveTo(padding, H-padding); numberCtx.lineTo(W-padding, H-padding); numberCtx.stroke();
-        numberCtx.font = "14px sans-serif"; numberCtx.fillStyle = '#888'; numberCtx.textAlign = 'center';
-        numberCtx.fillText("n (Quantum Number)", W/2, H - padding/2.5);
-        numberCtx.save(); numberCtx.translate(padding/2, H/2); numberCtx.rotate(-Math.PI/2); numberCtx.fillText("P(n) (Probability)", 0, 0); numberCtx.restore();
 
+        numberCtx.font = "16px monospace"; 
+        numberCtx.fillStyle = '#ccc'; 
+        numberCtx.textAlign = 'center';
+        numberCtx.fillText("n (Quantum Number)", W/2, H - padding/3);
+        numberCtx.save(); numberCtx.translate(padding/3, H/2); numberCtx.rotate(-Math.PI/2); numberCtx.fillText("P(n) (Probability)", 0, 0); numberCtx.restore();
+
+        // Draw Y-axis tick marks and labels based on dynamic yMax
+        const yTicks = [0, 0.25 * yMax, 0.5 * yMax, 0.75 * yMax, yMax];
+        const drawableHeight = H - 2 * padding;
+        yTicks.forEach(probValue => {
+            const y = (H - padding) - (probValue / yMax) * drawableHeight;
+            numberCtx.beginPath();
+            numberCtx.moveTo(padding - 5, y);
+            numberCtx.lineTo(padding, y);
+            numberCtx.strokeStyle = '#888';
+            numberCtx.lineWidth = 1;
+            numberCtx.stroke();
+
+            numberCtx.fillStyle = '#888';
+            numberCtx.font = "12px sans-serif";
+            numberCtx.textAlign = 'right';
+            numberCtx.textBaseline = 'middle';
+            numberCtx.fillText(probValue.toFixed(2), padding - 10, y);
+        });
+
+        // Draw bars with dynamic scaling
         const barWidth = (W - 2*padding) / (max_n_display + 1);
-        numberCtx.fillStyle = colors.highlight;
         for (let n = 0; n <= max_n_display; n++) {
             const prob = probabilities[n] || 0;
-            const barHeight = prob * (H - 2*padding);
+            const barHeight = (prob / yMax) * drawableHeight;
             const x = padding + n * barWidth;
-            if (barHeight > 0) numberCtx.fillRect(x, H - padding - barHeight, barWidth * 0.8, barHeight);
-            if (n % 5 === 0) numberCtx.fillText(n, x + barWidth*0.4, H - padding + 20);
+            
+            numberCtx.fillStyle = colors.highlight;
+            if (barHeight > 0.5) numberCtx.fillRect(x, H - padding - barHeight, barWidth * 0.8, barHeight);
+            
+            if (n % 5 === 0 || (max_n_display < 30 && n % 2 === 0)) {
+                 numberCtx.fillStyle = '#888';
+                 numberCtx.font = "14px sans-serif";
+                 numberCtx.textAlign = 'center';
+                 numberCtx.fillText(n, x + barWidth*0.4, H - padding + 20);
+            }
         }
+
+        numberCtx.fillStyle = '#ccc';
+        numberCtx.font = "16px monospace";
+        numberCtx.textAlign = 'right';
+        const textX = W - padding;
+        const textY1 = padding;
+        numberCtx.fillText(`Mean <n>  = ${mean.toFixed(2)}`, textX, textY1);
+        numberCtx.fillText(`Var (Δn)² = ${variance.toFixed(2)}`, textX, textY1 + 22);
     }
+    // --- MODIFICATION END ---
     
     // --- Main Loop & Update Logic ---
     function getCurrentParams() { const type = simState.currentState; switch(type) { case 'number': return { type, n: parseInt(document.getElementById('nSlider').value) }; case 'coherent': return { type, alphaRe: parseFloat(document.getElementById('alphaReSlider').value), alphaIm: parseFloat(document.getElementById('alphaImSlider').value), r: 0 }; case 'squeezed': return { type, alphaRe: parseFloat(document.getElementById('squeezeAlphaReSlider').value), alphaIm: parseFloat(document.getElementById('squeezeAlphaImSlider').value), r: parseFloat(document.getElementById('squeezeRSlider').value) }; case 'thermal': return { type, avgN: parseFloat(document.getElementById('avgNSlider').value) }; } }
@@ -371,7 +434,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const isStationary = params.type === 'number' || params.type === 'thermal';
             const particles = isStationary ? cachedInitialParticles.map(p => ({...p, x: p.x0, p: p.p0})) : cachedInitialParticles.map(p => ({...p, x: p.x0*Math.cos(simState.time)+p.p0*Math.sin(simState.time), p: p.p0*Math.cos(simState.time)-p.x0*Math.sin(simState.time)}));
             drawPhaseSpaceScene(); drawPhaseSpaceParticles(particles);
-        } else if (simState.currentView === 'number') { const probabilities = calculateNumberStateProbabilities(params, simState.time); drawNumberSpace(probabilities); }
+        } else if (simState.currentView === 'number') { 
+            const numberData = calculateNumberStateProbabilities(params);
+            drawNumberSpace(numberData);
+        }
     }
     
     function simulationLoop(timestamp) { if (!simState.isRunning) return; const deltaTime = (timestamp - simState.lastTimestamp)/1000; simState.lastTimestamp = timestamp; simState.time += deltaTime * 2.0; redrawCurrentState(); simState.animationFrameId = requestAnimationFrame(simulationLoop); }
@@ -379,16 +445,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Handlers ---
     function invalidateCache() { 
         cachedInitialParticles = null; 
-        // --- MODIFICATION START: Invalidate number probability cache on parameter change ---
-        cachedNumberProbabilities = null;
-        // --- MODIFICATION END ---
+        cachedNumberData = null;
     }
     function playSimulation() { if (simState.isRunning) return; simState.isRunning = true; playPauseText.textContent = 'Pause'; playIcon.style.display = 'none'; pauseIcon.style.display = 'block'; simState.lastTimestamp = performance.now(); simState.animationFrameId = requestAnimationFrame(simulationLoop); }
     function pauseSimulation() { if (!simState.isRunning) return; simState.isRunning = false; playPauseText.textContent = 'Play'; playIcon.style.display = 'block'; pauseIcon.style.display = 'none'; cancelAnimationFrame(simState.animationFrameId); }
     
     function isEffectivelyStationary() {
         const state = simState.currentState, view = simState.currentView;
-        // MODIFICATION: Number view is now always stationary.
         if (view === 'number' || state === 'number' || state === 'thermal') return true;
         return false;
     }
