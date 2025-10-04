@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Black Body Radiation Simulator</title>
+    <!-- Load Three.js from a CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Roboto+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #1a1a2e;
+            --primary-color: #e94560;
+            --secondary-color: #16213e;
+            --text-color: #e0e0e0;
+            --border-color: #4a4a6a;
+            --glow-color: rgba(233, 69, 96, 0.5);
+            --accent-color-2: #3f72af;
+            --accent-color-3: #2ecc71;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            padding: 25px;
+            background-color: var(--secondary-color);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+        }
+        
+        .main-content { display: flex; flex-direction: column; gap: 25px; }
+        .simulation-area { display: flex; flex-direction: column; gap: 20px; }
+        
+        #threejs-container {
+            width: 100%;
+            height: 300px;
+            background-color: #000;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+            cursor: grab;
+            touch-action: none; /* Prevents scrolling on touch devices */
+        }
+
+        .controls-panel { display: flex; flex-wrap: wrap; gap: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        
+        .panel {
+            background-color: rgba(0,0,0,0.2);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .panel h4 { margin-top: 0; color: var(--primary-color); }
+        
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .slider-label-value {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 0 2px;
+        }
+        #temp-value {
+            font-family: 'Roboto Mono', monospace;
+            font-weight: 700;
+            font-size: 1.2em;
+            color: var(--primary-color);
+        }
+        #temp-slider {
+            width: 100%;
+            -webkit-appearance: none; appearance: none;
+            height: 10px; background: var(--border-color);
+            outline: none; border-radius: 5px;
+        }
+        #temp-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 22px; height: 22px;
+            background: var(--primary-color); cursor: pointer;
+            border-radius: 50%; box-shadow: 0 0 10px var(--glow-color);
+        }
+        #temp-slider::-moz-range-thumb {
+            width: 22px; height: 22px;
+            background: var(--primary-color); cursor: pointer;
+            border-radius: 50%; border: none;
+            box-shadow: 0 0 10px var(--glow-color);
+        }
+
+        .presets { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+        .presets button {
+            flex-grow: 1; padding: 8px 12px; font-family: 'Roboto', sans-serif;
+            font-size: 0.9em; background-color: var(--border-color); color: var(--text-color);
+            border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s;
+        }
+        .presets button:hover { background-color: #5a5a7a; }
+        .presets button.active { background-color: var(--primary-color); box-shadow: 0 0 10px var(--glow-color); }
+        
+        .checkbox-group { display: flex; flex-direction: column; gap: 10px; }
+        .checkbox-group label { display: flex; align-items: center; cursor: pointer; }
+        .checkbox-group input { margin-right: 10px; }
+        .label-energy { color: white; } .label-photons { color: var(--accent-color-2); } .label-modes { color: var(--accent-color-3); }
+        
+        .canvas-container { background-color: #111; border-radius: 8px; border: 1px solid var(--border-color); box-shadow: inset 0 0 15px rgba(0,0,0,0.5); padding: 15px; }
+        .canvas-container h3 { text-align: center; margin: 5px 0 15px 0; font-weight: 400; opacity: 0.9; }
+        canvas { width: 100%; height: auto; display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>3D Black Body Radiation Simulator</h1>
+
+        <div class="main-content">
+            <div id="threejs-container"></div>
+            
+            <div class="controls-panel">
+                <div class="controls panel">
+                    <h4>Controls</h4>
+                    <div class="slider-group">
+                        <div class="slider-label-value">
+                            <label for="temp-slider">Temperature:</label>
+                            <span id="temp-value">5778 K</span>
+                        </div>
+                        <input type="range" id="temp-slider" min="300" max="10000" value="5778" step="10">
+                    </div>
+                    <div class="presets">
+                        <button data-temp="5778" data-shape="sphere" class="preset-btn active">The Sun</button>
+                        <button data-temp="2700" data-shape="lightbulb" class="preset-btn">Light Bulb</button>
+                        <button data-temp="310" data-shape="human" class="preset-btn">Human Body</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="simulation-area">
+                <div class="canvas-container" id="energy-container">
+                    <h3>Plot 1: Energy Density vs. Frequency</h3>
+                    <canvas id="energy-canvas" width="800" height="400"></canvas>
+                </div>
+                <div class="canvas-container" id="photon-container">
+                    <h3>Plot 2: Photon Count vs. Frequency</h3>
+                    <canvas id="photon-number-canvas" width="800" height="400"></canvas>
+                </div>
+                <div class="canvas-container" id="modes-container">
+                    <h3>Plot 3: Density of Modes vs. Frequency</h3>
+                    <canvas id="modes-canvas" width="800" height="400"></canvas>
+                </div>
+            </div>
+
+            <div class="view-options panel">
+                <h4>View Options</h4>
+                <div class="checkbox-group">
+                    <label class="label-energy"><input type="checkbox" id="energy-checkbox" data-target="energy-container" checked> Show Energy Density Plot</label>
+                    <label class="label-photons"><input type="checkbox" id="photon-checkbox" data-target="photon-container" checked> Show Photon Count Plot</label>
+                    <label class="label-modes"><input type="checkbox" id="modes-checkbox" data-target="modes-container" checked> Show Density of Modes Plot</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // --- UTILITIES & CONSTANTS ---
+    const h = 6.626e-34, c = 3.0e8, k_b = 1.38e-23, b_freq = 5.879e10;
+
+    // --- DOM ELEMENTS ---
+    const slider = document.getElementById('temp-slider');
+    const tempValue = document.getElementById('temp-value');
+    const presetBtns = document.querySelectorAll('.preset-btn');
+    const checkboxes = document.querySelectorAll('.checkbox-group input');
+    
+    // --- CANVAS SETUP ---
+    const eCanvas = document.getElementById('energy-canvas'), eCtx = eCanvas.getContext('2d');
+    const nCanvas = document.getElementById('photon-number-canvas'), nCtx = nCanvas.getContext('2d');
+    const mCanvas = document.getElementById('modes-canvas'), mCtx = mCanvas.getContext('2d');
+    const canvasWidth = 800, canvasHeight = 400;
+
+    // --- THREE.JS SETUP ---
+    let scene, camera, renderer, objectGroup, glowingPart, basePart, isDragging = false;
+    const threeContainer = document.getElementById('threejs-container');
+    const PARTICLE_COUNT = 50000;
+    
+    // --- CORE PHYSICS & DRAWING FUNCTIONS (Compacted) ---
+    function planckFrequency(nu, T){const e=(h*nu)/(k_b*T);if(e>100)return 0;return(2*h*nu**3)/(c**2*(Math.exp(e)-1))}
+    function boseEinstein(nu, T){const e=(h*nu)/(k_b*T);if(e>100)return 0;const d=Math.exp(e)-1;return d<=0?Infinity:1/d}
+    function modeDensity(nu){return(8*Math.PI*nu**2)/c**3}
+    function getPerceivedColor(T){let r=0,g=0,b=0,i=0;for(let l=380;l<=780;l+=5){const nu=c/(l*1e-9),p=planckFrequency(nu,T),rgb=frequencyToRGB(nu,true);if(rgb){r+=p*rgb[0];g+=p*rgb[1];b+=p*rgb[2];i+=p}}if(i===0)return{hex:'#000000'};r/=i;g/=i;b/=i;const s=Math.pow((T-300)/9700,0.6)*15;r=Math.min(255,r*s);g=Math.min(255,g*s);b=Math.min(255,b*s);const toHex=c=>('0'+Math.round(c).toString(16)).slice(-2);return{hex:`#${toHex(r)}${toHex(g)}${toHex(b)}`}}
+    function frequencyToRGB(nu,asArray=false){const l=c/nu*1e9;let R,G,B;if(l>=380&&l<440){R=-(l-440)/60;G=0;B=1}else if(l>=440&&l<490){R=0;G=(l-440)/50;B=1}else if(l>=490&&l<510){R=0;G=1;B=-(l-510)/20}else if(l>=510&&l<580){R=(l-510)/70;G=1;B=0}else if(l>=580&&l<645){R=1;G=-(l-645)/65;B=0}else if(l>=645&&l<781){R=1;G=0;B=0}else{return null}R=Math.round(255*R);G=Math.round(255*G);B=Math.round(255*B);return asArray?[R,G,B]:`rgb(${R},${G},${B})`}
+    function drawAxesAndGrid(ctx,xL,yL,xT){const p={top:20,bottom:50,left:70,right:20},pw=canvasWidth-p.left-p.right,ph=canvasHeight-p.top-p.bottom;ctx.clearRect(0,0,canvasWidth,canvasHeight);ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font="14px 'Roboto Mono'";for(let i=1;i<=4;i++){ctx.beginPath();ctx.moveTo(p.left,p.top+i*ph/4);ctx.lineTo(canvasWidth-p.right,p.top+i*ph/4);ctx.stroke()}for(let i=1;i<xT.length;i++){let xP=p.left+(xT[i]/xT[xT.length-1])*pw;ctx.beginPath();ctx.moveTo(xP,p.top);ctx.lineTo(xP,canvasHeight-p.bottom);ctx.stroke();ctx.fillText(xT[i],xP-15,canvasHeight-p.bottom+20)}ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.beginPath();ctx.moveTo(p.left,p.top);ctx.lineTo(p.left,canvasHeight-p.bottom);ctx.lineTo(canvasWidth-p.right,canvasHeight-p.bottom);ctx.stroke();ctx.save();ctx.translate(25,canvasHeight/2);ctx.rotate(-Math.PI/2);ctx.textAlign="center";ctx.fillText(yL,0,0);ctx.restore();ctx.textAlign="center";ctx.fillText(xL,canvasWidth/2,canvasHeight-10);ctx.fillText(xT[0],p.left,canvasHeight-p.bottom+20);return p}
+    function drawGraph(ctx,T,xT,nuMax,yF,color,yCap){const p=drawAxesAndGrid(ctx,"Frequency (THz)",ctx.canvas.id.includes('energy')?"Energy Density":ctx.canvas.id.includes('photon')?"Avg. Photon Count <n>":"Mode Density g(ν)",xT),pw=canvasWidth-p.left-p.right,ph=canvasHeight-p.top-p.bottom;let peakVal;if(yCap){peakVal=yCap}else{const peakNu=ctx.canvas.id.includes('modes')?nuMax:b_freq*T;peakVal=Math.max(1e-25,yF(peakNu,T)*1.5)}const pts=[];for(let x=0;x<=pw;x++){const nu=(x/pw)*nuMax,val=yF(nu,T),y=p.top+ph-(Math.min(val,peakVal)/peakVal)*ph;pts.push({x:p.left+x,y:y})}const grad=ctx.createLinearGradient(0,p.top,0,canvasHeight-p.bottom);grad.addColorStop(0,`rgba(${color},0.6)`);grad.addColorStop(1,`rgba(${color},0.1)`);if(ctx.canvas.id.includes('energy')){const visGrad=ctx.createLinearGradient(p.left,0,p.left+pw,0);for(let nu=c/780e-9;nu<=c/380e-9;nu+=5e12){const cVal=frequencyToRGB(nu);if(cVal)visGrad.addColorStop(nu/nuMax,cVal)}ctx.fillStyle=visGrad}else{ctx.fillStyle=grad}ctx.beginPath();ctx.moveTo(p.left,canvasHeight-p.bottom);pts.forEach(pt=>ctx.lineTo(pt.x,pt.y));ctx.lineTo(p.left+pw,canvasHeight-p.bottom);ctx.closePath();ctx.fill();ctx.beginPath();pts.forEach((pt,i)=>{i===0?ctx.moveTo(pt.x,pt.y):ctx.lineTo(pt.x,pt.y)});ctx.lineWidth=3;ctx.strokeStyle=ctx.canvas.id.includes('energy')?'white':`rgb(${color})`;ctx.shadowColor=`rgba(${color},0.7)`;ctx.shadowBlur=10;ctx.stroke();ctx.shadowBlur=0}
+
+    // --- THREE.JS FUNCTIONS ---
+    function initThree() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, threeContainer.clientWidth / threeContainer.clientHeight, 0.1, 1000);
+        camera.position.z = 3;
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(threeContainer.clientWidth, threeContainer.clientHeight);
+        threeContainer.appendChild(renderer.domElement);
+        objectGroup = new THREE.Group();
+        scene.add(objectGroup);
+        glowingPart = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: 0.02, blending: THREE.AdditiveBlending, sizeAttenuation: true, transparent: true }));
+        objectGroup.add(glowingPart);
+        basePart = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: 0.025, color: 0x888888, sizeAttenuation: true }));
+        objectGroup.add(basePart);
+        
+        let previousPointerPosition = { x: 0, y: 0 };
+        function onPointerDown(x, y) { isDragging = true; previousPointerPosition = { x, y }; threeContainer.style.cursor = 'grabbing'; }
+        function onPointerMove(x, y) {
+            if (!isDragging) return;
+            const deltaMove = { x: x - previousPointerPosition.x, y: y - previousPointerPosition.y };
+            objectGroup.rotation.y += deltaMove.x * 0.005;
+            objectGroup.rotation.x += deltaMove.y * 0.005;
+            previousPointerPosition = { x, y };
+        }
+        function onPointerUp() { isDragging = false; threeContainer.style.cursor = 'grab'; }
+        
+        threeContainer.addEventListener('mousedown', e => onPointerDown(e.clientX, e.clientY));
+        threeContainer.addEventListener('mousemove', e => onPointerMove(e.clientX, e.clientY));
+        threeContainer.addEventListener('mouseup', onPointerUp);
+        threeContainer.addEventListener('mouseleave', onPointerUp);
+        threeContainer.addEventListener('touchstart', e => { e.preventDefault(); onPointerDown(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+        threeContainer.addEventListener('touchmove', e => { e.preventDefault(); onPointerMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+        threeContainer.addEventListener('touchend', onPointerUp);
+        
+        animate();
+    }
+    
+    function animate() {
+        requestAnimationFrame(animate);
+        if (!isDragging) { objectGroup.rotation.y += 0.0005; }
+        renderer.render(scene, camera);
+    }
+    
+    function updateObjectShape(shape) {
+        glowingPart.geometry.dispose(); basePart.geometry.dispose();
+        let glowingPositions, basePositions;
+        switch(shape) {
+            case 'sphere': case 'human':
+                glowingPositions = (shape === 'sphere') ? generateSphereParticles() : generateHumanParticles();
+                basePositions = new Float32Array(0);
+                break;
+            case 'lightbulb':
+                const bulbParticles = generateBulbParticles();
+                glowingPositions = bulbParticles.glowing;
+                basePositions = bulbParticles.base;
+                break;
+        }
+        glowingPart.geometry = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(glowingPositions, 3));
+        basePart.geometry = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(basePositions, 3));
+    }
+    function generateSphereParticles() { const positions = new Float32Array(PARTICLE_COUNT * 3); for (let i = 0; i < PARTICLE_COUNT; i++) { const phi = Math.acos(2 * Math.random() - 1), theta = Math.random() * 2 * Math.PI; positions.set([Math.sin(phi) * Math.cos(theta), Math.sin(phi) * Math.sin(theta), Math.cos(phi)], i * 3); } return positions; }
+    function generateHumanParticles() { const positions = new Float32Array(PARTICLE_COUNT * 3); const parts = [ { type: 'sphere', pos: [0, 1.35, 0], size: [0.3], ratio: 0.1 }, { type: 'box', pos: [0, 0.55, 0], size: [0.8, 1.1, 0.3], ratio: 0.4 }, { type: 'box', pos: [-0.6, 0.4, 0], size: [0.2, 1.4, 0.2], ratio: 0.15 }, { type: 'box', pos: [0.6, 0.4, 0], size: [0.2, 1.4, 0.2], ratio: 0.15 }, { type: 'box', pos: [-0.2, -0.6, 0], size: [0.3, 1.2, 0.2], ratio: 0.1 }, { type: 'box', pos: [0.2, -0.6, 0], size: [0.3, 1.2, 0.2], ratio: 0.1 } ]; let particleIndex = 0; for (const part of parts) { const numParticles = Math.floor(PARTICLE_COUNT * part.ratio); for (let i = 0; i < numParticles; i++) { if (particleIndex >= PARTICLE_COUNT) break; let x, y, z; if (part.type === 'sphere') { const phi = Math.acos(2 * Math.random() - 1), theta = Math.random() * 2 * Math.PI, r = part.size[0] * Math.cbrt(Math.random()); x = part.pos[0] + r * Math.sin(phi) * Math.cos(theta); y = part.pos[1] + r * Math.sin(phi) * Math.sin(theta); z = part.pos[2] + r * Math.cos(phi); } else { x = part.pos[0] + (Math.random() - 0.5) * part.size[0]; y = part.pos[1] + (Math.random() - 0.5) * part.size[1]; z = part.pos[2] + (Math.random() - 0.5) * part.size[2]; } positions.set([x, y, z], particleIndex * 3); particleIndex++; } } return positions; }
+    function generateBulbParticles() { const filamentCount = Math.floor(PARTICLE_COUNT * 0.5), glassCount = Math.floor(PARTICLE_COUNT * 0.4), baseCount = PARTICLE_COUNT - filamentCount - glassCount; const glowing = new Float32Array((filamentCount + glassCount) * 3), base = new Float32Array(baseCount * 3); for (let i = 0; i < filamentCount; i++) { const t = Math.random() * 40, r = 0.08 + (Math.random() - 0.5) * 0.02; glowing.set([r * Math.cos(t), 0.3 + r * Math.sin(t), (t / 40) * 0.8 - 0.4], i * 3); } for (let i = 0; i < glassCount; i++) { const phi = Math.acos(2*Math.random()-1), theta = Math.random()*2*Math.PI, r = 1.0; glowing.set([r*Math.sin(phi)*Math.cos(theta), r*Math.sin(phi)*Math.sin(theta)+0.3, r*Math.cos(phi)], (filamentCount + i)*3); } for (let i = 0; i < baseCount; i++) { const r = 0.4 - Math.random() * 0.05, angle = Math.random() * Math.PI * 2; base.set([r * Math.cos(angle), -0.7 - Math.random() * 0.3, r * Math.sin(angle)], i * 3); } return { glowing, base }; }
+
+    function updateThreeObject(T) {
+        if (!glowingPart) return;
+        const colorInfo = getPerceivedColor(T);
+        glowingPart.material.color.set(new THREE.Color(colorInfo.hex));
+        const tempFraction = Math.max(0, T - 300) / 9700;
+        // Ensure a base visibility for low-temp objects
+        glowingPart.material.opacity = Math.min(1, 0.4 + Math.pow(tempFraction, 0.5) * 0.6);
+    }
+    
+    // --- MAIN UPDATE & EVENT HANDLERS ---
+    function updateAll() {
+        const T = parseFloat(slider.value);
+        tempValue.textContent = `${Math.round(T)} K`;
+        updateThreeObject(T);
+        if (document.getElementById('energy-checkbox').checked) { drawGraph(eCtx, T, [0, 500, 1000, 1500, 2000, 2500], 2500e12, planckFrequency, '255,255,255'); }
+        if (document.getElementById('photon-checkbox').checked) { drawGraph(nCtx, T, [0, 100, 200, 300, 400], 400e12, boseEinstein, '63,114,175', 10); }
+        if (document.getElementById('modes-checkbox').checked) { drawGraph(mCtx, T, [0, 500, 1000, 1500, 2000, 2500], 2500e12, modeDensity, '46,204,113'); }
+    }
+    slider.addEventListener('input', updateAll);
+    presetBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            presetBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            slider.value = btn.dataset.temp;
+            updateObjectShape(btn.dataset.shape);
+            updateAll();
+        });
+    });
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            document.getElementById(checkbox.dataset.target).style.display = checkbox.checked ? 'block' : 'none';
+            if (checkbox.checked) updateAll();
+        });
+    });
+    
+    // --- INITIALIZATION ---
+    function initialize() {
+        checkboxes.forEach(cb => { document.getElementById(cb.dataset.target).style.display = cb.checked ? 'block' : 'none'; });
+        initThree();
+        updateObjectShape('sphere');
+        updateAll();
+    }
+    initialize();
+    </script>
+</body>
+</html>
