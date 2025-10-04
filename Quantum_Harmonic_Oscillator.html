@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Quantum Harmonic Oscillator</title>
+    <title>Interactive Quantum Harmonic Oscillator (Corrected)</title>
     <style>
         :root {
             --bg-color: #1a1a2e; --panel-color: #16213e; --text-color: #e0e0e0;
@@ -73,7 +73,6 @@
         #descriptionContainer strong { color: var(--text-color); }
         #descriptionContainer code { font-family: monospace; font-weight: bold; }
         
-        /* MODIFICATION: Added footer styles */
         footer {
             text-align: center;
             margin-top: 2em;
@@ -140,7 +139,9 @@
                 <li><strong>Number Space Plot:</strong> This shows the probability `P(n)` of finding the system in the n-th energy eigenstate (a "Number State" `|n>`).
                     <ul>
                     <li>The horizontal axis is the quantum number `n`, and the vertical axis is the probability.</li>
-                    <li>For Coherent, Number, and Thermal states, this distribution is static. For a Squeezed state, it oscillates in time.</li>
+                    <!-- MODIFICATION START: Corrected description of Number Space dynamics -->
+                    <li>For all of these states (Coherent, Squeezed, Number, and Thermal), this probability distribution is <strong>static</strong> for a freely evolving oscillator.</li>
+                    <!-- MODIFICATION END -->
                     </ul>
                 </li>
                 <li><strong>Position Space Plot:</strong> This is the standard view of the wavefunction Ψ(x) at different positions x.
@@ -158,7 +159,6 @@
         </div>
     </section>
 
-    <!-- MODIFICATION: Added footer -->
     <footer>
         <p>Created by <strong>Dr. Devender Garg</strong></p>
     </footer>
@@ -185,6 +185,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const plotVisibility = { prob: true, re: true, im: true };
     const precomputedNumberStates = [];
     let cachedInitialParticles = null; 
+    // --- MODIFICATION START: Added cache for number state probabilities ---
+    let cachedNumberProbabilities = null;
+    // --- MODIFICATION END ---
     const MAX_N_PRECOMPUTE = 60;
 
     // --- Position Space Constants ---
@@ -244,6 +247,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     function calculateNumberStateProbabilities(params, t) {
+        // --- MODIFICATION START: Implement caching to enforce static probabilities ---
+        if (cachedNumberProbabilities) return cachedNumberProbabilities;
+        // --- MODIFICATION END ---
+
         const probabilities = new Array(MAX_N_PRECOMPUTE + 1).fill(0);
         if (params.type === 'number') {
             if (params.n <= MAX_N_PRECOMPUTE) probabilities[params.n] = 1;
@@ -257,18 +264,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 for(let n=0; n<probabilities.length; n++) probabilities[n] = p_unnormalized[n]/sumP;
             }
         } else { // Coherent & Squeezed - numerical projection
-            const psi_t = calculateWavefunction(params, t);
+            // --- MODIFICATION START: Always calculate at t=0 for P(n) as it is time-independent ---
+            const psi_t0 = calculateWavefunction(params, 0); // Use t=0
+            // --- MODIFICATION END ---
             for (let n = 0; n <= MAX_N_PRECOMPUTE; n++) {
                 let overlap = { re: 0, im: 0 };
                 const psi_n = precomputedNumberStates[n];
                 if (!psi_n) continue;
                 for (let i = 0; i < numPoints; i++) {
-                    overlap.re += psi_n[i] * psi_t[i].re * dx;
-                    overlap.im += psi_n[i] * psi_t[i].im * dx;
+                    overlap.re += psi_n[i] * psi_t0[i].re * dx; // use psi_t0
+                    overlap.im += psi_n[i] * psi_t0[i].im * dx; // use psi_t0
                 }
                 probabilities[n] = C.mag2(overlap);
             }
         }
+        // --- MODIFICATION START: Store the calculated probabilities in the cache ---
+        cachedNumberProbabilities = probabilities;
+        // --- MODIFICATION END ---
         return probabilities;
     }
     function getWignerFunction(params, t) {
@@ -365,14 +377,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function simulationLoop(timestamp) { if (!simState.isRunning) return; const deltaTime = (timestamp - simState.lastTimestamp)/1000; simState.lastTimestamp = timestamp; simState.time += deltaTime * 2.0; redrawCurrentState(); simState.animationFrameId = requestAnimationFrame(simulationLoop); }
     
     // --- Event Handlers ---
-    function invalidateCache() { cachedInitialParticles = null; }
+    function invalidateCache() { 
+        cachedInitialParticles = null; 
+        // --- MODIFICATION START: Invalidate number probability cache on parameter change ---
+        cachedNumberProbabilities = null;
+        // --- MODIFICATION END ---
+    }
     function playSimulation() { if (simState.isRunning) return; simState.isRunning = true; playPauseText.textContent = 'Pause'; playIcon.style.display = 'none'; pauseIcon.style.display = 'block'; simState.lastTimestamp = performance.now(); simState.animationFrameId = requestAnimationFrame(simulationLoop); }
     function pauseSimulation() { if (!simState.isRunning) return; simState.isRunning = false; playPauseText.textContent = 'Play'; playIcon.style.display = 'block'; pauseIcon.style.display = 'none'; cancelAnimationFrame(simState.animationFrameId); }
     
     function isEffectivelyStationary() {
         const state = simState.currentState, view = simState.currentView;
-        if (state === 'number' || state === 'thermal') return true;
-        if (view === 'number' && state === 'coherent') return true;
+        // MODIFICATION: Number view is now always stationary.
+        if (view === 'number' || state === 'number' || state === 'thermal') return true;
         return false;
     }
     
