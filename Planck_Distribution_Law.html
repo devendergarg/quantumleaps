@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planck's Law of Radiation</title>
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background-color: #f0f2f5;
+        color: #333;
+        margin: 0;
+        padding: 10px 10px 60px 10px; /* Added bottom padding for footer */
+    }
+    h1 {
+        color: #2c3e50;
+        text-align: center;
+    }
+    #view-title {
+        font-size: 1.2em;
+        font-weight: 600;
+        color: #34495e;
+        margin-top: 20px;
+    }
+    #oscillator-container {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        width: 90%;
+        max-width: 800px;
+        margin-top: 10px;
+        padding: 25px;
+        background-color: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+    .oscillator {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        min-height: 80px;
+    }
+    .label-container {
+        width: 150px;
+        text-align: right;
+        padding-right: 20px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #34495e;
+        flex-shrink: 0;
+    }
+    .label-container small { font-weight: normal; color: #566573; }
+    .vibration-area { flex-grow: 1; position: relative; height: 80px; }
+    .spring-svg {
+        position: absolute; left: 0; top: 50%;
+        transform: translateY(-50%);
+        stroke: #556270; stroke-width: 2.5; fill: none; stroke-linecap: round;
+    }
+    .glass-ball {
+        width: 80px; height: 80px;
+        border: 2px solid #7f8c8d; border-radius: 50%;
+        background-color: rgba(41, 128, 185, 0.1);
+        box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
+        position: absolute; top: 0;
+    }
+    .small-sphere {
+        position: absolute;
+        border: 1px solid rgba(0, 50, 100, 0.2);
+        border-radius: 50%;
+        transform: translateZ(0); 
+    }
+    .particle {
+        position: absolute; width: 6px; height: 6px;
+        background-color: #c0392b; border-radius: 50%;
+    }
+    #controls {
+        margin-top: 30px; padding: 20px 25px;
+        background-color: #ffffff; border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        display: flex; align-items: center; flex-wrap: wrap; justify-content: center;
+    }
+    #density-toggle-container {
+        display: flex; align-items: center;
+        margin-top: 15px; font-size: 16px;
+    }
+    #density-toggle { margin-right: 8px; cursor: pointer; }
+    
+    /* --- About Section & Footer Styles --- */
+    #about-container {
+        width: 90%;
+        max-width: 800px;
+        margin-top: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    #about-button {
+        background-color: #3498db;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.3s;
+    }
+    #about-button:hover {
+        background-color: #2980b9;
+    }
+    #about-section {
+        background-color: #ffffff;
+        border-radius: 8px;
+        margin-top: 15px;
+        line-height: 1.6;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        transition: max-height 0.5s ease-in-out, opacity 0.5s ease-in-out, padding 0.5s ease-in-out;
+    }
+    #about-section.visible {
+        padding: 20px 25px;
+        max-height: 1000px;
+        opacity: 1;
+    }
+    #about-section h3 { color: #2c3e50; margin-top: 0; }
+    footer { margin-top: 40px; color: #7f8c8d; font-size: 14px; }
+
+    /* --- Responsive CSS --- */
+    @media (max-width: 768px) {
+        body { padding: 5px 5px 60px 5px; }
+        h1 { font-size: 1.5em; }
+        #oscillator-container, #about-container, #controls { width: 95%; }
+        .label-container {
+            order: 2; width: 90px; text-align: left;
+            padding-right: 0; padding-left: 10px; font-size: 14px;
+        }
+        .vibration-area { order: 1; }
+        #controls { flex-direction: column; gap: 15px; }
+        #temperature-slider { width: 80vw; max-width: 350px; margin-left: 0; }
+    }
+</style>
+</head>
+<body>
+
+<h1>Planck's Law of Radiation</h1>
+<div id="view-title">Energy Per Mode</div>
+<div id="oscillator-container"></div>
+<div id="controls">
+    <div>
+        <label for="temperature-slider" id="temperature-label">Normalized Temperature</label>
+        <input type="range" min="0.1" max="15" value="2.5" step="0.1" id="temperature-slider">
+    </div>
+    <div id="density-toggle-container">
+        <input type="checkbox" id="density-toggle">
+        <label for="density-toggle">Include Density of Modes (ν²)</label>
+    </div>
+</div>
+
+<div id="about-container">
+    <button id="about-button">About this Simulation</button>
+    <div id="about-section">
+        <h3>Formula for Planck's Distribution Law</h3>
+        <p>This law describes the average number of photons (or phonons), <em>&lt;n&gt;</em>, that occupy a single oscillator mode of frequency <em>&nu;</em> at a given temperature <em>T</em>. The formula is:</p>
+        <p style="text-align: center; font-size: 1.2em;"><strong><em>&lt;n&gt;</em> = 1 / (e<sup><em>h&nu;/kT</em></sup> - 1)</strong></p>
+        <p>The "Energy Per Mode" view in this simulation directly visualizes this value. You can see how <em>&lt;n&gt;</em> is high for low-frequency oscillators but drops off exponentially for high-frequency ones.</p>
+        <h3>Formula for Density of Modes</h3>
+        <p>To get the total energy radiated by a blackbody, we must account for the fact that there are more available modes for high-frequency waves to exist in. The number of modes, or <strong>Density of States</strong> <em>g(&nu;)</em>, in a 3D cavity is proportional to the square of the frequency:</p>
+        <p style="text-align: center; font-size: 1.2em;"><strong><em>g(&nu;)</em> &propto; &nu;<sup>2</sup></strong></p>
+        <p>The "Total Radiated Power" view visualizes this by showing &nu;<sup>2</sup> small spheres. The total number of photons and the resulting amplitude are calculated from <em>Total Energy &propto; &lt;n&gt; &times; g(&nu;)</em>, which correctly reproduces the famous blackbody radiation curve.</p>
+    </div>
+</div>
+
+<footer>
+    <p>Created by Dr. Devender Garg</p>
+</footer>
+
+<script>
+    const temperatureSlider = document.getElementById('temperature-slider');
+    const densityToggle = document.getElementById('density-toggle');
+    const viewTitle = document.getElementById('view-title');
+    const aboutButton = document.getElementById('about-button');
+    const aboutSection = document.getElementById('about-section');
+    
+    const oscillators = [];
+    const numOscillators = 10, ballRadius = 40, springHeight = 25, springCoils = 18;
+
+    let absoluteMaxRawAmplitude = 0;
+    const calibrationTemp = 15.0;
+    for (let i = 1; i <= numOscillators; i++) {
+        const x = i / calibrationTemp;
+        const n = 1 / (Math.exp(x) - 1);
+        const rawAmp = Math.sqrt(n * i);
+        if (rawAmp > absoluteMaxRawAmplitude) {
+            absoluteMaxRawAmplitude = rawAmp;
+        }
+    }
+    absoluteMaxRawAmplitude += 1e-9;
+
+    for (let i = 0; i < numOscillators; i++) {
+        const oscillatorContainer = document.getElementById('oscillator-container');
+        const oscillatorEl = document.createElement('div'); oscillatorEl.className = 'oscillator';
+        const labelContainer = document.createElement('div'); labelContainer.className = 'label-container';
+        const vibrationArea = document.createElement('div'); vibrationArea.className = 'vibration-area';
+        const springSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); springSVG.setAttribute('class', 'spring-svg'); springSVG.setAttribute('height', springHeight);
+        const springPath = document.createElementNS('http://www.w3.org/2000/svg', 'path'); springSVG.appendChild(springPath);
+        const glassBallEl = document.createElement('div'); glassBallEl.className = 'glass-ball';
+        vibrationArea.appendChild(springSVG); vibrationArea.appendChild(glassBallEl);
+        oscillatorEl.appendChild(labelContainer); oscillatorEl.appendChild(vibrationArea);
+        oscillatorContainer.appendChild(oscillatorEl);
+        
+        const osc = {
+            glassBall: glassBallEl, svg: springSVG, path: springPath,
+            label: labelContainer, frequency_multiple: i + 1, amplitude: 0,
+            animationTime: Math.random() * 2 * Math.PI,
+            spherePool: [], particlePool: [], cachedBaseLength: 0
+        };
+        oscillators.push(osc);
+
+        // --- ROBUST OBJECT POOL SIZING ---
+        const maxModes = 10 * 10; // Max possible modes is for ν=10, so 10*10 = 100.
+        // Analytically determined max particles at T=15, ν=10 is ~106. We use 120 as a safe, round number.
+        const maxParticles = 120; 
+        
+        for (let j = 0; j < maxModes; j++) {
+            const sphere = document.createElement('div');
+            sphere.className = 'small-sphere';
+            sphere.style.display = 'none';
+            osc.glassBall.appendChild(sphere);
+            osc.spherePool.push(sphere);
+        }
+        for (let j = 0; j < maxParticles; j++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.display = 'none';
+            osc.glassBall.appendChild(particle);
+            osc.particlePool.push(particle);
+        }
+    }
+    
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+    
+    function updateOscillators() {
+        const isDensityMode = densityToggle.checked;
+        const normalized_temp = parseFloat(temperatureSlider.value);
+        document.getElementById('temperature-label').innerHTML = `Normalized Temp (kT/hν<sub>0</sub>): ${normalized_temp.toFixed(2)}`;
+
+        const areaWidth = oscillators[0].glassBall.parentElement.clientWidth;
+        const baseLength = (areaWidth / 2) - ballRadius;
+        oscillators.forEach(osc => osc.cachedBaseLength = baseLength);
+        
+        const maxPossibleAmplitude = baseLength;
+        const dynamicScaler = maxPossibleAmplitude / absoluteMaxRawAmplitude;
+
+        viewTitle.innerText = isDensityMode ? "Total Radiated Power" : "Energy Per Mode";
+
+        oscillators.forEach(osc => {
+            osc.spherePool.forEach(s => s.style.display = 'none');
+            osc.particlePool.forEach(p => p.style.display = 'none');
+        });
+
+        let particlePoolIndex = 0;
+
+        for (const osc of oscillators) {
+            particlePoolIndex = 0;
+            const x = osc.frequency_multiple / normalized_temp;
+            const avgPhotons = 1 / (Math.exp(x) - 1);
+            
+            let rawAmplitude = 0;
+            if (!isNaN(avgPhotons) && avgPhotons > 0) {
+                if (isDensityMode) {
+                    rawAmplitude = Math.sqrt(avgPhotons * osc.frequency_multiple);
+                } else {
+                    rawAmplitude = Math.sqrt(avgPhotons / osc.frequency_multiple);
+                }
+            }
+            osc.amplitude = rawAmplitude * dynamicScaler;
+            
+            const avgPhotonsDisplay = (isNaN(avgPhotons) || avgPhotons < 0) ? 0 : avgPhotons;
+            let labelHTML = '';
+            
+            if (isDensityMode) {
+                const numModes = osc.frequency_multiple * osc.frequency_multiple;
+                const totalAvgPhotons = avgPhotons * numModes;
+                let numParticlesToDistribute = Math.round(totalAvgPhotons);
+                
+                const totalAvgPhotonsDisplay = (isNaN(totalAvgPhotons) || totalAvgPhotons < 0) ? 0 : totalAvgPhotons;
+                labelHTML = `Freq: ${osc.frequency_multiple}ν<sub>0</sub><br><small>&lt;n&gt; = ${avgPhotonsDisplay.toFixed(2)} per mode</small><br><small>Total &lt;n&gt; = ${totalAvgPhotonsDisplay.toFixed(2)}</small>`;
+                
+                const smallSpheresToUse = [];
+                const grid_dim = osc.frequency_multiple;
+                const largeSphereDiameter = ballRadius * 2;
+                const maxGridSize = largeSphereDiameter / Math.sqrt(2);
+                const offset = (largeSphereDiameter - maxGridSize) / 2;
+                const sphere_size = maxGridSize / grid_dim;
+
+                for (let i = 0; i < numModes; i++) {
+                    const row = Math.floor(i / grid_dim);
+                    const col = i % grid_dim;
+                    const sphere = osc.spherePool[i];
+                    sphere.style.width = `${sphere_size}px`; sphere.style.height = `${sphere_size}px`;
+                    sphere.style.left = `${offset + col * sphere_size}px`; sphere.style.top = `${offset + row * sphere_size}px`;
+                    sphere.style.display = 'block';
+                    smallSpheresToUse.push(sphere);
+                }
+                
+                if (smallSpheresToUse.length > 0) {
+                    const particlesPerSphere_base = Math.floor(numParticlesToDistribute / smallSpheresToUse.length);
+                    const remainderParticles = numParticlesToDistribute % smallSpheresToUse.length;
+
+                    shuffleArray(smallSpheresToUse);
+                    
+                    for(let i = 0; i < smallSpheresToUse.length; i++) {
+                        let numToPlace = particlesPerSphere_base;
+                        if (i < remainderParticles) numToPlace++;
+                        
+                        const { nextIndex } = addParticlesWithRejectionSampling(smallSpheresToUse[i], sphere_size, numToPlace, osc.particlePool, particlePoolIndex);
+                        particlePoolIndex = nextIndex;
+                    }
+                }
+            } else {
+                labelHTML = `Freq: ${osc.frequency_multiple}ν<sub>0</sub><br><small>&lt;n&gt; = ${avgPhotonsDisplay.toFixed(2)}</small>`;
+                let numParticles = Math.round(avgPhotons);
+                if (isNaN(numParticles) || numParticles < 0) numParticles = 0;
+                
+                for (let j = 0; j < numParticles; j++) {
+                    if (particlePoolIndex >= osc.particlePool.length) break;
+                    const particle = osc.particlePool[particlePoolIndex++];
+                    const angle = Math.random() * 2 * Math.PI;
+                    const radius = Math.random() * (ballRadius - 5);
+                    osc.glassBall.appendChild(particle);
+                    particle.style.left = `${ballRadius + radius * Math.cos(angle) - 3}px`;
+                    particle.style.top = `${ballRadius + radius * Math.sin(angle) - 3}px`;
+                    particle.style.display = 'block';
+                }
+            }
+            osc.label.innerHTML = labelHTML;
+        }
+    }
+
+    function addParticlesWithRejectionSampling(targetSphere, sphereSize, numParticles, particlePool, startIndex) {
+        if (numParticles === 0) return { nextIndex: startIndex };
+
+        const centerX = sphereSize / 2, centerY = sphereSize / 2;
+        const particleWidth = 6, minDistance = particleWidth, minDistanceSq = minDistance * minDistance;
+        const maxRadius = Math.max(0, (sphereSize / 2) - particleWidth / 2);
+        const maxAttemptsPerParticle = 50;
+        
+        let currentIndex = startIndex;
+        const placedParticles = [];
+
+        for (let i = 0; i < numParticles; i++) {
+            if (currentIndex >= particlePool.length) break;
+
+            let foundValidPosition = false;
+            for (let attempt = 0; attempt < maxAttemptsPerParticle; attempt++) {
+                const randomAngle = Math.random() * 2 * Math.PI;
+                const randomRadius = Math.sqrt(Math.random()) * maxRadius;
+                const x = centerX + randomRadius * Math.cos(randomAngle);
+                const y = centerY + randomRadius * Math.sin(randomAngle);
+
+                let isTooClose = false;
+                for (const placed of placedParticles) {
+                    const dx = x - placed.x;
+                    const dy = y - placed.y;
+                    if (dx * dx + dy * dy < minDistanceSq) {
+                        isTooClose = true;
+                        break;
+                    }
+                }
+
+                if (!isTooClose) {
+                    placedParticles.push({ x, y });
+                    const particle = particlePool[currentIndex++];
+                    targetSphere.appendChild(particle);
+                    particle.style.left = `${x - particleWidth / 2}px`;
+                    particle.style.top = `${y - particleWidth / 2}px`;
+                    particle.style.display = 'block';
+                    foundValidPosition = true;
+                    break; 
+                }
+            }
+        }
+        return { nextIndex: currentIndex };
+    }
+
+    function animate() {
+        oscillators.forEach(osc => {
+            osc.animationTime += osc.frequency_multiple * 0.03;
+            const displacement = osc.amplitude * Math.sin(osc.animationTime);
+            const springEndPoint = osc.cachedBaseLength + displacement;
+            if (springEndPoint > 0) {
+                 osc.glassBall.style.left = `${springEndPoint}px`;
+                 osc.svg.setAttribute('width', springEndPoint);
+                 osc.path.setAttribute('d', createSpringSVGPath(springEndPoint, springCoils, springHeight));
+            }
+        });
+        requestAnimationFrame(animate);
+    }
+    
+    function createSpringSVGPath(length, coils, height) {
+        if (length <= 0) length = 1;
+        let path = `M 0 ${height / 2}`;
+        const segmentLength = length / coils;
+        for (let i = 0; i < coils; i++) {
+            const x = (i + 0.5) * segmentLength;
+            const y = (i % 2 === 0) ? 0 : height;
+            path += ` L ${x} ${y}`;
+        }
+        path += ` L ${length} ${height / 2}`;
+        return path;
+    }
+
+    function throttle(func, delay) {
+      let inThrottle;
+      return function(...args) {
+        if (!inThrottle) {
+          func.apply(this, args);
+          inThrottle = true;
+          setTimeout(() => inThrottle = false, delay);
+        }
+      };
+    }
+    
+    temperatureSlider.addEventListener('input', throttle(updateOscillators, 50));
+    densityToggle.addEventListener('change', updateOscillators);
+    window.addEventListener('resize', updateOscillators);
+    window.addEventListener('load', () => setTimeout(updateOscillators, 50));
+    
+    aboutButton.addEventListener('click', () => {
+        aboutSection.classList.toggle('visible');
+        aboutButton.textContent = aboutSection.classList.contains('visible') ? 'Hide Information' : 'About this Simulation';
+    });
+
+    animate();
+</script>
+
+</body>
+</html>
