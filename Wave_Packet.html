@@ -44,7 +44,15 @@
             font-size: 2rem;
             text-align: center;
             margin-top: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        .author-credit {
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 0;
             margin-bottom: 2rem;
+            font-style: italic;
         }
         
         .main-container {
@@ -133,10 +141,9 @@
         }
         #info-display p:not(:last-child) { border-bottom: 1px solid var(--border-color); }
         
-        /* --- STYLE FIX for subscript tags --- */
         sub {
             font-size: 0.8em;
-            line-height: 0; /* Prevents it from affecting line spacing */
+            line-height: 0;
         }
         
         code { 
@@ -173,12 +180,62 @@
             border-radius: 4px;
             height: 20px;
         }
+
+        /* --- STYLES FOR COLLAPSIBLE INFO SECTION --- */
+        .info-details {
+            margin-top: 2.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--element-bg);
+        }
+        .info-details summary {
+            padding: 1rem 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: var(--primary-color);
+            cursor: pointer;
+            outline: none;
+            list-style: none; /* Hide default marker */
+            position: relative;
+        }
+        .info-details summary::-webkit-details-marker { display: none; } /* Hide default marker for Chrome/Safari */
+        .info-details summary::after {
+            content: '+';
+            position: absolute;
+            right: 1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5rem;
+            transition: transform 0.2s;
+        }
+        .info-details[open] > summary::after {
+            transform: translateY(-50%) rotate(45deg);
+        }
+        .info-content {
+            padding: 0 1.5rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+        }
+        .info-content h3 {
+            color: var(--text-color);
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .info-content ul {
+            padding-left: 20px;
+            margin-top: 0.5rem;
+        }
+        .info-content li { margin-bottom: 0.5rem; }
+        .info-content strong { color: var(--text-color); }
+
     </style>
 </head>
 <body>
 
     <div class="main-wrapper">
         <h1>Advanced Wave Packet Simulator</h1>
+        <p class="author-credit">Created by Dr. Devender Garg</p>
+
         <main class="main-container">
             <section class="chart-section">
                 <canvas id="wave-chart"></canvas>
@@ -224,7 +281,6 @@
                 <section class="card info-section">
                     <h2>Information</h2>
                     <div id="info-display">
-                        <!-- FIX: Use <sub> tags -->
                         <p><span>Phase Velocity (v<sub>p</sub>)</span><code id="vp-value"></code></p>
                         <p><span>Group Velocity (v<sub>g</sub>)</span><code id="vg-value"></code></p>
                         <p><span>Time (t)</span><code id="time-value">0.00</code></p>
@@ -232,12 +288,10 @@
 
                     <div id="velocity-viz-container">
                         <div class="velocity-track-row">
-                            <!-- FIX: Use <sub> tags -->
                             <span class="velocity-label">v<sub>p</sub></span>
                             <canvas id="phase-velocity-track" class="velocity-track"></canvas>
                         </div>
                         <div class="velocity-track-row">
-                            <!-- FIX: Use <sub> tags -->
                             <span class="velocity-label">v<sub>g</sub></span>
                             <canvas id="group-velocity-track" class="velocity-track"></canvas>
                         </div>
@@ -250,6 +304,29 @@
                 </section>
             </div>
         </main>
+
+        <details class="info-details">
+            <summary>About this Simulator</summary>
+            <div class="info-content">
+                <p>This simulator visualizes the behavior of a <strong>wave packet</strong>, which is a localized wave disturbance formed by the superposition (sum) of many continuous waves with different wavenumbers.</p>
+                
+                <h3>Key Concepts</h3>
+                <ul>
+                    <li><strong>Phase Velocity (v<sub>p</sub>):</strong> The speed at which a single wave crest (a point of constant phase) moves. It is defined as v<sub>p</sub> = ω/k. The pink dot tracks this velocity.</li>
+                    <li><strong>Group Velocity (v<sub>g</sub>):</strong> The speed at which the overall shape, or "envelope," of the wave packet propagates. This velocity typically corresponds to the speed of energy or information transfer. It is defined as v<sub>g</sub> = dω/dk. The gray dot tracks this velocity.</li>
+                    <li><strong>Dispersion:</strong> The phenomenon where waves with different wavenumbers travel at different phase velocities. In a dispersive medium, the wave packet's shape changes over time, typically spreading out.</li>
+                </ul>
+
+                <h3>Dispersion Relations</h3>
+                <p>The relationship between angular frequency (ω) and wavenumber (k) is called the dispersion relation. It defines how waves behave in a medium.</p>
+                <ul>
+                    <li><strong>Quantum Particle (ω = ħk²/2m):</strong> This describes a free, non-relativistic quantum particle. The medium is <strong>dispersive</strong>. The group velocity is twice the phase velocity (v<sub>g</sub> = 2v<sub>p</sub>), causing the wave packet to spread out over time.</li>
+                    <li><strong>Non-Dispersive (ω = ck):</strong> This relation is typical for light in a vacuum or sound in an ideal gas. All wave components travel at the same speed. Here, v<sub>p</sub> = v<sub>g</sub> = c, and the wave packet maintains its shape perfectly as it travels.</li>
+                    <li><strong>Deep Water Wave (ω = α√|k|):</strong> This describes gravity waves on the surface of deep water. The medium is <strong>dispersive</strong>. Here, the phase velocity is twice the group velocity (v<sub>p</sub> = 2v<sub>g</sub>). Long-wavelength waves travel faster than short-wavelength waves.</li>
+                </ul>
+            </div>
+        </details>
+
     </div>
 
 <script>
@@ -266,6 +343,7 @@
 
     let time = 0, animationId = null, isRunning = false;
     let x_values = [];
+    let initialMaxEnvelope = 1;
     let viewWidth = 80;
     let initialPhaseMarkerX = 0;
     let phaseTrackPos = 0, groupTrackPos = 0;
@@ -320,7 +398,6 @@
             { label: 'Group Marker', data: [], borderColor: textColor, backgroundColor: 'rgba(200, 200, 200, 0.8)', pointRadius: 9, pointHoverRadius: 11, showLine: false }
     ];
 
-    // --- FIX: FUNCTION TO RESIZE TRACK CANVASES FOR HIGH QUALITY ---
     function resizeVelocityTracks() {
         [dom.phaseVelocityTrack, dom.groupVelocityTrack].forEach(track => {
             const { width, height } = track.getBoundingClientRect();
@@ -355,7 +432,41 @@
     }
 
 
-    function update() { const k0 = parseFloat(dom.k0Slider.value); const deltaK = parseFloat(dom.deltaKSlider.value); const mass = parseFloat(dom.massSlider.value); const dispersionType = dom.dispersionSelect.value; const boundaryType = dom.boundarySelect.value; dom.k0Value.textContent = k0.toFixed(2); dom.deltaKValue.textContent = deltaK.toFixed(2); dom.massValue.textContent = mass.toFixed(2); dom.timeValue.textContent = time.toFixed(2); dom.massControlGroup.style.display = (dispersionType === 'quantum') ? 'block' : 'none'; const physics = getPhysicsFunctions(dispersionType, { mass, ...simParams }); const vg = physics.vg_func(k0); const omega_k0 = physics.omega(k0); const vp = k0 === 0 ? 0 : omega_k0 / k0; dom.vpValue.textContent = vp.toFixed(2); dom.vgValue.textContent = vg.toFixed(2); if (boundaryType === 'center') { const packetCenter = vg * time; simParams.x_min = packetCenter - viewWidth / 2; simParams.x_max = packetCenter + viewWidth / 2; x_values = Array.from({length: simParams.x_points}, (_, i) => simParams.x_min + i * viewWidth / (simParams.x_points - 1) ); chart.options.scales.x.min = simParams.x_min; chart.options.scales.x.max = simParams.x_max; } const { realPart, envelope } = calculateWavePacket(k0, deltaK, time, physics, boundaryType); const maxEnvValue = Math.max(...envelope); let peakIndex = envelope.indexOf(maxEnvValue); const phaseMarkerX = initialPhaseMarkerX + vp * time; const phaseIndex = findClosestIndex(x_values, phaseMarkerX); chart.data.datasets[0].data = x_values.map((x, i) => ({x, y: realPart[i]})); chart.data.datasets[1].data = x_values.map((x, i) => ({x, y: envelope[i]})); chart.data.datasets[2].data = x_values.map((x, i) => ({x, y: -envelope[i]})); 
+    function update() { 
+        const k0 = parseFloat(dom.k0Slider.value); 
+        const deltaK = parseFloat(dom.deltaKSlider.value); 
+        const mass = parseFloat(dom.massSlider.value); 
+        const dispersionType = dom.dispersionSelect.value; 
+        const boundaryType = dom.boundarySelect.value; 
+        dom.k0Value.textContent = k0.toFixed(2); 
+        dom.deltaKValue.textContent = deltaK.toFixed(2); 
+        dom.massValue.textContent = mass.toFixed(2); 
+        dom.timeValue.textContent = time.toFixed(2); 
+        dom.massControlGroup.style.display = (dispersionType === 'quantum') ? 'block' : 'none'; 
+        const physics = getPhysicsFunctions(dispersionType, { mass, ...simParams }); 
+        const vg = physics.vg_func(k0); 
+        const omega_k0 = physics.omega(k0); 
+        const vp = k0 === 0 ? 0 : omega_k0 / k0; 
+        dom.vpValue.textContent = vp.toFixed(2); 
+        dom.vgValue.textContent = vg.toFixed(2); 
+        if (boundaryType === 'center') { 
+            const packetCenter = vg * time; 
+            simParams.x_min = packetCenter - viewWidth / 2; 
+            simParams.x_max = packetCenter + viewWidth / 2; 
+            x_values = Array.from({length: simParams.x_points}, (_, i) => simParams.x_min + i * viewWidth / (simParams.x_points - 1) ); 
+            chart.options.scales.x.min = simParams.x_min; 
+            chart.options.scales.x.max = simParams.x_max; 
+        } 
+        const { realPart: unnormalizedRealPart, envelope: unnormalizedEnvelope } = calculateWavePacket(k0, deltaK, time, physics, boundaryType);
+        const realPart = unnormalizedRealPart.map(v => v / initialMaxEnvelope);
+        const envelope = unnormalizedEnvelope.map(v => v / initialMaxEnvelope);
+        const maxEnvValue = Math.max(...envelope); 
+        let peakIndex = envelope.indexOf(maxEnvValue); 
+        const phaseMarkerX = initialPhaseMarkerX + vp * time; 
+        const phaseIndex = findClosestIndex(x_values, phaseMarkerX); 
+        chart.data.datasets[0].data = x_values.map((x, i) => ({x, y: realPart[i]})); 
+        chart.data.datasets[1].data = x_values.map((x, i) => ({x, y: envelope[i]})); 
+        chart.data.datasets[2].data = x_values.map((x, i) => ({x, y: -envelope[i]})); 
         
         if (phaseMarkerX >= simParams.x_min && phaseMarkerX <= simParams.x_max) {
             chart.data.datasets[3].data = [{x: phaseMarkerX, y: realPart[phaseIndex]}];
@@ -374,7 +485,7 @@
         if (animationId) { cancelAnimationFrame(animationId); animationId = null; } 
         time = 0; 
         phaseTrackPos = 0; groupTrackPos = 0;
-        resizeVelocityTracks(); // Call resize here
+        resizeVelocityTracks();
         setupSimulationSpace(); setInitialPhaseMarker(); update(); 
         if (isRunning) { animate(); } 
     }
@@ -383,14 +494,75 @@
         if (animationId) { cancelAnimationFrame(animationId); animationId = null; } 
         time = 0; 
         phaseTrackPos = 0; groupTrackPos = 0;
-        resizeVelocityTracks(); // And here
+        resizeVelocityTracks();
         setupSimulationSpace(); setInitialPhaseMarker(); update(); 
     }
-    function setInitialPhaseMarker() { const k0 = parseFloat(dom.k0Slider.value); const deltaK = parseFloat(dom.deltaKSlider.value); const mass = parseFloat(dom.massSlider.value); const dispersionType = dom.dispersionSelect.value; const physics = getPhysicsFunctions(dispersionType, { mass, ...simParams }); const { realPart, envelope } = calculateWavePacket(k0, deltaK, 0, physics, 'fixed'); const peakIndex = envelope.indexOf(Math.max(...envelope)); let phaseIndex = peakIndex; for (let i = Math.max(1, peakIndex - 15); i < Math.min(realPart.length - 1, peakIndex + 15); i++) { if (realPart[i] > realPart[i-1] && realPart[i] > realPart[i+1] && realPart[i] > 0.1) { phaseIndex = i; break; } } initialPhaseMarkerX = x_values[phaseIndex]; }
+    function setInitialPhaseMarker() {
+        const k0 = parseFloat(dom.k0Slider.value);
+        const deltaK = parseFloat(dom.deltaKSlider.value);
+        const mass = parseFloat(dom.massSlider.value);
+        const dispersionType = dom.dispersionSelect.value;
+        const physics = getPhysicsFunctions(dispersionType, { mass, ...simParams });
+        const { realPart: unnormalizedRealPart, envelope: unnormalizedEnvelope } = calculateWavePacket(k0, deltaK, 0, physics, 'fixed');
+        
+        const maxEnv_t0 = Math.max(...unnormalizedEnvelope);
+        initialMaxEnvelope = maxEnv_t0 > 1e-6 ? maxEnv_t0 : 1;
+        
+        const realPart = unnormalizedRealPart.map(v => v / initialMaxEnvelope);
+        const envelope = unnormalizedEnvelope.map(v => v / initialMaxEnvelope);
+        
+        const peakIndex = envelope.indexOf(Math.max(...envelope));
+        let phaseIndex = peakIndex;
+        for (let i = Math.max(1, peakIndex - 15); i < Math.min(realPart.length - 1, peakIndex + 15); i++) {
+            if (realPart[i] > realPart[i-1] && realPart[i] > realPart[i+1] && realPart[i] > 0.1) {
+                phaseIndex = i;
+                break;
+            }
+        }
+        initialPhaseMarkerX = x_values[phaseIndex];
+    }
     function findClosestIndex(arr, target) { return arr.reduce((prev, curr, index) => (Math.abs(curr - target) < Math.abs(arr[prev] - target) ? index : prev), 0); }
-    function setupSimulationSpace() { const isMobile = window.innerWidth < 768; viewWidth = isMobile ? 40 : 80; const boundaryType = dom.boundarySelect.value; if(boundaryType !== 'center') { simParams.x_min = -viewWidth / 2; simParams.x_max = viewWidth / 2; x_values = Array.from({length: simParams.x_points}, (_, i) => simParams.x_min + i * viewWidth / (simParams.x_points - 1) ); chart.options.scales.x.min = simParams.x_min; chart.options.scales.x.max = simParams.x_max; } }
+    function setupSimulationSpace() {
+        const isMobile = window.innerWidth < 768;
+        viewWidth = isMobile ? 40 : 80;
+        simParams.x_min = -viewWidth / 2;
+        simParams.x_max = viewWidth / 2;
+        x_values = Array.from({length: simParams.x_points}, (_, i) => simParams.x_min + i * viewWidth / (simParams.x_points - 1) );
+        chart.options.scales.x.min = simParams.x_min;
+        chart.options.scales.x.max = simParams.x_max;
+    }
     function getPhysicsFunctions(type, params) { const { mass, c, alpha, hbar } = params; switch(type) { case 'quantum': return { omega: k => (hbar * k * k) / (2 * mass), vg_func: k => (hbar * k) / mass }; case 'nonDispersive': return { omega: k => c * k, vg_func: k => c }; case 'deepWater': return { omega: k => alpha * Math.sqrt(Math.abs(k)), vg_func: k => (k === 0) ? 0 : (alpha * Math.sign(k)) / (2 * Math.sqrt(Math.abs(k))) }; } }
-    function calculateWavePacket(k0, deltaK, t, physics, boundaryType) { const dk = (8 * deltaK) / simParams.k_points; const k_min = k0 - 4 * deltaK; let realPart = new Array(simParams.x_points).fill(0); let imagPart = new Array(simParams.x_points).fill(0); const L = viewWidth; for (let i = 0; i < simParams.x_points; i++) { const x = x_values[i]; let sumReal = 0, sumImag = 0; for (let j = 0; j < simParams.k_points; j++) { const k = k_min + j * dk; const omega_k = physics.omega(k); const amplitude = Math.exp(-0.5 * Math.pow((k - k0) / deltaK, 2)); let phase = k * x - omega_k * t; sumReal += amplitude * Math.cos(phase) * dk; sumImag += amplitude * Math.sin(phase) * dk; if (boundaryType === 'periodic') { let phase_left = k * (x + L) - omega_k * t; sumReal += amplitude * Math.cos(phase_left) * dk; sumImag += amplitude * Math.sin(phase_left) * dk; let phase_right = k * (x - L) - omega_k * t; sumReal += amplitude * Math.cos(phase_right) * dk; sumImag += amplitude * Math.sin(phase_right) * dk; } } realPart[i] = sumReal; imagPart[i] = sumImag; } const envelope = realPart.map((re, i) => Math.sqrt(re * re + imagPart[i] * imagPart[i])); const maxEnv = Math.max(...envelope); if (maxEnv > 1e-6) { return { realPart: realPart.map(v => v / maxEnv), envelope: envelope.map(v => v / maxEnv) }; } return { realPart, envelope }; }
+    function calculateWavePacket(k0, deltaK, t, physics, boundaryType) {
+        const dk = (8 * deltaK) / simParams.k_points;
+        const k_min = k0 - 4 * deltaK;
+        let realPart = new Array(simParams.x_points).fill(0);
+        let imagPart = new Array(simParams.x_points).fill(0);
+        const L = viewWidth;
+        for (let i = 0; i < simParams.x_points; i++) {
+            const x = x_values[i];
+            let sumReal = 0, sumImag = 0;
+            for (let j = 0; j < simParams.k_points; j++) {
+                const k = k_min + j * dk;
+                const omega_k = physics.omega(k);
+                const amplitude = Math.exp(-0.5 * Math.pow((k - k0) / deltaK, 2));
+                let phase = k * x - omega_k * t;
+                sumReal += amplitude * Math.cos(phase) * dk;
+                sumImag += amplitude * Math.sin(phase) * dk;
+                if (boundaryType === 'periodic') {
+                    let phase_left = k * (x + L) - omega_k * t;
+                    sumReal += amplitude * Math.cos(phase_left) * dk;
+                    sumImag += amplitude * Math.sin(phase_left) * dk;
+                    let phase_right = k * (x - L) - omega_k * t;
+                    sumReal += amplitude * Math.cos(phase_right) * dk;
+                    sumImag += amplitude * Math.sin(phase_right) * dk;
+                }
+            }
+            realPart[i] = sumReal;
+            imagPart[i] = sumImag;
+        }
+        const envelope = realPart.map((re, i) => Math.sqrt(re * re + imagPart[i] * imagPart[i]));
+        return { realPart, envelope };
+    }
     
     dom.playPauseBtn.addEventListener('click', handlePlayPause);
     dom.resetBtn.addEventListener('click', handleReset);
