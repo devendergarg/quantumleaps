@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Wave Packet Simulator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --container-bg: #0f3460;
+            --element-bg: #16213e;
+            --primary-color: #e94560;
+            --primary-hover: #d83a56;
+            --text-color: #f0f0f0;
+            --text-muted: #aaa;
+            --envelope-color: rgba(200, 200, 200, 0.6);
+            --border-color: #3a567c;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0; 
+            padding: 2rem 1rem;
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .main-wrapper {
+            width: 100%;
+            max-width: 900px;
+            background-color: var(--container-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 2rem;
+            margin: 0 auto;
+        }
+
+        h1 { 
+            color: var(--primary-color); 
+            font-size: 2rem;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 2rem;
+        }
+        
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .chart-section {
+            width: 100%;
+            height: 40vh;
+            min-height: 300px;
+            padding: 1rem;
+            background-color: var(--element-bg);
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+        }
+        
+        .controls-and-info-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        @media (min-width: 900px) {
+            .controls-and-info-container {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+
+        .card { 
+            background-color: transparent;
+            padding: 0;
+        }
+        
+        h2 { 
+            margin-top: 0; 
+            border-bottom: 1px solid var(--border-color); 
+            padding-bottom: 0.75rem; 
+            margin-bottom: 1.5rem; 
+            color: var(--primary-color);
+            font-weight: 500;
+            font-size: 1.25rem;
+        }
+        .control-group { margin-bottom: 1.5rem; }
+        label { display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-muted); }
+        
+        input[type="range"] { 
+            -webkit-appearance: none; width: 100%; height: 8px; 
+            background: var(--element-bg); 
+            border-radius: 5px; outline: none; 
+            opacity: 0.8; transition: opacity .2s; cursor: pointer;
+        }
+        input[type="range"]:hover { opacity: 1; }
+        input[type="range"]::-webkit-slider-thumb { 
+            -webkit-appearance: none; appearance: none; width: 20px; height: 20px; 
+            background: var(--primary-color); cursor: pointer; border-radius: 50%; border: none; 
+        }
+        input[type="range"]::-moz-range-thumb { 
+            width: 20px; height: 20px; background: var(--primary-color); 
+            cursor: pointer; border-radius: 50%; border: none; 
+        }
+
+        select, button { 
+            width: 100%; padding: 0.75rem; border-radius: 6px; 
+            border: 1px solid var(--border-color); font-size: 1rem; 
+            background-color: var(--element-bg); color: var(--text-color);
+        }
+        select option { background-color: var(--element-bg); }
+
+        .button-group { display: flex; gap: 1rem; margin-top: 1.5rem; }
+        
+        button { 
+            background-color: var(--primary-color); color: white; 
+            border: none; cursor: pointer; transition: background-color 0.2s; 
+            font-weight: bold;
+        }
+        button:hover { background-color: var(--primary-hover); }
+        
+        #reset-btn { background-color: #6c757d; } 
+        #reset-btn:hover { background-color: #5a6268; }
+        
+        #info-display p { 
+            display: flex; justify-content: space-between; font-size: 1rem; 
+            margin: 0.5rem 0; padding: 0.5rem 0; 
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #info-display p:not(:last-child) { border-bottom: 1px solid var(--border-color); }
+        
+        /* --- STYLE FIX for subscript tags --- */
+        sub {
+            font-size: 0.8em;
+            line-height: 0; /* Prevents it from affecting line spacing */
+        }
+        
+        code { 
+            font-family: inherit; font-weight: bold; font-size: 1.1em;
+            background-color: transparent; padding: 0; color: var(--text-color);
+        }
+        
+        .info-section .info-text {
+            margin-top: 1.5rem; font-style: italic; color: var(--text-muted);
+        }
+        .info-section .info-text strong { color: var(--primary-color); }
+
+        #velocity-viz-container {
+            margin-top: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .velocity-track-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .velocity-label {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--text-muted);
+            width: 30px;
+        }
+        .velocity-track {
+            flex-grow: 1;
+            background-color: var(--element-bg);
+            border-radius: 4px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        <h1>Advanced Wave Packet Simulator</h1>
+        <main class="main-container">
+            <section class="chart-section">
+                <canvas id="wave-chart"></canvas>
+            </section>
+    
+            <div class="controls-and-info-container">
+                <section class="card controls-section">
+                    <h2>Controls</h2>
+                    <div class="control-group">
+                        <label for="dispersion-select">Dispersion Relation ω(k)</label>
+                        <select id="dispersion-select">
+                            <option value="quantum">Quantum Particle: ω = ħk²/2m</option>
+                            <option value="nonDispersive">Non-Dispersive: ω = ck</option>
+                            <option value="deepWater">Deep Water Wave: ω = α√|k|</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="k0-slider">Central Wavenumber (k₀): <span id="k0-value"></span></label>
+                        <input type="range" id="k0-slider" min="1" max="10" value="5" step="0.1">
+                    </div>
+                    <div class="control-group">
+                        <label for="deltaK-slider">k-space Spread (Δk): <span id="deltaK-value"></span></label>
+                        <input type="range" id="deltaK-slider" min="0.1" max="1" value="0.5" step="0.05">
+                    </div>
+                    <div class="control-group" id="mass-control-group">
+                        <label for="mass-slider">Particle Mass (m): <span id="mass-value"></span></label>
+                        <input type="range" id="mass-slider" min="0.5" max="5" value="1" step="0.1">
+                    </div>
+                    <div class="control-group">
+                        <label for="boundary-select">Boundary Condition</label>
+                        <select id="boundary-select">
+                            <option value="center">Auto-center View (Follow)</option>
+                            <option value="periodic">Periodic (Wrapping)</option>
+                            <option value="fixed">Fixed (Clipping)</option>
+                        </select>
+                    </div>
+                    <div class="button-group">
+                        <button id="play-pause-btn">Play</button>
+                        <button id="reset-btn">Reset</button>
+                    </div>
+                </section>
+                
+                <section class="card info-section">
+                    <h2>Information</h2>
+                    <div id="info-display">
+                        <!-- FIX: Use <sub> tags -->
+                        <p><span>Phase Velocity (v<sub>p</sub>)</span><code id="vp-value"></code></p>
+                        <p><span>Group Velocity (v<sub>g</sub>)</span><code id="vg-value"></code></p>
+                        <p><span>Time (t)</span><code id="time-value">0.00</code></p>
+                    </div>
+
+                    <div id="velocity-viz-container">
+                        <div class="velocity-track-row">
+                            <!-- FIX: Use <sub> tags -->
+                            <span class="velocity-label">v<sub>p</sub></span>
+                            <canvas id="phase-velocity-track" class="velocity-track"></canvas>
+                        </div>
+                        <div class="velocity-track-row">
+                            <!-- FIX: Use <sub> tags -->
+                            <span class="velocity-label">v<sub>g</sub></span>
+                            <canvas id="group-velocity-track" class="velocity-track"></canvas>
+                        </div>
+                    </div>
+                    
+                    <p class="info-text">
+                        The <strong style="color: var(--text-muted);">gray circle</strong> tracks the packet's peak.
+                        The <strong style="color: var(--primary-color);">pink circle</strong> tracks a wave crest.
+                    </p>
+                </section>
+            </div>
+        </main>
+    </div>
+
+<script>
+    const dom = {
+        k0Slider: document.getElementById('k0-slider'), deltaKSlider: document.getElementById('deltaK-slider'), massSlider: document.getElementById('mass-slider'),
+        dispersionSelect: document.getElementById('dispersion-select'), playPauseBtn: document.getElementById('play-pause-btn'), resetBtn: document.getElementById('reset-btn'),
+        k0Value: document.getElementById('k0-value'), deltaKValue: document.getElementById('deltaK-value'), massValue: document.getElementById('mass-value'),
+        vpValue: document.getElementById('vp-value'), vgValue: document.getElementById('vg-value'), timeValue: document.getElementById('time-value'),
+        massControlGroup: document.getElementById('mass-control-group'), canvas: document.getElementById('wave-chart'),
+        boundarySelect: document.getElementById('boundary-select'),
+        phaseVelocityTrack: document.getElementById('phase-velocity-track'),
+        groupVelocityTrack: document.getElementById('group-velocity-track'),
+    };
+
+    let time = 0, animationId = null, isRunning = false;
+    let x_values = [];
+    let viewWidth = 80;
+    let initialPhaseMarkerX = 0;
+    let phaseTrackPos = 0, groupTrackPos = 0;
+    const phaseTrackCtx = dom.phaseVelocityTrack.getContext('2d');
+    const groupTrackCtx = dom.groupVelocityTrack.getContext('2d');
+
+    const simParams = {
+        x_min: -40, x_max: 40, x_points: 500, k_points: 100,
+        hbar: 1, c: 10, alpha: 5
+    };
+
+    const rootStyles = getComputedStyle(document.documentElement);
+    const primaryColor = rootStyles.getPropertyValue('--primary-color').trim();
+    const envelopeColor = rootStyles.getPropertyValue('--envelope-color').trim();
+    const textColor = rootStyles.getPropertyValue('--text-color').trim();
+    const textMutedColor = rootStyles.getPropertyValue('--text-muted').trim();
+    
+    const chart = new Chart(dom.canvas.getContext('2d'), {
+        type: 'line',
+        options: {
+            responsive: true, maintainAspectRatio: false, animation: false,
+            scales: {
+                x: { 
+                    type: 'linear', title: { display: false },
+                    border: { display: false }, grid: { display: false },
+                    ticks: { 
+                        color: textMutedColor,
+                        callback: function(value, index, ticks) {
+                            const boundaryType = dom.boundarySelect.value;
+                            if (boundaryType === 'center' && (index > 0 && index < ticks.length - 1)) {
+                                return '';
+                            }
+                            return value.toFixed(1);
+                        }
+                    }
+                },
+                y: { 
+                    title: { display: false }, min: -1.2, max: 1.2,
+                    border: { display: false }, grid: { display: false },
+                    ticks: { display: false }
+                }
+            }, 
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    chart.data.datasets = [
+            { label: 'Wave', data: [], borderColor: primaryColor, borderWidth: 2, pointRadius: 0, tension: 0.1 },
+            { label: 'Envelope', data: [], borderColor: envelopeColor, borderWidth: 2.5, pointRadius: 0, tension: 0.1, borderDash: [6, 3] },
+            { label: 'Negative Envelope', data: [], borderColor: envelopeColor, borderWidth: 2.5, pointRadius: 0, tension: 0.1, borderDash: [6, 3] },
+            { label: 'Phase Marker', data: [], borderColor: primaryColor, backgroundColor: 'rgba(233, 69, 96, 0.5)', pointRadius: 6, pointHoverRadius: 8, showLine: false },
+            { label: 'Group Marker', data: [], borderColor: textColor, backgroundColor: 'rgba(200, 200, 200, 0.8)', pointRadius: 9, pointHoverRadius: 11, showLine: false }
+    ];
+
+    // --- FIX: FUNCTION TO RESIZE TRACK CANVASES FOR HIGH QUALITY ---
+    function resizeVelocityTracks() {
+        [dom.phaseVelocityTrack, dom.groupVelocityTrack].forEach(track => {
+            const { width, height } = track.getBoundingClientRect();
+            track.width = width;
+            track.height = height;
+        });
+    }
+
+    function drawVelocityTracks(vp, vg) {
+        const speedScale = 4;
+        const dt = 0.03;
+
+        phaseTrackPos += vp * speedScale * dt;
+        groupTrackPos += vg * speedScale * dt;
+        
+        const pWidth = dom.phaseVelocityTrack.width;
+        const gWidth = dom.groupVelocityTrack.width;
+        phaseTrackPos = (phaseTrackPos % pWidth + pWidth) % pWidth;
+        groupTrackPos = (groupTrackPos % gWidth + gWidth) % gWidth;
+
+        phaseTrackCtx.clearRect(0, 0, pWidth, dom.phaseVelocityTrack.height);
+        phaseTrackCtx.fillStyle = primaryColor;
+        phaseTrackCtx.beginPath();
+        phaseTrackCtx.arc(phaseTrackPos, dom.phaseVelocityTrack.height / 2, 6, 0, 2 * Math.PI);
+        phaseTrackCtx.fill();
+
+        groupTrackCtx.clearRect(0, 0, gWidth, dom.groupVelocityTrack.height);
+        groupTrackCtx.fillStyle = textColor;
+        groupTrackCtx.beginPath();
+        groupTrackCtx.arc(groupTrackPos, dom.groupVelocityTrack.height / 2, 8, 0, 2 * Math.PI);
+        groupTrackCtx.fill();
+    }
+
+
+    function update() { const k0 = parseFloat(dom.k0Slider.value); const deltaK = parseFloat(dom.deltaKSlider.value); const mass = parseFloat(dom.massSlider.value); const dispersionType = dom.dispersionSelect.value; const boundaryType = dom.boundarySelect.value; dom.k0Value.textContent = k0.toFixed(2); dom.deltaKValue.textContent = deltaK.toFixed(2); dom.massValue.textContent = mass.toFixed(2); dom.timeValue.textContent = time.toFixed(2); dom.massControlGroup.style.display = (dispersionType === 'quantum') ? 'block' : 'none'; const physics = getPhysicsFunctions(dispersionType, { mass, ...simParams }); const vg = physics.vg_func(k0); const omega_k0 = physics.omega(k0); const vp = k0 === 0 ? 0 : omega_k0 / k0; dom.vpValue.textContent = vp.toFixed(2); dom.vgValue.textContent = vg.toFixed(2); if (boundaryType === 'center') { const packetCenter = vg * time; simParams.x_min = packetCenter - viewWidth / 2; simParams.x_max = packetCenter + viewWidth / 2; x_values = Array.from({length: simParams.x_points}, (_, i) => simParams.x_min + i * viewWidth / (simParams.x_points - 1) ); chart.options.scales.x.min = simParams.x_min; chart.options.scales.x.max = simParams.x_max; } const { realPart, envelope } = calculateWavePacket(k0, deltaK, time, physics, boundaryType); const maxEnvValue = Math.max(...envelope); let peakIndex = envelope.indexOf(maxEnvValue); const phaseMarkerX = initialPhaseMarkerX + vp * time; const phaseIndex = findClosestIndex(x_values, phaseMarkerX); chart.data.datasets[0].data = x_values.map((x, i) => ({x, y: realPart[i]})); chart.data.datasets[1].data = x_values.map((x, i) => ({x, y: envelope[i]})); chart.data.datasets[2].data = x_values.map((x, i) => ({x, y: -envelope[i]})); 
+        
+        if (phaseMarkerX >= simParams.x_min && phaseMarkerX <= simParams.x_max) {
+            chart.data.datasets[3].data = [{x: phaseMarkerX, y: realPart[phaseIndex]}];
+        } else {
+            chart.data.datasets[3].data = [];
+        }
+        
+        chart.data.datasets[4].data = [{x: x_values[peakIndex], y: maxEnvValue}]; chart.update('none');
+        
+        drawVelocityTracks(vp, vg);
+    }
+    function animate() { if (!isRunning) return; time += 0.03; update(); animationId = requestAnimationFrame(animate); }
+    function handlePlayPause() { isRunning = !isRunning; dom.playPauseBtn.textContent = isRunning ? 'Pause' : 'Play'; if (isRunning) { if(animationId) cancelAnimationFrame(animationId); animate(); } else if (animationId) { cancelAnimationFrame(animationId); animationId = null; } }
+    
+    function handleParameterChange() { 
+        if (animationId) { cancelAnimationFrame(animationId); animationId = null; } 
+        time = 0; 
+        phaseTrackPos = 0; groupTrackPos = 0;
+        resizeVelocityTracks(); // Call resize here
+        setupSimulationSpace(); setInitialPhaseMarker(); update(); 
+        if (isRunning) { animate(); } 
+    }
+    function handleReset() { 
+        isRunning = false; dom.playPauseBtn.textContent = 'Play'; 
+        if (animationId) { cancelAnimationFrame(animationId); animationId = null; } 
+        time = 0; 
+        phaseTrackPos = 0; groupTrackPos = 0;
+        resizeVelocityTracks(); // And here
+        setupSimulationSpace(); setInitialPhaseMarker(); update(); 
+    }
+    function setInitialPhaseMarker() { const k0 = parseFloat(dom.k0Slider.value); const deltaK = parseFloat(dom.deltaKSlider.value); const mass = parseFloat(dom.massSlider.value); const dispersionType = dom.dispersionSelect.value; const physics = getPhysicsFunctions(dispersionType, { mass, ...simParams }); const { realPart, envelope } = calculateWavePacket(k0, deltaK, 0, physics, 'fixed'); const peakIndex = envelope.indexOf(Math.max(...envelope)); let phaseIndex = peakIndex; for (let i = Math.max(1, peakIndex - 15); i < Math.min(realPart.length - 1, peakIndex + 15); i++) { if (realPart[i] > realPart[i-1] && realPart[i] > realPart[i+1] && realPart[i] > 0.1) { phaseIndex = i; break; } } initialPhaseMarkerX = x_values[phaseIndex]; }
+    function findClosestIndex(arr, target) { return arr.reduce((prev, curr, index) => (Math.abs(curr - target) < Math.abs(arr[prev] - target) ? index : prev), 0); }
+    function setupSimulationSpace() { const isMobile = window.innerWidth < 768; viewWidth = isMobile ? 40 : 80; const boundaryType = dom.boundarySelect.value; if(boundaryType !== 'center') { simParams.x_min = -viewWidth / 2; simParams.x_max = viewWidth / 2; x_values = Array.from({length: simParams.x_points}, (_, i) => simParams.x_min + i * viewWidth / (simParams.x_points - 1) ); chart.options.scales.x.min = simParams.x_min; chart.options.scales.x.max = simParams.x_max; } }
+    function getPhysicsFunctions(type, params) { const { mass, c, alpha, hbar } = params; switch(type) { case 'quantum': return { omega: k => (hbar * k * k) / (2 * mass), vg_func: k => (hbar * k) / mass }; case 'nonDispersive': return { omega: k => c * k, vg_func: k => c }; case 'deepWater': return { omega: k => alpha * Math.sqrt(Math.abs(k)), vg_func: k => (k === 0) ? 0 : (alpha * Math.sign(k)) / (2 * Math.sqrt(Math.abs(k))) }; } }
+    function calculateWavePacket(k0, deltaK, t, physics, boundaryType) { const dk = (8 * deltaK) / simParams.k_points; const k_min = k0 - 4 * deltaK; let realPart = new Array(simParams.x_points).fill(0); let imagPart = new Array(simParams.x_points).fill(0); const L = viewWidth; for (let i = 0; i < simParams.x_points; i++) { const x = x_values[i]; let sumReal = 0, sumImag = 0; for (let j = 0; j < simParams.k_points; j++) { const k = k_min + j * dk; const omega_k = physics.omega(k); const amplitude = Math.exp(-0.5 * Math.pow((k - k0) / deltaK, 2)); let phase = k * x - omega_k * t; sumReal += amplitude * Math.cos(phase) * dk; sumImag += amplitude * Math.sin(phase) * dk; if (boundaryType === 'periodic') { let phase_left = k * (x + L) - omega_k * t; sumReal += amplitude * Math.cos(phase_left) * dk; sumImag += amplitude * Math.sin(phase_left) * dk; let phase_right = k * (x - L) - omega_k * t; sumReal += amplitude * Math.cos(phase_right) * dk; sumImag += amplitude * Math.sin(phase_right) * dk; } } realPart[i] = sumReal; imagPart[i] = sumImag; } const envelope = realPart.map((re, i) => Math.sqrt(re * re + imagPart[i] * imagPart[i])); const maxEnv = Math.max(...envelope); if (maxEnv > 1e-6) { return { realPart: realPart.map(v => v / maxEnv), envelope: envelope.map(v => v / maxEnv) }; } return { realPart, envelope }; }
+    
+    dom.playPauseBtn.addEventListener('click', handlePlayPause);
+    dom.resetBtn.addEventListener('click', handleReset);
+    [dom.k0Slider, dom.deltaKSlider, dom.massSlider].forEach(slider => slider.addEventListener('input', handleParameterChange));
+    dom.dispersionSelect.addEventListener('change', handleParameterChange);
+    dom.boundarySelect.addEventListener('change', handleParameterChange);
+    window.addEventListener('resize', handleParameterChange);
+    window.addEventListener('load', () => { handleReset(); handlePlayPause(); });
+</script>
+
+</body>
+</html>
