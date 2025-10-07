@@ -115,21 +115,24 @@
             cursor: pointer; border-radius: 50%; border: none; 
         }
 
-        select, button { 
+        select { 
             width: 100%; padding: 0.75rem; border-radius: 6px; 
             border: 1px solid var(--border-color); font-size: 1rem; 
             background-color: var(--element-bg); color: var(--text-color);
         }
+        select:disabled { opacity: 0.5; cursor: not-allowed; }
         select option { background-color: var(--element-bg); }
 
         .button-group { display: flex; gap: 1rem; margin-top: 1.5rem; }
         
         button { 
+            width: 100%; padding: 0.75rem; border-radius: 6px; font-size: 1rem;
             background-color: var(--primary-color); color: white; 
             border: none; cursor: pointer; transition: background-color 0.2s; 
             font-weight: bold;
         }
         button:hover { background-color: var(--primary-hover); }
+        button:disabled { background-color: #555; cursor: not-allowed; opacity: 0.7;}
         
         #reset-btn { background-color: #6c757d; } 
         #reset-btn:hover { background-color: #5a6268; }
@@ -141,93 +144,35 @@
         }
         #info-display p:not(:last-child) { border-bottom: 1px solid var(--border-color); }
         
-        sub {
-            font-size: 0.8em;
-            line-height: 0;
-        }
+        sub { font-size: 0.8em; line-height: 0; }
         
-        code { 
-            font-family: inherit; font-weight: bold; font-size: 1.1em;
-            background-color: transparent; padding: 0; color: var(--text-color);
-        }
+        code { font-family: inherit; font-weight: bold; font-size: 1.1em; background-color: transparent; padding: 0; color: var(--text-color); }
         
-        .info-section .info-text {
-            margin-top: 1.5rem; font-style: italic; color: var(--text-muted);
-        }
+        .info-section .info-text { margin-top: 1.5rem; font-style: italic; color: var(--text-muted); }
         .info-section .info-text strong { color: var(--primary-color); }
 
-        #velocity-viz-container {
-            margin-top: 2rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-        .velocity-track-row {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        .velocity-label {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 1.2em;
-            font-weight: bold;
-            color: var(--text-muted);
-            width: 30px;
-        }
-        .velocity-track {
-            flex-grow: 1;
-            background-color: var(--element-bg);
-            border-radius: 4px;
-            height: 20px;
-        }
+        #velocity-viz-container { margin-top: 2rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        .velocity-track-row { display: flex; align-items: center; gap: 1rem; }
+        .velocity-label { font-family: 'Courier New', Courier, monospace; font-size: 1.2em; font-weight: bold; color: var(--text-muted); width: 30px; }
+        .velocity-track { flex-grow: 1; background-color: var(--element-bg); border-radius: 4px; height: 20px; }
 
-        /* --- STYLES FOR COLLAPSIBLE INFO SECTION --- */
-        .info-details {
-            margin-top: 2.5rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background-color: var(--element-bg);
-        }
-        .info-details summary {
-            padding: 1rem 1.5rem;
-            font-size: 1.25rem;
-            font-weight: 500;
-            color: var(--primary-color);
-            cursor: pointer;
-            outline: none;
-            list-style: none; /* Hide default marker */
-            position: relative;
-        }
-        .info-details summary::-webkit-details-marker { display: none; } /* Hide default marker for Chrome/Safari */
-        .info-details summary::after {
-            content: '+';
-            position: absolute;
-            right: 1.5rem;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 1.5rem;
-            transition: transform 0.2s;
-        }
-        .info-details[open] > summary::after {
-            transform: translateY(-50%) rotate(45deg);
-        }
-        .info-content {
-            padding: 0 1.5rem 1.5rem;
-            border-top: 1px solid var(--border-color);
-            color: var(--text-muted);
-        }
-        .info-content h3 {
-            color: var(--text-color);
-            margin-top: 1.5rem;
-            margin-bottom: 0.5rem;
-        }
-        .info-content ul {
-            padding-left: 20px;
-            margin-top: 0.5rem;
-        }
+        .toggle-group { margin-bottom: 1.5rem; }
+        .toggle-buttons { display: flex; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); }
+        .toggle-buttons button { width: 50%; background-color: var(--element-bg); color: var(--text-muted); border-radius: 0; transition: all 0.2s; }
+        .toggle-buttons button.active { background-color: var(--primary-color); color: white; font-weight: bold; }
+        .toggle-buttons button:not(.active):hover { background-color: #3a567c; color: var(--text-color); }
+        .toggle-buttons button:disabled { background-color: var(--element-bg) !important; opacity: 0.5; cursor: not-allowed; }
+        
+        .info-details { margin-top: 2.5rem; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--element-bg); }
+        .info-details summary { padding: 1rem 1.5rem; font-size: 1.25rem; font-weight: 500; color: var(--primary-color); cursor: pointer; outline: none; list-style: none; position: relative; }
+        .info-details summary::-webkit-details-marker { display: none; }
+        .info-details summary::after { content: '+'; position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 1.5rem; transition: transform 0.2s; }
+        .info-details[open] > summary::after { transform: translateY(-50%) rotate(45deg); }
+        .info-content { padding: 0 1.5rem 1.5rem; border-top: 1px solid var(--border-color); color: var(--text-muted); }
+        .info-content h3 { color: var(--text-color); margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        .info-content ul { padding-left: 20px; margin-top: 0.5rem; }
         .info-content li { margin-bottom: 0.5rem; }
         .info-content strong { color: var(--text-color); }
-
     </style>
 </head>
 <body>
@@ -244,6 +189,23 @@
             <div class="controls-and-info-container">
                 <section class="card controls-section">
                     <h2>Controls</h2>
+
+                    <div class="toggle-group">
+                        <label>View</label>
+                        <div class="toggle-buttons" id="view-toggle">
+                            <button class="active" data-view="x_space">Position (x)</button>
+                            <button data-view="k_space">Wavenumber (k)</button>
+                        </div>
+                    </div>
+                    
+                    <div class="toggle-group">
+                        <label>Representation</label>
+                        <div class="toggle-buttons" id="rep-toggle">
+                            <button class="active" data-rep="real_part">Real Part Re(Ψ)</button>
+                            <button data-rep="prob_density">Probability |Ψ|²</button>
+                        </div>
+                    </div>
+
                     <div class="control-group">
                         <label for="dispersion-select">Dispersion Relation ω(k)</label>
                         <select id="dispersion-select">
@@ -264,7 +226,7 @@
                         <label for="mass-slider">Particle Mass (m): <span id="mass-value"></span></label>
                         <input type="range" id="mass-slider" min="0.5" max="5" value="1" step="0.1">
                     </div>
-                    <div class="control-group">
+                     <div class="control-group">
                         <label for="boundary-select">Boundary Condition</label>
                         <select id="boundary-select">
                             <option value="center">Auto-center View (Follow)</option>
@@ -296,11 +258,6 @@
                             <canvas id="group-velocity-track" class="velocity-track"></canvas>
                         </div>
                     </div>
-                    
-                    <p class="info-text">
-                        The <strong style="color: var(--text-muted);">gray circle</strong> tracks the packet's peak.
-                        The <strong style="color: var(--primary-color);">pink circle</strong> tracks a wave crest.
-                    </p>
                 </section>
             </div>
         </main>
@@ -309,20 +266,13 @@
             <summary>About this Simulator</summary>
             <div class="info-content">
                 <p>This simulator visualizes the behavior of a <strong>wave packet</strong>, which is a localized wave disturbance formed by the superposition (sum) of many continuous waves with different wavenumbers.</p>
-                
                 <h3>Key Concepts</h3>
                 <ul>
-                    <li><strong>Phase Velocity (v<sub>p</sub>):</strong> The speed at which a single wave crest (a point of constant phase) moves. It is defined as v<sub>p</sub> = ω/k. The pink dot tracks this velocity.</li>
-                    <li><strong>Group Velocity (v<sub>g</sub>):</strong> The speed at which the overall shape, or "envelope," of the wave packet propagates. This velocity typically corresponds to the speed of energy or information transfer. It is defined as v<sub>g</sub> = dω/dk. The gray dot tracks this velocity.</li>
+                    <li><strong>Position vs. Wavenumber Space:</strong> A wave packet can be described by its shape in position space (x) or by the distribution of wavenumbers (k) that compose it. The two are related by the Fourier transform and linked by the Heisenberg Uncertainty Principle: a narrow packet in one space is wide in the other.</li>
+                    <li><strong>Real Part vs. Probability Density:</strong> The quantum wave function Ψ is complex. Its real part shows the wave-like oscillations. The probability of finding the particle at a position x is given by the probability density, |Ψ|², which is always positive and its total area must equal 1.</li>
+                    <li><strong>Phase Velocity (v<sub>p</sub>):</strong> The speed at which a single wave crest (a point of constant phase) moves. It is defined as v<sub>p</sub> = ω/k. </li>
+                    <li><strong>Group Velocity (v<sub>g</sub>):</strong> The speed at which the overall shape, or "envelope," of the wave packet propagates. This velocity corresponds to the classical velocity of the particle. It is defined as v<sub>g</sub> = dω/dk.</li>
                     <li><strong>Dispersion:</strong> The phenomenon where waves with different wavenumbers travel at different phase velocities. In a dispersive medium, the wave packet's shape changes over time, typically spreading out.</li>
-                </ul>
-
-                <h3>Dispersion Relations</h3>
-                <p>The relationship between angular frequency (ω) and wavenumber (k) is called the dispersion relation. It defines how waves behave in a medium.</p>
-                <ul>
-                    <li><strong>Quantum Particle (ω = ħk²/2m):</strong> This describes a free, non-relativistic quantum particle. The medium is <strong>dispersive</strong>. The group velocity is twice the phase velocity (v<sub>g</sub> = 2v<sub>p</sub>), causing the wave packet to spread out over time.</li>
-                    <li><strong>Non-Dispersive (ω = ck):</strong> This relation is typical for light in a vacuum or sound in an ideal gas. All wave components travel at the same speed. Here, v<sub>p</sub> = v<sub>g</sub> = c, and the wave packet maintains its shape perfectly as it travels.</li>
-                    <li><strong>Deep Water Wave (ω = α√|k|):</strong> This describes gravity waves on the surface of deep water. The medium is <strong>dispersive</strong>. Here, the phase velocity is twice the group velocity (v<sub>p</sub> = 2v<sub>g</sub>). Long-wavelength waves travel faster than short-wavelength waves.</li>
                 </ul>
             </div>
         </details>
@@ -337,18 +287,20 @@
         vpValue: document.getElementById('vp-value'), vgValue: document.getElementById('vg-value'), timeValue: document.getElementById('time-value'),
         massControlGroup: document.getElementById('mass-control-group'), canvas: document.getElementById('wave-chart'),
         boundarySelect: document.getElementById('boundary-select'),
-        phaseVelocityTrack: document.getElementById('phase-velocity-track'),
-        groupVelocityTrack: document.getElementById('group-velocity-track'),
+        phaseVelocityTrack: document.getElementById('phase-velocity-track'), groupVelocityTrack: document.getElementById('group-velocity-track'),
+        viewToggle: document.getElementById('view-toggle'), repToggle: document.getElementById('rep-toggle')
     };
 
-    let time = 0, animationId = null, isRunning = false;
-    let x_values = [];
-    let initialMaxEnvelope = 1;
+    let time = 0, animationId = null, isRunning = false, userWantsToRun = false;
+    let x_values = [], k_values = [];
+    let probNormFactor = 1, amplitudeNormFactor = 1;
     let viewWidth = 80;
-    let initialPhaseMarkerX = 0;
     let phaseTrackPos = 0, groupTrackPos = 0;
     const phaseTrackCtx = dom.phaseVelocityTrack.getContext('2d');
     const groupTrackCtx = dom.groupVelocityTrack.getContext('2d');
+    
+    let currentView = 'x_space'; // 'x_space' or 'k_space'
+    let currentRep = 'real_part'; // 'real_part' or 'prob_density'
 
     const simParams = {
         x_min: -40, x_max: 40, x_points: 500, k_points: 100,
@@ -363,17 +315,16 @@
     
     const chart = new Chart(dom.canvas.getContext('2d'), {
         type: 'line',
-        options: {
-            responsive: true, maintainAspectRatio: false, animation: false,
+        options: { responsive: true, maintainAspectRatio: false, animation: false,
             scales: {
                 x: { 
-                    type: 'linear', title: { display: false },
+                    type: 'linear', title: { display: true, text: 'Position (x)', color: textMutedColor }, 
                     border: { display: false }, grid: { display: false },
                     ticks: { 
                         color: textMutedColor,
                         callback: function(value, index, ticks) {
                             const boundaryType = dom.boundarySelect.value;
-                            if (boundaryType === 'center' && (index > 0 && index < ticks.length - 1)) {
+                            if (boundaryType === 'center' && currentView === 'x_space' && (index > 0 && index < ticks.length - 1)) {
                                 return '';
                             }
                             return value.toFixed(1);
@@ -381,9 +332,9 @@
                     }
                 },
                 y: { 
-                    title: { display: false }, min: -1.2, max: 1.2,
-                    border: { display: false }, grid: { display: false },
-                    ticks: { display: false }
+                    title: { display: true, text: 'Amplitude', color: textMutedColor }, 
+                    min: -1.2, max: 1.2, border: { display: false }, 
+                    grid: { display: false }, ticks: { display: false } 
                 }
             }, 
             plugins: { legend: { display: false } }
@@ -391,186 +342,247 @@
     });
 
     chart.data.datasets = [
-            { label: 'Wave', data: [], borderColor: primaryColor, borderWidth: 2, pointRadius: 0, tension: 0.1 },
-            { label: 'Envelope', data: [], borderColor: envelopeColor, borderWidth: 2.5, pointRadius: 0, tension: 0.1, borderDash: [6, 3] },
-            { label: 'Negative Envelope', data: [], borderColor: envelopeColor, borderWidth: 2.5, pointRadius: 0, tension: 0.1, borderDash: [6, 3] },
-            { label: 'Phase Marker', data: [], borderColor: primaryColor, backgroundColor: 'rgba(233, 69, 96, 0.5)', pointRadius: 6, pointHoverRadius: 8, showLine: false },
-            { label: 'Group Marker', data: [], borderColor: textColor, backgroundColor: 'rgba(200, 200, 200, 0.8)', pointRadius: 9, pointHoverRadius: 11, showLine: false }
+        { label: 'Wave', data: [], borderColor: primaryColor, borderWidth: 2, pointRadius: 0, tension: 0.1 },
+        { label: 'Envelope', data: [], borderColor: envelopeColor, borderWidth: 2.5, pointRadius: 0, tension: 0.1, borderDash: [6, 3] },
+        { label: 'Negative Envelope', data: [], borderColor: envelopeColor, borderWidth: 2.5, pointRadius: 0, tension: 0.1, borderDash: [6, 3] }
     ];
 
-    function resizeVelocityTracks() {
-        [dom.phaseVelocityTrack, dom.groupVelocityTrack].forEach(track => {
-            const { width, height } = track.getBoundingClientRect();
-            track.width = width;
-            track.height = height;
-        });
-    }
+    function resizeVelocityTracks() { [dom.phaseVelocityTrack, dom.groupVelocityTrack].forEach(track => { const { width, height } = track.getBoundingClientRect(); track.width = width; track.height = height; }); }
+    function drawVelocityTracks(vp, vg) { const speedScale = 4, dt = 0.03; phaseTrackPos += vp * speedScale * dt; groupTrackPos += vg * speedScale * dt; const pWidth = dom.phaseVelocityTrack.width; const gWidth = dom.groupVelocityTrack.width; phaseTrackPos = (phaseTrackPos % pWidth + pWidth) % pWidth; groupTrackPos = (groupTrackPos % gWidth + gWidth) % gWidth; phaseTrackCtx.clearRect(0, 0, pWidth, dom.phaseVelocityTrack.height); phaseTrackCtx.fillStyle = primaryColor; phaseTrackCtx.beginPath(); phaseTrackCtx.arc(phaseTrackPos, dom.phaseVelocityTrack.height / 2, 6, 0, 2 * Math.PI); phaseTrackCtx.fill(); groupTrackCtx.clearRect(0, 0, gWidth, dom.groupVelocityTrack.height); groupTrackCtx.fillStyle = textColor; groupTrackCtx.beginPath(); groupTrackCtx.arc(groupTrackPos, dom.groupVelocityTrack.height / 2, 8, 0, 2 * Math.PI); groupTrackCtx.fill(); }
 
-    function drawVelocityTracks(vp, vg) {
-        const speedScale = 4;
-        const dt = 0.03;
-
-        phaseTrackPos += vp * speedScale * dt;
-        groupTrackPos += vg * speedScale * dt;
-        
-        const pWidth = dom.phaseVelocityTrack.width;
-        const gWidth = dom.groupVelocityTrack.width;
-        phaseTrackPos = (phaseTrackPos % pWidth + pWidth) % pWidth;
-        groupTrackPos = (groupTrackPos % gWidth + gWidth) % gWidth;
-
-        phaseTrackCtx.clearRect(0, 0, pWidth, dom.phaseVelocityTrack.height);
-        phaseTrackCtx.fillStyle = primaryColor;
-        phaseTrackCtx.beginPath();
-        phaseTrackCtx.arc(phaseTrackPos, dom.phaseVelocityTrack.height / 2, 6, 0, 2 * Math.PI);
-        phaseTrackCtx.fill();
-
-        groupTrackCtx.clearRect(0, 0, gWidth, dom.groupVelocityTrack.height);
-        groupTrackCtx.fillStyle = textColor;
-        groupTrackCtx.beginPath();
-        groupTrackCtx.arc(groupTrackPos, dom.groupVelocityTrack.height / 2, 8, 0, 2 * Math.PI);
-        groupTrackCtx.fill();
-    }
-
-
-    function update() { 
-        const k0 = parseFloat(dom.k0Slider.value); 
-        const deltaK = parseFloat(dom.deltaKSlider.value); 
-        const mass = parseFloat(dom.massSlider.value); 
-        const dispersionType = dom.dispersionSelect.value; 
-        const boundaryType = dom.boundarySelect.value; 
-        dom.k0Value.textContent = k0.toFixed(2); 
-        dom.deltaKValue.textContent = deltaK.toFixed(2); 
-        dom.massValue.textContent = mass.toFixed(2); 
-        dom.timeValue.textContent = time.toFixed(2); 
-        dom.massControlGroup.style.display = (dispersionType === 'quantum') ? 'block' : 'none'; 
-        const physics = getPhysicsFunctions(dispersionType, { mass, ...simParams }); 
-        const vg = physics.vg_func(k0); 
-        const omega_k0 = physics.omega(k0); 
-        const vp = k0 === 0 ? 0 : omega_k0 / k0; 
-        dom.vpValue.textContent = vp.toFixed(2); 
-        dom.vgValue.textContent = vg.toFixed(2); 
-        if (boundaryType === 'center') { 
-            const packetCenter = vg * time; 
-            simParams.x_min = packetCenter - viewWidth / 2; 
-            simParams.x_max = packetCenter + viewWidth / 2; 
-            x_values = Array.from({length: simParams.x_points}, (_, i) => simParams.x_min + i * viewWidth / (simParams.x_points - 1) ); 
-            chart.options.scales.x.min = simParams.x_min; 
-            chart.options.scales.x.max = simParams.x_max; 
-        } 
-        const { realPart: unnormalizedRealPart, envelope: unnormalizedEnvelope } = calculateWavePacket(k0, deltaK, time, physics, boundaryType);
-        const realPart = unnormalizedRealPart.map(v => v / initialMaxEnvelope);
-        const envelope = unnormalizedEnvelope.map(v => v / initialMaxEnvelope);
-        const maxEnvValue = Math.max(...envelope); 
-        let peakIndex = envelope.indexOf(maxEnvValue); 
-        const phaseMarkerX = initialPhaseMarkerX + vp * time; 
-        const phaseIndex = findClosestIndex(x_values, phaseMarkerX); 
-        chart.data.datasets[0].data = x_values.map((x, i) => ({x, y: realPart[i]})); 
-        chart.data.datasets[1].data = x_values.map((x, i) => ({x, y: envelope[i]})); 
-        chart.data.datasets[2].data = x_values.map((x, i) => ({x, y: -envelope[i]})); 
-        
-        if (phaseMarkerX >= simParams.x_min && phaseMarkerX <= simParams.x_max) {
-            chart.data.datasets[3].data = [{x: phaseMarkerX, y: realPart[phaseIndex]}];
-        } else {
-            chart.data.datasets[3].data = [];
+    function update() {
+        if (currentView === 'x_space') {
+            updateXSpace();
+        } else if (currentView === 'k_space') {
+            updateKSpace();
         }
+    }
+
+    function updateXSpace() {
+        const k0 = parseFloat(dom.k0Slider.value); const deltaK = parseFloat(dom.deltaKSlider.value); const mass = parseFloat(dom.massSlider.value); const dispersionType = dom.dispersionSelect.value; const boundaryType = dom.boundarySelect.value;
+        dom.timeValue.textContent = time.toFixed(2);
+        dom.massControlGroup.style.display = (dispersionType === 'quantum') ? 'block' : 'none';
         
-        chart.data.datasets[4].data = [{x: x_values[peakIndex], y: maxEnvValue}]; chart.update('none');
+        const physics = getPhysicsFunctions(dispersionType, { mass, ...simParams });
+        const vg = physics.vg_func(k0); const omega_k0 = physics.omega(k0); const vp = k0 === 0 ? 0 : omega_k0 / k0;
+        dom.vpValue.textContent = vp.toFixed(2); dom.vgValue.textContent = vg.toFixed(2);
+
+        if (boundaryType === 'center') {
+            const packetCenter = vg * time;
+            simParams.x_min = packetCenter - viewWidth / 2;
+            simParams.x_max = packetCenter + viewWidth / 2;
+            x_values = Array.from({length: simParams.x_points}, (_, i) => simParams.x_min + i * viewWidth / (simParams.x_points - 1) );
+        }
+        chart.options.scales.x.min = simParams.x_min;
+        chart.options.scales.x.max = simParams.x_max;
+
+        const { realPart: unnormalizedReal, envelope: unnormalizedEnv } = calculateWavePacket(k0, deltaK, time, physics, boundaryType);
         
+        chart.options.scales.x.title.text = 'Position (x)';
+        chart.options.scales.x.grid.display = false;
+        
+        if (currentRep === 'real_part') {
+            const realPart = unnormalizedReal.map(v => v * amplitudeNormFactor);
+            const envelope = unnormalizedEnv.map(v => v * amplitudeNormFactor);
+            
+            chart.options.scales.y.title.text = 'Amplitude Re(Ψ)';
+            chart.options.scales.y.min = -1.2; chart.options.scales.y.max = 1.2;
+            chart.options.scales.y.ticks.display = false;
+            chart.options.scales.y.grid.display = false;
+
+            chart.data.datasets[0].data = x_values.map((x, i) => ({ x, y: realPart[i] }));
+            chart.data.datasets[1].data = x_values.map((x, i) => ({ x, y: envelope[i] }));
+            chart.data.datasets[2].data = x_values.map((x, i) => ({ x, y: -envelope[i] }));
+        } else { // prob_density
+            const envelope = unnormalizedEnv.map(v => v * probNormFactor);
+            const probDensity = envelope.map(e => e * e);
+            const maxProb = Math.max(...probDensity, 0.1);
+
+            chart.options.scales.y.title.text = 'Probability Density |Ψ|²';
+            chart.options.scales.y.min = 0; 
+            chart.options.scales.y.max = Math.ceil(maxProb * 2) / 2;
+            chart.options.scales.y.ticks.display = true;
+            chart.options.scales.y.grid.display = true;
+            chart.options.scales.y.grid.color = 'rgba(255,255,255,0.1)';
+
+            chart.data.datasets[0].data = x_values.map((x, i) => ({ x, y: probDensity[i] }));
+            chart.data.datasets[1].data = []; 
+            chart.data.datasets[2].data = [];
+        }
+        chart.update('none');
         drawVelocityTracks(vp, vg);
     }
-    function animate() { if (!isRunning) return; time += 0.03; update(); animationId = requestAnimationFrame(animate); }
-    function handlePlayPause() { isRunning = !isRunning; dom.playPauseBtn.textContent = isRunning ? 'Pause' : 'Play'; if (isRunning) { if(animationId) cancelAnimationFrame(animationId); animate(); } else if (animationId) { cancelAnimationFrame(animationId); animationId = null; } }
     
-    function handleParameterChange() { 
-        if (animationId) { cancelAnimationFrame(animationId); animationId = null; } 
-        time = 0; 
-        phaseTrackPos = 0; groupTrackPos = 0;
-        resizeVelocityTracks();
-        setupSimulationSpace(); setInitialPhaseMarker(); update(); 
-        if (isRunning) { animate(); } 
-    }
-    function handleReset() { 
-        isRunning = false; dom.playPauseBtn.textContent = 'Play'; 
-        if (animationId) { cancelAnimationFrame(animationId); animationId = null; } 
-        time = 0; 
-        phaseTrackPos = 0; groupTrackPos = 0;
-        resizeVelocityTracks();
-        setupSimulationSpace(); setInitialPhaseMarker(); update(); 
-    }
-    function setInitialPhaseMarker() {
+    function updateKSpace() {
         const k0 = parseFloat(dom.k0Slider.value);
         const deltaK = parseFloat(dom.deltaKSlider.value);
-        const mass = parseFloat(dom.massSlider.value);
-        const dispersionType = dom.dispersionSelect.value;
-        const physics = getPhysicsFunctions(dispersionType, { mass, ...simParams });
-        const { realPart: unnormalizedRealPart, envelope: unnormalizedEnvelope } = calculateWavePacket(k0, deltaK, 0, physics, 'fixed');
+        const { k_values, amplitude } = calculateKSpaceDistribution(k0, deltaK);
         
-        const maxEnv_t0 = Math.max(...unnormalizedEnvelope);
-        initialMaxEnvelope = maxEnv_t0 > 1e-6 ? maxEnv_t0 : 1;
+        chart.options.scales.x.title.text = 'Wavenumber (k)';
+        chart.options.scales.y.title.text = 'Amplitude |Φ(k)|';
+        chart.options.scales.x.min = 0;
+        chart.options.scales.x.max = 15;
+        chart.options.scales.y.min = 0; chart.options.scales.y.max = 1.2;
         
-        const realPart = unnormalizedRealPart.map(v => v / initialMaxEnvelope);
-        const envelope = unnormalizedEnvelope.map(v => v / initialMaxEnvelope);
-        
-        const peakIndex = envelope.indexOf(Math.max(...envelope));
-        let phaseIndex = peakIndex;
-        for (let i = Math.max(1, peakIndex - 15); i < Math.min(realPart.length - 1, peakIndex + 15); i++) {
-            if (realPart[i] > realPart[i-1] && realPart[i] > realPart[i+1] && realPart[i] > 0.1) {
-                phaseIndex = i;
-                break;
+        chart.options.scales.x.grid.display = true;
+        chart.options.scales.x.grid.color = 'rgba(255,255,255,0.1)';
+        chart.options.scales.y.ticks.display = true;
+        chart.options.scales.y.grid.display = true;
+        chart.options.scales.y.grid.color = 'rgba(255,255,255,0.1)';
+
+        chart.data.datasets[0].data = k_values.map((k, i) => ({ x: k, y: amplitude[i] }));
+        for (let i = 1; i < chart.data.datasets.length; i++) {
+            chart.data.datasets[i].data = [];
+        }
+        chart.update('none');
+    }
+    
+    function updateControlDisplays() {
+        dom.k0Value.textContent = parseFloat(dom.k0Slider.value).toFixed(2);
+        dom.deltaKValue.textContent = parseFloat(dom.deltaKSlider.value).toFixed(2);
+        dom.massValue.textContent = parseFloat(dom.massSlider.value).toFixed(2);
+    }
+
+    function animate() { if (!isRunning) return; time += 0.03; update(); animationId = requestAnimationFrame(animate); }
+    
+    function handlePlayPause(userAction = false) {
+        if (userAction) userWantsToRun = !userWantsToRun;
+        let shouldBeRunning = userWantsToRun && currentView === 'x_space';
+
+        if (shouldBeRunning !== isRunning) {
+            isRunning = shouldBeRunning;
+            if (isRunning) {
+                if(animationId) cancelAnimationFrame(animationId);
+                animate();
+            } else {
+                if (animationId) cancelAnimationFrame(animationId);
+                animationId = null;
             }
         }
-        initialPhaseMarkerX = x_values[phaseIndex];
+        dom.playPauseBtn.textContent = userWantsToRun ? 'Pause' : 'Play';
     }
-    function findClosestIndex(arr, target) { return arr.reduce((prev, curr, index) => (Math.abs(curr - target) < Math.abs(arr[prev] - target) ? index : prev), 0); }
+    
+    function handleParameterChange() { 
+        updateControlDisplays();
+        if (animationId) { cancelAnimationFrame(animationId); animationId = null; } 
+        time = 0; phaseTrackPos = 0; groupTrackPos = 0;
+        resizeVelocityTracks();
+        setupSimulationSpace();
+        calculateNormalizationFactors();
+        updateUIState();
+        update(); 
+        if (isRunning) { animate(); } 
+    }
+    
+    function handleReset() { 
+        updateControlDisplays();
+        userWantsToRun = false; isRunning = false;
+        dom.playPauseBtn.textContent = 'Play'; 
+        if (animationId) { cancelAnimationFrame(animationId); animationId = null; } 
+        time = 0; phaseTrackPos = 0; groupTrackPos = 0;
+        resizeVelocityTracks(); 
+        setupSimulationSpace();
+        calculateNormalizationFactors();
+        updateUIState();
+        update(); 
+    }
+    
+    function calculateNormalizationFactors() {
+        const k0 = parseFloat(dom.k0Slider.value); const deltaK = parseFloat(dom.deltaKSlider.value); const mass = parseFloat(dom.massSlider.value); const dispersionType = dom.dispersionSelect.value;
+        const physics = getPhysicsFunctions(dispersionType, { mass, ...simParams });
+        const { envelope } = calculateWavePacket(k0, deltaK, 0, physics, 'fixed');
+
+        const maxEnv_t0 = Math.max(...envelope);
+        amplitudeNormFactor = maxEnv_t0 > 1e-6 ? 1 / maxEnv_t0 : 1;
+
+        const probDensity = envelope.map(e => e * e);
+        const dx = viewWidth / (simParams.x_points - 1);
+        const totalArea = probDensity.reduce((sum, p) => sum + p, 0) * dx;
+        probNormFactor = totalArea > 1e-6 ? 1 / Math.sqrt(totalArea) : 1;
+    }
+    
     function setupSimulationSpace() {
         const isMobile = window.innerWidth < 768;
         viewWidth = isMobile ? 40 : 80;
-        simParams.x_min = -viewWidth / 2;
-        simParams.x_max = viewWidth / 2;
+        const boundaryType = dom.boundarySelect.value;
+        if(boundaryType !== 'center' || currentView === 'k_space') {
+            simParams.x_min = -viewWidth / 2;
+            simParams.x_max = viewWidth / 2;
+        }
         x_values = Array.from({length: simParams.x_points}, (_, i) => simParams.x_min + i * viewWidth / (simParams.x_points - 1) );
-        chart.options.scales.x.min = simParams.x_min;
-        chart.options.scales.x.max = simParams.x_max;
     }
+    
     function getPhysicsFunctions(type, params) { const { mass, c, alpha, hbar } = params; switch(type) { case 'quantum': return { omega: k => (hbar * k * k) / (2 * mass), vg_func: k => (hbar * k) / mass }; case 'nonDispersive': return { omega: k => c * k, vg_func: k => c }; case 'deepWater': return { omega: k => alpha * Math.sqrt(Math.abs(k)), vg_func: k => (k === 0) ? 0 : (alpha * Math.sign(k)) / (2 * Math.sqrt(Math.abs(k))) }; } }
+    
     function calculateWavePacket(k0, deltaK, t, physics, boundaryType) {
-        const dk = (8 * deltaK) / simParams.k_points;
-        const k_min = k0 - 4 * deltaK;
-        let realPart = new Array(simParams.x_points).fill(0);
-        let imagPart = new Array(simParams.x_points).fill(0);
-        const L = viewWidth;
+        const dk = (8 * deltaK) / simParams.k_points; const k_min = k0 - 4 * deltaK; const L = viewWidth;
+        let realPart = new Array(simParams.x_points).fill(0); let imagPart = new Array(simParams.x_points).fill(0);
         for (let i = 0; i < simParams.x_points; i++) {
-            const x = x_values[i];
-            let sumReal = 0, sumImag = 0;
+            const x = x_values[i]; let sumReal = 0, sumImag = 0;
             for (let j = 0; j < simParams.k_points; j++) {
                 const k = k_min + j * dk;
                 const omega_k = physics.omega(k);
                 const amplitude = Math.exp(-0.5 * Math.pow((k - k0) / deltaK, 2));
                 let phase = k * x - omega_k * t;
-                sumReal += amplitude * Math.cos(phase) * dk;
-                sumImag += amplitude * Math.sin(phase) * dk;
+                sumReal += amplitude * Math.cos(phase) * dk; sumImag += amplitude * Math.sin(phase) * dk;
                 if (boundaryType === 'periodic') {
                     let phase_left = k * (x + L) - omega_k * t;
-                    sumReal += amplitude * Math.cos(phase_left) * dk;
-                    sumImag += amplitude * Math.sin(phase_left) * dk;
+                    sumReal += amplitude * Math.cos(phase_left) * dk; sumImag += amplitude * Math.sin(phase_left) * dk;
                     let phase_right = k * (x - L) - omega_k * t;
-                    sumReal += amplitude * Math.cos(phase_right) * dk;
-                    sumImag += amplitude * Math.sin(phase_right) * dk;
+                    sumReal += amplitude * Math.cos(phase_right) * dk; sumImag += amplitude * Math.sin(phase_right) * dk;
                 }
             }
-            realPart[i] = sumReal;
-            imagPart[i] = sumImag;
+            realPart[i] = sumReal; imagPart[i] = sumImag;
         }
         const envelope = realPart.map((re, i) => Math.sqrt(re * re + imagPart[i] * imagPart[i]));
         return { realPart, envelope };
     }
-    
-    dom.playPauseBtn.addEventListener('click', handlePlayPause);
+
+    function calculateKSpaceDistribution(k0, deltaK) {
+        const num_k_points = 200; const k_min_calc = 0; const k_max_calc = 15;
+        const dk = (k_max_calc - k_min_calc) / (num_k_points - 1);
+        k_values = Array.from({length: num_k_points}, (_, i) => k_min_calc + i * dk);
+        const amplitude = k_values.map(k => Math.exp(-0.5 * Math.pow((k - k0) / deltaK, 2)));
+        return { k_values, amplitude };
+    }
+
+    function updateUIState() {
+        const isXSpace = currentView === 'x_space';
+        dom.playPauseBtn.disabled = !isXSpace;
+        dom.repToggle.querySelectorAll('button').forEach(btn => btn.disabled = !isXSpace);
+        dom.boundarySelect.disabled = !isXSpace;
+        document.getElementById('velocity-viz-container').style.display = isXSpace ? 'flex' : 'none';
+        document.getElementById('info-display').querySelectorAll('p').forEach(p => p.style.display = isXSpace ? 'flex' : 'none');
+        
+        handlePlayPause(false);
+    }
+
+    // --- Event Listeners ---
+    dom.playPauseBtn.addEventListener('click', () => handlePlayPause(true));
     dom.resetBtn.addEventListener('click', handleReset);
-    [dom.k0Slider, dom.deltaKSlider, dom.massSlider].forEach(slider => slider.addEventListener('input', handleParameterChange));
-    dom.dispersionSelect.addEventListener('change', handleParameterChange);
-    dom.boundarySelect.addEventListener('change', handleParameterChange);
+    [dom.k0Slider, dom.deltaKSlider, dom.massSlider, dom.dispersionSelect, dom.boundarySelect].forEach(el => el.addEventListener('input', handleParameterChange));
     window.addEventListener('resize', handleParameterChange);
-    window.addEventListener('load', () => { handleReset(); handlePlayPause(); });
+    
+    dom.viewToggle.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON') {
+            currentView = e.target.dataset.view;
+            dom.viewToggle.querySelector('.active').classList.remove('active');
+            e.target.classList.add('active');
+            updateUIState();
+            update();
+        }
+    });
+
+    dom.repToggle.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON' && !e.target.disabled) {
+            currentRep = e.target.dataset.rep;
+            dom.repToggle.querySelector('.active').classList.remove('active');
+            e.target.classList.add('active');
+            update();
+        }
+    });
+    
+    window.addEventListener('load', () => { handleReset(); handlePlayPause(true); });
 </script>
 
 </body>
