@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Modulation Simulator</title>
+    <!-- Using Chart.js for plotting -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --container-bg: #0f3460;
+            --element-bg: #16213e;
+            --primary-color: #e94560;
+            --primary-hover: #d83a56;
+            --text-color: #f0f0f0;
+            --text-muted: #aaa;
+            --border-color: #3a567c;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            --y-axis-padding: 25px; /* Define padding as a variable */
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 2rem 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-wrapper {
+            width: 100%;
+            max-width: 900px;
+            background-color: var(--container-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 2rem;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 2rem;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 2rem;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .controls-section {
+            background-color: var(--element-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .control-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+        }
+
+        #bitStreamInput {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 1.1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        
+        .modulation-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+        }
+
+        .modulation-cards input[type="radio"] {
+            display: none;
+        }
+
+        .modulation-cards label {
+            display: block;
+            padding: 1rem;
+            text-align: center;
+            background-color: var(--element-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .modulation-cards label:hover {
+            border-color: var(--primary-hover);
+            color: var(--text-color);
+        }
+        
+        .modulation-cards input[type="radio"]:checked + label {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+        }
+
+        .chart-container {
+            margin-bottom: 2rem;
+            background-color: var(--element-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden; /* Important to clip the overscan */
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            height: 220px;
+            /* CORRECTED: The Overscan Technique */
+            width: calc(100% + var(--y-axis-padding));
+            margin-left: calc(-1 * var(--y-axis-padding));
+        }
+        
+        h2 {
+            text-align: center;
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+            font-weight: 500;
+            font-size: 1.25rem;
+        }
+        
+        .info-details {
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--element-bg);
+        }
+        .info-details summary {
+            padding: 1rem 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: var(--primary-color);
+            cursor: pointer;
+            outline: none;
+            list-style: none;
+            position: relative;
+        }
+        .info-details summary::-webkit-details-marker { display: none; }
+        .info-details summary::after {
+            content: '+';
+            position: absolute;
+            right: 1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5rem;
+            transition: transform 0.2s;
+        }
+        .info-details[open] > summary::after { transform: translateY(-50%) rotate(45deg); }
+        .info-content {
+            padding: 0 1.5rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+        .info-content b { color: var(--text-color); }
+        
+        .author-credit {
+            text-align: center;
+            margin-top: 2rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        @media (max-width: 600px) {
+            .modulation-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            body { padding: 1rem 0.5rem; }
+            .main-wrapper { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        <h1>Digital Modulation Simulator</h1>
+        
+        <main class="main-container">
+            <section class="controls-section">
+                <div class="control-group">
+                    <label for="bitStreamInput">Digital Input (e.g., 101101)</label>
+                    <input type="text" id="bitStreamInput" value="101101" pattern="[01]*">
+                </div>
+                <div class="control-group">
+                    <label>Modulation Type</label>
+                    <div class="modulation-cards">
+                        <div>
+                            <input type="radio" id="ask" name="modulationType" value="ask" checked>
+                            <label for="ask">ASK</label>
+                        </div>
+                        <div>
+                            <input type="radio" id="psk" name="modulationType" value="psk">
+                            <label for="psk">PSK</label>
+                        </div>
+                        <div>
+                            <input type="radio" id="fsk" name="modulationType" value="fsk">
+                            <label for="fsk">FSK</label>
+                        </div>
+                        <div>
+                            <input type="radio" id="dpsk" name="modulationType" value="dpsk">
+                            <label for="dpsk">DPSK</label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="results-section">
+                <div class="chart-container">
+                    <h2>Digital Message Signal</h2>
+                    <div class="canvas-wrapper">
+                        <canvas id="digitalSignalCanvas"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h2>Carrier Signal</h2>
+                    <div class="canvas-wrapper">
+                        <canvas id="carrierSignalCanvas"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h2 id="modulatedSignalTitle">Modulated Signal</h2>
+                    <div class="canvas-wrapper">
+                        <canvas id="modulatedSignalCanvas"></canvas>
+                    </div>
+                </div>
+                
+                <details class="info-details" id="explanation-container">
+                    <summary>About This Modulation</summary>
+                    <div class="info-content" id="explanation-content"></div>
+                </details>
+            </section>
+        </main>
+    </div>
+
+    <footer class="author-credit">
+        Created By Dr. Devender Garg
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bitStreamInput = document.getElementById('bitStreamInput');
+            const modulationRadios = document.querySelectorAll('input[name="modulationType"]');
+            const modulatedSignalTitle = document.getElementById('modulatedSignalTitle');
+            const explanationContent = document.getElementById('explanation-content');
+            
+            const rootStyles = getComputedStyle(document.documentElement);
+            const primaryColor = rootStyles.getPropertyValue('--primary-color').trim();
+            const textMutedColor = rootStyles.getPropertyValue('--text-muted').trim();
+            const borderColor = rootStyles.getPropertyValue('--border-color').trim();
+            const yAxisPadding = parseFloat(rootStyles.getPropertyValue('--y-axis-padding')) || 25;
+
+            const chartOptions = {
+                responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
+                plugins: { legend: { display: false } },
+                layout: { padding: { left: yAxisPadding } },
+                scales: {
+                    x: {
+                        type: 'linear', position: 'bottom',
+                        title: { display: true, text: 'Time (s)', color: textMutedColor },
+                        ticks: { color: textMutedColor },
+                        grid: { color: 'rgba(58, 86, 124, 0.3)' },
+                        border: { color: borderColor }
+                    },
+                    y: {
+                        title: { display: false },
+                        min: -1.5, max: 1.5,
+                        ticks: { color: textMutedColor },
+                        grid: { color: 'rgba(58, 86, 124, 0.3)' },
+                        border: { color: borderColor }
+                    }
+                },
+                elements: { point: { radius: 0 }, line: { borderWidth: 2.5 } }
+            };
+
+            const digitalChartOptions = {
+                ...chartOptions,
+                scales: {
+                    ...chartOptions.scales,
+                    y: {
+                        min: -0.2, max: 1.2,
+                        title: { display: false },
+                        grid: { display: false },
+                        border: { display: false },
+                        ticks: {
+                            color: textMutedColor,
+                            callback: function(value) {
+                                if (value === 0 || value === 1) return value;
+                                return null;
+                            }
+                        }
+                    }
+                }
+            };
+            
+            const createChart = (canvasId, options = chartOptions) => {
+                const canvas = document.getElementById(canvasId);
+                const ctx = canvas.getContext('2d');
+                return new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: [], datasets: [{ data: [], borderColor: primaryColor }] },
+                    options: options
+                });
+            };
+
+            let digitalChart = createChart('digitalSignalCanvas', digitalChartOptions);
+            let carrierChart = createChart('carrierSignalCanvas');
+            let modulatedChart = createChart('modulatedSignalCanvas');
+            
+            const explanations = {
+                ask: '<b>Amplitude Shift Keying (ASK):</b> The amplitude of the carrier wave is varied. A high amplitude represents binary \'1\', and zero amplitude represents binary \'0\'. It is simple but susceptible to noise.',
+                psk: '<b>Phase Shift Keying (PSK):</b> The phase of the carrier wave is shifted. A 0° phase represents binary \'1\', and a 180° phase shift represents binary \'0\'. It is more robust against noise than ASK.',
+                fsk: '<b>Frequency Shift Keying (FSK):</b> The frequency of the carrier wave is changed. A higher frequency represents binary \'1\', and a lower frequency represents binary \'0\'. It is widely used in low-speed modems.',
+                dpsk: '<b>Differential PSK (DPSK):</b> The phase is shifted relative to the previous bit. A binary \'0\' causes a 180° phase change, while a binary \'1\' results in no phase change from the last state. This avoids the need for a coherent reference signal at the receiver.'
+            };
+
+            function updateChart(chart, labels, data) {
+                chart.data.labels = labels;
+                chart.data.datasets[0].data = data;
+                chart.update();
+            }
+
+            function generateWaveforms() {
+                const bitStream = bitStreamInput.value.replace(/[^01]/g, '') || '101';
+                if (bitStreamInput.value !== bitStream) bitStreamInput.value = bitStream;
+                const modulationType = document.querySelector('input[name="modulationType"]:checked').value;
+
+                const parameters = {
+                    amplitude: 1.0, carrierFrequency: 2, bitDuration: 1,
+                    samplingRate: 500, fskFrequencyMultiplier: 2
+                };
+                const { amplitude: A, carrierFrequency: fc, bitDuration } = parameters;
+
+                const totalTime = bitStream.length * bitDuration;
+                const numSamples = Math.floor(totalTime * parameters.samplingRate);
+                const time = [], digitalSignal = [], carrierSignal = [], modulatedSignal = [];
+
+                let dpskPhase = 0;
+
+                for (let i = 0; i < numSamples; i++) {
+                    const t = i / parameters.samplingRate;
+                    time.push(t);
+                    
+                    const bitIndex = Math.floor(t / parameters.bitDuration);
+                    const currentBit = (bitIndex < bitStream.length) ? parseInt(bitStream[bitIndex]) : 0;
+                    const isNewBit = (i > 0 && bitIndex !== Math.floor((i - 1) / parameters.samplingRate));
+
+                    digitalSignal.push(currentBit);
+                    carrierSignal.push(A * Math.sin(2 * Math.PI * fc * t));
+                    
+                    let modulatedValue = 0;
+                    switch (modulationType) {
+                        case 'ask':
+                            modulatedValue = (A * currentBit) * Math.sin(2 * Math.PI * fc * t);
+                            break;
+                        case 'psk':
+                            modulatedValue = A * Math.sin(2 * Math.PI * fc * t + ((currentBit === 1) ? 0 : Math.PI));
+                            break;
+                        case 'fsk':
+                            const f_fsk = (currentBit === 1) ? fc * parameters.fskFrequencyMultiplier : fc;
+                            modulatedValue = A * Math.sin(2 * Math.PI * f_fsk * t);
+                            break;
+                        case 'dpsk':
+                            if (isNewBit && bitIndex < bitStream.length && parseInt(bitStream[bitIndex]) === 0) {
+                                dpskPhase = (dpskPhase + Math.PI) % (2 * Math.PI); 
+                            }
+                            modulatedValue = A * Math.sin(2 * Math.PI * fc * t + dpskPhase);
+                            break;
+                    }
+                    modulatedSignal.push(modulatedValue);
+                }
+                
+                [digitalChart, carrierChart, modulatedChart].forEach(chart => {
+                    chart.options.scales.x.min = 0;
+                    chart.options.scales.x.max = totalTime;
+                });
+                
+                updateChart(digitalChart, time, digitalSignal);
+                updateChart(carrierChart, time, carrierSignal);
+                updateChart(modulatedChart, time, modulatedSignal);
+
+                modulatedSignalTitle.textContent = `${modulationType.toUpperCase()} Modulated Signal`;
+                explanationContent.innerHTML = explanations[modulationType];
+            }
+            
+            let debounceTimer;
+            function debouncedGenerate() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(generateWaveforms, 300);
+            }
+
+            bitStreamInput.addEventListener('input', debouncedGenerate);
+            modulationRadios.forEach(radio => radio.addEventListener('change', generateWaveforms));
+            
+            generateWaveforms();
+        });
+    </script>
+
+</body>
+</html>
