@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canonical Ensemble Microstates</title>
+    <style>
+        :root {
+            /* New color palette inspired by the other demo */
+            --bg-color: #1a1a2e;
+            --container-bg: #0f3460;
+            --panel-bg: #16213e;
+            --primary-color: #e94560;
+            --text-color: #f0f0f0;
+            --text-muted: #aaa;
+            --border-color: #34495e;
+
+            /* Data-specific colors */
+            --final-row-bg: #1c3a1e;
+            --final-row-color: #66bb6a;
+            --level-color: #bdc3c7;
+            --particle-color: #e67e22;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--container-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-top: 0;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+            font-size: 1.8em;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .controls {
+            padding: 20px;
+            border-radius: 8px;
+            background-color: var(--panel-bg);
+        }
+        .controls-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .controls-header h3 {
+            margin: 0;
+            padding: 0;
+            border: none;
+            color: var(--primary-color);
+        }
+        .kbt-display-header {
+            color: var(--text-muted);
+            font-size: 0.95em;
+            font-weight: normal;
+            font-family: sans-serif;
+        }
+        .control-group { margin-bottom: 20px; }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .value-display { font-weight: bold; color: var(--primary-color); }
+        
+        /* Custom Slider Styles */
+        input[type="range"] {
+            width: 100%; -webkit-appearance: none; height: 8px;
+            background: #2c3e50; border-radius: 5px; outline: none;
+            opacity: 0.8; transition: opacity .2s; cursor: pointer;
+        }
+        input[type="range"]:hover { opacity: 1; }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 20px; height: 20px; background: var(--primary-color);
+            border-radius: 50%; cursor: pointer;
+        }
+        
+        .visualization-container {
+            padding: 10px;
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--panel-bg);
+        }
+
+        #energy-well {
+            width: 100%;
+            height: 270px;
+            position: relative;
+            background-color: #1a1a2e;
+            border: 2px solid var(--border-color);
+            border-radius: 5px;
+            overflow: hidden;
+            padding-left: 40px;
+            padding-right: 10px;
+            box-sizing: border-box;
+        }
+
+        /* Container for the probability text block */
+        .probability-container {
+            position: absolute;
+            right: 15px;
+            top: 8px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        /* Style for each line of probability text */
+        .prob-line {
+            font-family: sans-serif;
+            font-size: 0.95em;
+            font-weight: normal;
+            color: var(--text-muted);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+            line-height: 1.5; /* Adds vertical spacing between the lines */
+        }
+
+        .energy-level {
+            position: absolute; left: 40px; right: 10px; height: 3px;
+            background-color: var(--level-color);
+            transition: bottom 0.3s ease;
+        }
+        
+        .energy-level span {
+            position: absolute; left: -35px; top: 50%;
+            transform: translateY(-50%);
+            font-weight: bold; color: var(--level-color);
+            width: 30px; text-align: center;
+        }
+
+        .particle {
+            position: absolute; width: 10px; height: 10px;
+            background-color: var(--particle-color);
+            border-radius: 50%;
+            transform: translateX(-50%);
+            transition: bottom 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55), left 0.5s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            table-layout: fixed;
+        }
+        th, td { border: 1px solid var(--border-color); padding: 10px; text-align: left; vertical-align: middle; }
+        th { background-color: var(--panel-bg); }
+        td { font-family: 'Courier New', Courier, monospace; font-size: 0.95em; word-wrap: break-word; }
+        .math-format { font-family: sans-serif; }
+        .final-row { background-color: var(--final-row-bg); font-weight: bold; color: var(--final-row-color); }
+
+        details { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+        summary { font-weight: bold; padding: 15px; cursor: pointer; background-color: var(--panel-bg); }
+        .explanation { font-size: 1.05em; line-height: 1.6; background-color: #102a43; border-left: 5px solid var(--primary-color); padding: 15px; margin: 0; }
+        .explanation .final-point { background-color: var(--panel-bg); padding: 5px; border-radius: 4px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Canonical Ensemble Microstates</h1>
+        <div class="main-content">
+            <div class="visualization-area">
+                <div class="visualization-container">
+                    <div id="energy-well">
+                        <div class="probability-container">
+                            <div id="prob-display-1" class="prob-line"></div>
+                            <div id="prob-display-2" class="prob-line"></div>
+                        </div>
+                        <div id="level1" class="energy-level"><span>E₁</span></div>
+                        <div id="level2" class="energy-level"><span>E₂</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="controls-header">
+                    <h3>Controls</h3>
+                    <span id="kbtValueControl" class="kbt-display-header"></span>
+                </div>
+                <div class="control-group">
+                    <label for="tempSlider">
+                        Reservoir Temperature (T):
+                        <span class="control-value-group">
+                            <span id="tempValue" class="value-display">50</span> K
+                        </span>
+                    </label>
+                    <input type="range" id="tempSlider" min="1" max="500" value="50">
+                </div>
+                <div class="control-group">
+                    <label for="e1Slider">System Energy Level E₁: <span class="control-value-group"><span id="e1Value" class="value-display">10</span> meV</span></label>
+                    <input type="range" id="e1Slider" min="1" max="100" value="10">
+                </div>
+                <div class="control-group">
+                    <label for="e2Slider">System Energy Level E₂: <span class="control-value-group"><span id="e2Value" class="value-display">30</span> meV</span></label>
+                    <input type="range" id="e2Slider" min="1" max="100" value="30">
+                </div>
+            </div>
+
+            <details>
+                <summary>Advanced Calculation Details</summary>
+                <div class="results">
+                    <table>
+                        <thead> <tr> <th>Property</th> <th>If System is in State 1 (E₁)</th> <th>If System is in State 2 (E₂)</th> </tr> </thead>
+                        <tbody>
+                            <tr> <td>Reservoir Energy (eV)</td> <td id="resEnergy1" class="math-format"></td> <td id="resEnergy2" class="math-format"></td> </tr>
+                            <tr> <td>log₁₀(Ω_reservoir)</td> <td id="logOmega1" class="math-format"></td> <td id="logOmega2" class="math-format"></td> </tr>
+                            <tr> <td>Boltzmann Factor</td> <td id="boltzmann1"></td> <td id="boltzmann2"></td> </tr>
+                            <tr class="final-row"> <td>Ratio of Microstates (Ω₁/Ω₂)</td> <td id="omegaRatio" class="math-format" colspan="2" style="text-align: center;"></td> </tr>
+                            <tr class="final-row"> <td><strong>Probability</strong></td> <td id="prob1" class="math-format"></td> <td id="prob2" class="math-format"></td> </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+        
+            <details>
+                <summary>About this Simulation</summary>
+                <div class="explanation"> This simulation demonstrates why the Boltzmann distribution works by showing the full statistical story. The combined system (System + Reservoir) will be found in the configuration that has the maximum number of possible microstates (Ω). <br><br> 1. The reservoir's energy and the logarithm of its microstates `log₁₀(Ω)` are astronomically large. Due to computer precision, they appear identical whether the system is in State 1 or State 2. <br><br> 2. The tiny, hidden difference between these microstate counts results in a significant <strong>Ratio of Microstates</strong>. A ratio of 8.0, for example, means the reservoir has 8 times more available configurations when the system is in the lower energy state. <br><br> <span class="final-point">3. This physical ratio of available states <strong>(Ω₁ / Ω₂)</strong> is exactly what the mathematical <strong>Boltzmann Factor</strong> ratio describes, and it directly determines the final probability of finding the system in each state.</span> </div>
+            </details>
+        </div>
+    </div>
+
+    <script>
+        const tempSlider = document.getElementById('tempSlider'), e1Slider = document.getElementById('e1Slider'), e2Slider = document.getElementById('e2Slider'), tempValue = document.getElementById('tempValue'), e1Value = document.getElementById('e1Value'), e2Value = document.getElementById('e2Value'), resEnergy1 = document.getElementById('resEnergy1'), resEnergy2 = document.getElementById('resEnergy2'), logOmega1 = document.getElementById('logOmega1'), logOmega2 = document.getElementById('logOmega2'), boltzmann1 = document.getElementById('boltzmann1'), boltzmann2 = document.getElementById('boltzmann2'), omegaRatio = document.getElementById('omegaRatio'), prob1 = document.getElementById('prob1'), prob2 = document.getElementById('prob2'), energyWell = document.getElementById('energy-well'), level1 = document.getElementById('level1'), level2 = document.getElementById('level2'),
+        kbtValueControl = document.getElementById('kbtValueControl'),
+        probDisplay1 = document.getElementById('prob-display-1'),
+        probDisplay2 = document.getElementById('prob-display-2');
+
+        const k_B = 8.617e-5, N_RESERVOIR = 1e23, N_PARTICLES = 20;
+        const MAX_VIS_HEIGHT = 240, MAX_ENERGY_SLIDER = 100;
+        const particles = [];
+        for (let i = 0; i < N_PARTICLES; i++) { const p = document.createElement('div'); p.className = 'particle'; particles.push(p); energyWell.appendChild(p); }
+        function formatScientific(num, digits = 2) { if (isNaN(num) || !isFinite(num)) return "Invalid"; const notation = num.toExponential(digits); const parts = notation.split('e'); const exponent = parts[1] ? parts[1].replace('+', '') : '0'; return `${parts[0]} &times; 10<sup>${exponent}</sup>`; }
+        function update() {
+            const T = parseFloat(tempSlider.value), E1_meV = parseFloat(e1Slider.value), E2_meV = parseFloat(e2Slider.value), E1 = E1_meV / 1000.0, E2 = E2_meV / 1000.0;
+            tempValue.textContent = T.toFixed(0); e1Value.textContent = E1_meV.toFixed(0); e2Value.textContent = E2_meV.toFixed(0);
+            
+            const kbt_in_meV = k_B * T * 1000;
+            kbtValueControl.innerHTML = `k<sub>B</sub>T = ${kbt_in_meV.toFixed(1)} meV`;
+            
+            const E_total = (3/2) * N_RESERVOIR * k_B * T, E_res_1 = E_total - E1, E_res_2 = E_total - E2, log10_omega_1 = (N_RESERVOIR - 1) * Math.log10(E_res_1), log10_omega_2 = (N_RESERVOIR - 1) * Math.log10(E_res_2);
+            const boltzmannFactor1 = Math.exp(-E1 / (k_B * T)), boltzmannFactor2 = Math.exp(-E2 / (k_B * T)), partitionFunctionZ = boltzmannFactor1 + boltzmannFactor2;
+            const P1 = boltzmannFactor1 / partitionFunctionZ, P2 = boltzmannFactor2 / partitionFunctionZ;
+            const deltaE_reservoir = E2 - E1, ln_omega_diff = deltaE_reservoir / (k_B * T), log10_omega_diff = ln_omega_diff / Math.LN10, omega_ratio_val = Math.pow(10, log10_omega_diff);
+            
+            resEnergy1.innerHTML = formatScientific(E_res_1, 4); resEnergy2.innerHTML = formatScientific(E_res_2, 4); logOmega1.innerHTML = formatScientific(log10_omega_1, 6); logOmega2.innerHTML = formatScientific(log10_omega_2, 6);
+            boltzmann1.textContent = boltzmannFactor1.toFixed(4); boltzmann2.textContent = boltzmannFactor2.toFixed(4); 
+            omegaRatio.innerHTML = formatScientific(omega_ratio_val, 2);
+            prob1.innerHTML = `${(P1 * 100).toFixed(1)}%`; prob2.innerHTML = `${(P2 * 100).toFixed(1)}%`;
+            
+            probDisplay1.innerHTML = `P(E<sub>1</sub>) = ${(P1 * 100).toFixed(1)}%`;
+            probDisplay2.innerHTML = `P(E<sub>2</sub>) = ${(P2 * 100).toFixed(1)}%`;
+
+            const y1 = 10 + (E1_meV / MAX_ENERGY_SLIDER) * MAX_VIS_HEIGHT, y2 = 10 + (E2_meV / MAX_ENERGY_SLIDER) * MAX_VIS_HEIGHT;
+            level1.style.bottom = `${y1}px`; level2.style.bottom = `${y2}px`;
+            const numOnLevel1 = Math.round(P1 * N_PARTICLES);
+            
+            const wellWidth = energyWell.clientWidth;
+            if (wellWidth === 0) return;
+
+            const PARTICLE_DIAMETER_PX = 10;
+            const LINE_START_PX = 40;
+            const LINE_END_PX = wellWidth - 10;
+            const lineWidthPx = LINE_END_PX - LINE_START_PX;
+            
+            const firstParticleCenterPx = LINE_START_PX + (PARTICLE_DIAMETER_PX / 2);
+            const lastParticleCenterPx = LINE_END_PX - (PARTICLE_DIAMETER_PX / 2);
+            const centerSpreadPx = lastParticleCenterPx - firstParticleCenterPx;
+            
+            particles.forEach((p, i) => {
+                if (i < numOnLevel1) {
+                    p.style.bottom = `${y1 + 4}px`;
+                    if (numOnLevel1 === 1) {
+                        p.style.left = `${LINE_START_PX + (lineWidthPx / 2)}px`;
+                    } else {
+                        const spacing = centerSpreadPx / (numOnLevel1 - 1);
+                        p.style.left = `${firstParticleCenterPx + i * spacing}px`;
+                    }
+                } else {
+                    const numOnLevel2 = N_PARTICLES - numOnLevel1;
+                    const indexOnLevel2 = i - numOnLevel1;
+                    p.style.bottom = `${y2 + 4}px`;
+                    if (numOnLevel2 === 1) {
+                        p.style.left = `${LINE_START_PX + (lineWidthPx / 2)}px`;
+                    } else {
+                        const spacing = (numOnLevel2 > 1) ? centerSpreadPx / (numOnLevel2 - 1) : 0;
+                        p.style.left = `${firstParticleCenterPx + indexOnLevel2 * spacing}px`;
+                    }
+                }
+            });
+        }
+        tempSlider.addEventListener('input', update); e1Slider.addEventListener('input', update); e2Slider.addEventListener('input', update); window.addEventListener('resize', update); document.addEventListener('DOMContentLoaded', update);
+    </script>
+</body>
+</html>
