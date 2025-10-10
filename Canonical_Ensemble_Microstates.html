@@ -259,7 +259,27 @@
         
             <details>
                 <summary>About this Simulation</summary>
-                <div class="explanation"> This simulation demonstrates why the Boltzmann distribution works by showing the full statistical story. The combined system (System + Reservoir) will be found in the configuration that has the maximum number of possible microstates (Ω). <br><br> 1. The number of reservoir microstates, **Ω**, is too large to display directly. We show it in a special format: `Factor × 10^(Base)`. This separates the simple multiplicative `Factor` from the incomprehensibly large common `Base`. <br><br> 2. This revealed `Factor` is the physical **Ratio of Microstates**. If the factor for State 1 is 8.00 and for State 2 is 1.00, it means the reservoir truly has 8 times more available configurations when the system is in State 1. <br><br> <span class="final-point">3. This physical ratio of available states <strong>(Ω₁ / Ω₂)</strong> is exactly what the mathematical <strong>Boltzmann Factor</strong> ratio describes, and it directly determines the final probability of finding the system in each state.</span> </div>
+                <div class="explanation">
+                    <strong>Why are particles more likely to be in lower energy states? This simulation reveals the secret.</strong>
+                    <br><br>
+                    The universe always prefers the configuration with the most possible arrangements. Here, we have a tiny <strong>System</strong> (our two levels) connected to a giant <strong>Reservoir</strong> (the environment). The probability of our system being in a state is determined by how many arrangements that leaves for the reservoir.
+                    <br><br>
+                    <strong>1. The Energy Trade-Off:</strong>
+                    <ul>
+                        <li>If the system takes a <strong>low energy (E₁)</strong>, it leaves a <strong>high energy</strong> for the reservoir.</li>
+                        <li>If the system takes a <strong>high energy (E₂)</strong>, it leaves a <strong>low energy</strong> for the reservoir.</li>
+                    </ul>
+
+                    <strong>2. The Reservoir's Freedom:</strong>
+                    The number of ways the reservoir can arrange itself (its microstates, Ω) grows exponentially with its energy. A reservoir with even slightly more energy has dramatically more possible configurations.
+                    <br><br>
+                    <strong>3. See the Evidence:</strong>
+                    Look at the <strong>Ω_reservoir</strong> row. The `Factor` in front tells you the exact ratio. If the factor for E₁ is `8.00` and for E₂ is `1.00`, it means the universe has <strong>8 times more ways to exist</strong> when our system is in state E₁. If a factor is tiny (e.g., `1.35 × 10⁻⁸`), it means that state is incredibly unlikely.
+                    <br><br>
+                    <span class="final-point">
+                    <strong>Conclusion:</strong> The system is found in the lower energy state more often simply because that arrangement offers the entire combined system (System + Reservoir) a vastly greater number of possible configurations. The probabilities are a direct result of this cosmic-scale counting.
+                    </span>
+                </div>
             </details>
             <p class="creator-credit">Created By Dr. Devender Garg</p>
         </div>
@@ -276,7 +296,6 @@
         const particles = [];
         for (let i = 0; i < N_PARTICLES; i++) { const p = document.createElement('div'); p.className = 'particle'; particles.push(p); energyWell.appendChild(p); }
         
-        // *** UPDATED formatScientific FUNCTION ***
         function formatScientific(num, digits = 2) {
             if (isNaN(num) || !isFinite(num)) return "Invalid";
             const notation = num.toExponential(digits);
@@ -284,13 +303,25 @@
             const exponent = parseInt(parts[1] || '0', 10);
 
             if (exponent === 0) {
-                return parts[0]; // Just return the base number if exponent is 0
+                return parseFloat(parts[0]).toFixed(digits);
             } else {
                 const exponentStr = parts[1].replace('+', '');
                 return `${parts[0]} &times; 10<sup>${exponentStr}</sup>`;
             }
         }
         
+        // *** NEW HELPER FUNCTION TO FORMAT THE FACTOR ***
+        function formatFactor(num, digits = 2) {
+            if (num < 0.01 && num > 0) {
+                // If number is small, use scientific notation for the factor itself
+                const notation = num.toExponential(digits);
+                const parts = notation.split('e');
+                const exponentStr = parts[1].replace('+', '');
+                return `${parts[0]} &times; 10<sup>${exponentStr}</sup>`;
+            }
+            return num.toFixed(digits);
+        }
+
         function update() {
             const T = parseFloat(tempSlider.value), E1_meV = parseFloat(e1Slider.value), E2_meV = parseFloat(e2Slider.value), E1 = E1_meV / 1000.0, E2 = E2_meV / 1000.0;
             tempValue.textContent = T.toFixed(0); e1Value.textContent = E1_meV.toFixed(0); e2Value.textContent = E2_meV.toFixed(0);
@@ -315,17 +346,22 @@
 
             let factor1, factor2, base_exponent_log10;
             if (E1 <= E2) { // E1 is lower or equal, so it's the reference
-                base_exponent_log10 = log10_omega_1; // Use its log as the base exponent
+                base_exponent_log10 = log10_omega_1;
                 factor1 = 1.0;
-                factor2 = boltzmannFactor2 / boltzmannFactor1; // Ratio of microstates Ω₂/Ω₁ = BF₂/BF₁
+                factor2 = boltzmannFactor2 / boltzmannFactor1;
             } else { // E2 is lower, so it's the reference
-                base_exponent_log10 = log10_omega_2; // Use its log as the base exponent
+                base_exponent_log10 = log10_omega_2;
                 factor2 = 1.0;
-                factor1 = boltzmannFactor1 / boltzmannFactor2; // Ratio of microstates Ω₁/Ω₂ = BF₁/BF₂
+                factor1 = boltzmannFactor1 / boltzmannFactor2;
             }
             const exponent_str = formatScientific(base_exponent_log10, 6);
-            omegaRevealed1.innerHTML = `${factor1.toFixed(2)} &times; 10<sup>${exponent_str}</sup>`;
-            omegaRevealed2.innerHTML = `${factor2.toFixed(2)} &times; 10<sup>${exponent_str}</sup>`;
+            
+            // Use the new factor formatter
+            const factor1_str = formatFactor(factor1, 2);
+            const factor2_str = formatFactor(factor2, 2);
+            
+            omegaRevealed1.innerHTML = `${factor1_str} &times; 10<sup>${exponent_str}</sup>`;
+            omegaRevealed2.innerHTML = `${factor2_str} &times; 10<sup>${exponent_str}</sup>`;
 
             // Update visualization
             probDisplay1.innerHTML = `P(E<sub>1</sub>) = ${(P1 * 100).toFixed(1)}%`;
