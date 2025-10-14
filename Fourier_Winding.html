@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Fourier Winding</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --primary-color: #e94560;
+            --secondary-color: #0f3460;
+            --text-color: #f0f0f0;
+            --text-muted: #aaa;
+            --wave-color: #f0e68c; /* Khaki yellow */
+            --com-color: #e74c3c;   /* Red */
+            --grid-color: rgba(0, 100, 150, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--secondary-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 1.5rem 2rem;
+            text-align: center;
+        }
+        
+        h1 { 
+            color: var(--primary-color);
+            margin: 0 0 1rem 0;
+        }
+
+        canvas {
+            border: 2px solid var(--primary-color);
+            background-color: #16213e;
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .canvas-label { font-weight: bold; margin: 1rem 0 0.5rem 0; font-size: 1.1em; }
+        
+        .canvas-wrapper {
+            max-width: 500px;
+            margin: 1.5rem auto 0 auto;
+        }
+
+        .controls-container { display: flex; flex-direction: column; gap: 1rem; text-align: left; }
+        #input-controls {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        label { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 500; }
+        input[type="range"] { 
+            width: 100%; 
+            -webkit-appearance: none; 
+            height: 8px; 
+            background: #16213e; 
+            border-radius: 5px; 
+            outline: none; 
+            opacity: 0.8; 
+            transition: opacity .2s; 
+            cursor: pointer; 
+        }
+        input[type="range"]:hover { opacity: 1; }
+        input[type="range"]::-webkit-slider-thumb { 
+            -webkit-appearance: none; 
+            appearance: none; 
+            width: 20px; 
+            height: 20px; 
+            background: var(--primary-color); 
+            border-radius: 50%; 
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+            }
+            .main-container {
+                padding: 1.5rem 1rem;
+                border-radius: 0;
+            }
+            h1 { font-size: 1.5em; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <h1>Interactive Fourier Winding</h1>
+
+        <div class="controls-container" id="input-controls">
+            <div>
+                <label for="f1-slider">Input Frequency 1 (f₁): <span id="f1-value">3</span> Hz</label>
+                <input type="range" id="f1-slider" min="0" max="5" value="3" step="1">
+            </div>
+             <div>
+                <label for="f2-slider">Input Frequency 2 (f₂): <span id="f2-value">0</span> Hz</label>
+                <input type="range" id="f2-slider" min="0" max="5" value="0" step="1">
+            </div>
+        </div>
+
+        <div class="canvas-wrapper">
+            <div class="canvas-label">Input Signal</div>
+            <canvas id="waveformCanvas"></canvas>
+        </div>
+        
+        <div class="canvas-wrapper">
+            <div class="canvas-label">Winding Path</div>
+            <canvas id="windingCanvas"></canvas>
+        </div>
+        
+        <div class="controls-container" style="margin-top: 1.5rem;">
+            <div>
+                <label for="freq-slider">Winding Frequency: <span id="slider-value">2.50</span> Hz</label>
+                <input type="range" id="freq-slider" min="0" max="10" value="2.5" step="0.5">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const waveformCanvas = document.getElementById('waveformCanvas');
+            const wfmCtx = waveformCanvas.getContext('2d');
+            const windingCanvas = document.getElementById('windingCanvas');
+            const windCtx = windingCanvas.getContext('2d');
+            
+            const f1Slider = document.getElementById('f1-slider');
+            const f2Slider = document.getElementById('f2-slider');
+            const freqSlider = document.getElementById('freq-slider');
+
+            const f1Value = document.getElementById('f1-value');
+            const f2Value = document.getElementById('f2-value');
+            const sliderValue = document.getElementById('slider-value');
+
+            const signal = (t) => {
+                const f1 = parseFloat(f1Slider.value);
+                const f2 = parseFloat(f2Slider.value);
+                
+                if (f1 > 0 && f2 > 0) {
+                    return (Math.sin(2 * Math.PI * f1 * t) + Math.sin(2 * Math.PI * f2 * t)) / 2;
+                } else if (f1 > 0) {
+                    return Math.sin(2 * Math.PI * f1 * t);
+                } else if (f2 > 0) {
+                    return Math.sin(2 * Math.PI * f2 * t);
+                }
+                return 0;
+            };
+
+            // --- CHANGED --- Signal duration now matches the 4-second graph axis
+            const timeMax = 4.0, dt = 0.001;
+            const dpr = window.devicePixelRatio || 1;
+
+            function calculateCenterOfMass(windingFreq) {
+                let sumX = 0, sumY = 0, numPoints = 0;
+                const calculation_dt = 0.005;
+                for (let t = 0; t <= timeMax; t += calculation_dt) {
+                    const r = signal(t);
+                    const angle = -2 * Math.PI * windingFreq * t;
+                    sumX += r * Math.cos(angle);
+                    sumY += r * Math.sin(angle);
+                    numPoints++;
+                }
+                return { x: sumX / numPoints, y: sumY / numPoints };
+            }
+
+            function drawWaveform() {
+                const w = waveformCanvas.width / dpr, h = waveformCanvas.height / dpr;
+                const margin = { top: 0.1 * h, right: 0.02 * w, bottom: 0.2 * h, left: 0.05 * w };
+                const graphW = w - margin.left - margin.right;
+                const graphH = h - margin.top - margin.bottom;
+
+                wfmCtx.clearRect(0, 0, w * dpr, h * dpr);
+                wfmCtx.save();
+                wfmCtx.scale(dpr, dpr);
+                wfmCtx.font = `12px sans-serif`;
+                wfmCtx.fillStyle = varToCSS('--text-muted');
+
+                wfmCtx.strokeStyle = "#888"; wfmCtx.lineWidth = 1;
+                wfmCtx.beginPath(); wfmCtx.moveTo(margin.left, margin.top); wfmCtx.lineTo(margin.left, margin.top + graphH); wfmCtx.lineTo(margin.left + graphW, margin.top + graphH); wfmCtx.stroke();
+                
+                for (let i = 0; i <= 4; i++) {
+                    const x = margin.left + (i / 4) * graphW;
+                    const y = margin.top + graphH;
+                    wfmCtx.beginPath(); wfmCtx.moveTo(x, y); wfmCtx.lineTo(x, y + 5); wfmCtx.stroke();
+                    wfmCtx.fillText(i, x - 3, y + 20);
+                }
+
+                wfmCtx.strokeStyle = varToCSS('--primary-color'); wfmCtx.lineWidth = 2.5; wfmCtx.beginPath();
+                for (let t = 0; t <= timeMax; t += 0.01) {
+                    const x = margin.left + (t / timeMax) * graphW;
+                    const y = margin.top + (graphH / 2) - (signal(t) * (graphH / 2.2));
+                    (t === 0) ? wfmCtx.moveTo(x, y) : wfmCtx.lineTo(x, y);
+                }
+                wfmCtx.stroke();
+                wfmCtx.restore();
+            }
+
+            function drawWinding(windingFreq) {
+                const w = windingCanvas.width / dpr, h = windingCanvas.height / dpr;
+                const center = { x: w / 2, y: h / 2 };
+                const scale = w * 0.4;
+
+                windCtx.clearRect(0, 0, w * dpr, h * dpr);
+                windCtx.save();
+                windCtx.scale(dpr, dpr);
+
+                windCtx.strokeStyle = "#666";
+                windCtx.lineWidth = 0.5;
+                windCtx.beginPath();
+                windCtx.moveTo(center.x, 0); windCtx.lineTo(center.x, h);
+                windCtx.moveTo(0, center.y); windCtx.lineTo(w, center.y);
+                windCtx.stroke();
+                
+                windCtx.strokeStyle = varToCSS('--wave-color'); windCtx.lineWidth = 2; windCtx.beginPath();
+                for (let t = 0; t <= timeMax; t += dt) {
+                    const r = signal(t);
+                    const angle = -2 * Math.PI * windingFreq * t;
+                    const x = center.x + r * Math.cos(angle) * scale;
+                    const y = center.y + r * Math.sin(angle) * scale;
+                    (t === 0) ? windCtx.moveTo(x, y) : windCtx.lineTo(x, y);
+                }
+                windCtx.stroke();
+
+                const com = calculateCenterOfMass(windingFreq);
+                drawPoint(windCtx, center.x + com.x * scale, center.y + com.y * scale, w * 0.02, varToCSS('--com-color'));
+                windCtx.restore();
+            }
+
+            function drawPoint(ctx, cx, cy, radius, color) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = color;
+                ctx.fill();
+            }
+            
+            const varToCSS = (name) => getComputedStyle(document.documentElement).getPropertyValue(name);
+
+            function updateWinding() {
+                const windingFreq = parseFloat(freqSlider.value);
+                const freqText = windingFreq.toFixed(2);
+                sliderValue.textContent = `${freqText} Hz`;
+                
+                requestAnimationFrame(() => drawWinding(windingFreq));
+            }
+
+            function updateAll() {
+                 f1Value.textContent = `${f1Slider.value} Hz`;
+                 f2Value.textContent = `${f2Slider.value} Hz`;
+                 drawWaveform();
+                 updateWinding();
+            }
+            
+            function setupAndDrawAll() {
+                [waveformCanvas, windingCanvas].forEach(canvas => {
+                    const rect = canvas.parentElement.getBoundingClientRect();
+                    const cssWidth = rect.width;
+                    let cssHeight;
+
+                    if (canvas.id === 'waveformCanvas') cssHeight = cssWidth / 2.5;
+                    else cssHeight = cssWidth;
+
+                    canvas.width = cssWidth * dpr;
+                    canvas.height = cssHeight * dpr;
+                    canvas.style.width = `${cssWidth}px`;
+                    canvas.style.height = `${cssHeight}px`;
+                });
+                
+                updateAll();
+            }
+
+            freqSlider.addEventListener('input', updateWinding);
+            f1Slider.addEventListener('input', updateAll);
+            f2Slider.addEventListener('input', updateAll);
+            window.addEventListener('resize', setupAndDrawAll);
+            
+            setupAndDrawAll();
+        });
+    </script>
+</body>
+</html>
