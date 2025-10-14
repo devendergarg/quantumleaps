@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Damped & Forced Harmonic Oscillator</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --secondary-color: #0f3460;
+            --primary-color: #e94560;
+            --text-color: #f0f0f0;
+            --text-muted: #aaa;
+            --border-color: #16213e;
+            --mass-color: var(--primary-color);
+            --spring-color: #a0ff33; /* Lime Green */
+            --plot-line-color: #33d1ff; /* Cyan */
+            --envelope-color: rgba(200, 200, 200, 0.6);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            -webkit-font-smoothing: antialiased;
+            box-sizing: border-box;
+        }
+
+        .main-container {
+            width: 90%;
+            max-width: 800px;
+            background-color: var(--secondary-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        
+        h1 { color: var(--primary-color); margin-top: 0; margin-bottom: 1.5rem; }
+        
+        .canvas-label { font-weight: bold; margin: 1rem 0 0.5rem 0; font-size: 1.1em; text-align: left; }
+
+        .visualization-container, .plot-container {
+            border: 2px solid var(--primary-color);
+            background-color: var(--border-color);
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .visualization-container { height: 100px; position: relative; }
+        .plot-container { padding: 10px; }
+
+        #mass { position: absolute; width: 50px; height: 50px; background-color: var(--mass-color); border-radius: 4px; top: 50%; transform: translateY(-50%); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        #spring-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #spring-path { stroke: var(--spring-color); stroke-width: 2; fill: none; }
+        #plotCanvas { width: 100%; height: 250px; display: block; }
+        
+        .controls-container { display: flex; flex-direction: column; align-items: center; gap: 20px; margin-top: 1.5rem; width: 100%; }
+        .slider-group { text-align: left; width: 100%; max-width: 500px; }
+        label { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 500; }
+        input[type="range"] { width: 100%; -webkit-appearance: none; height: 8px; background: #16213e; border-radius: 5px; outline: none; opacity: 0.8; transition: opacity .2s; cursor: pointer; }
+        input[type="range"]:hover { opacity: 1; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; background: var(--primary-color); border-radius: 50%; }
+        
+        .presets-container button {
+            background-color: transparent; border: 1px solid var(--text-muted); color: var(--text-muted);
+            padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.2s ease;
+        }
+        .presets-container button:not(.active):hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .presets-container button.active { background-color: var(--primary-color); border-color: var(--primary-color); color: white; }
+        
+        .mode-selector, .damping-presets { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; width: 100%; margin-bottom: 20px; }
+        #forced-controls { display: none; width: 100%; gap: 15px; flex-direction: column; }
+
+        .actions { display: flex; gap: 15px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+        .actions button { background-color: var(--primary-color); color: white; border: none; border-radius: 5px; padding: 10px 15px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; min-width: 100px; font-size: 1rem; }
+        .actions button:hover { background-color: #d83a56; }
+
+        .credit { margin-top: 25px; color: var(--text-muted); font-size: 0.9em; }
+
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .main-container { width: 100%; padding: 1.5rem 1rem; }
+            h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <h1>Harmonic Oscillator</h1>
+        
+        <div class="canvas-label">Physical Simulation</div>
+        <div class="visualization-container">
+            <svg id="spring-svg"><path id="spring-path" d=""></path></svg>
+            <div id="mass"></div>
+        </div>
+        
+        <div class="canvas-label">Amplitude vs. Time Plot</div>
+        <div class="plot-container">
+            <canvas id="plotCanvas"></canvas>
+        </div>
+
+        <div class="controls-container">
+            <div class="presets-container mode-selector">
+                <button id="dampedModeBtn" class="active">Damped Oscillator</button>
+                <button id="forcedModeBtn">Forced Oscillator</button>
+            </div>
+
+            <div class="slider-group">
+                <label for="dampingSlider">Damping Ratio (ζ): <span id="dampingValue">0.10</span></label>
+                <input type="range" id="dampingSlider" min="0" max="5" step="0.01" value="0.1">
+            </div>
+            
+            <div id="damped-controls" class="presets-container damping-presets">
+                <button id="underdampedBtn" data-zeta="0.1">Underdamped</button>
+                <button id="criticalBtn" data-zeta="1.0">Critically Damped</button>
+                <button id="overdampedBtn" data-zeta="2.5">Overdamped</button>
+            </div>
+            
+            <div id="forced-controls">
+                <div class="slider-group">
+                    <label for="F0Slider">Driving Force Amp (F₀): <span id="F0Value">1.0</span></label>
+                    <input type="range" id="F0Slider" min="0" max="10" step="0.1" value="1.0">
+                </div>
+                <div class="slider-group">
+                    <label for="omegaDSlider">Driving Frequency (ω_d / ω₀): <span id="omegaDValue">1.00</span></label>
+                    <input type="range" id="omegaDSlider" min="0.1" max="3" step="0.01" value="1.0">
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="playPauseButton">Pause</button>
+                <button id="resetButton">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <p class="credit">Created by Dr. Devender Garg</p>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dampingSlider = document.getElementById('dampingSlider');
+            const F0Slider = document.getElementById('F0Slider');
+            const omegaDSlider = document.getElementById('omegaDSlider');
+            const dampingValueSpan = document.getElementById('dampingValue');
+            const F0ValueSpan = document.getElementById('F0Value');
+            const omegaDValueSpan = document.getElementById('omegaDValue');
+            const mass = document.getElementById('mass');
+            const springPath = document.getElementById('spring-path');
+            const canvas = document.getElementById('plotCanvas');
+            const ctx = canvas.getContext('2d');
+            const playPauseButton = document.getElementById('playPauseButton');
+            const resetButton = document.getElementById('resetButton');
+            const dampedModeBtn = document.getElementById('dampedModeBtn');
+            const forcedModeBtn = document.getElementById('forcedModeBtn');
+            const dampedControls = document.getElementById('damped-controls');
+            const forcedControls = document.getElementById('forced-controls');
+            const presetButtons = document.querySelectorAll('#damped-controls button');
+            
+            const m = 1, k = 20;
+            const omega0 = Math.sqrt(k / m);
+            const initialTimeMax = 10;
+            let plotTimeMax = initialTimeMax;
+            
+            let b, F0, omega_d, zeta;
+            let maxPossibleAmp = 1.0;
+            let positionHistory = [];
+            
+            let isForcedMode = false;
+            let isPaused = false;
+            let animationFrameId, animationStartTime = 0;
+            let elapsedTimeOnPause = 0;
+
+            function getPosition(t) {
+                const gamma = b / (2 * m);
+
+                if (!isForcedMode) {
+                    const x0 = 1.0;
+                    if (zeta < 1) {
+                        const omega1 = omega0 * Math.sqrt(1 - zeta*zeta);
+                        return x0 * Math.exp(-gamma * t) * (Math.cos(omega1 * t) + (gamma / omega1) * Math.sin(omega1 * t));
+                    } else if (Math.abs(zeta - 1) < 0.001) {
+                        return x0 * (1 + gamma * t) * Math.exp(-gamma * t);
+                    } else {
+                        const lambda = omega0 * Math.sqrt(zeta*zeta - 1);
+                        const C1 = x0 * (gamma + lambda) / (2 * lambda);
+                        const C2 = -x0 * (gamma - lambda) / (2 * lambda);
+                        return Math.exp(-gamma * t) * (C1 * Math.exp(lambda * t) + C2 * Math.exp(-lambda * t));
+                    }
+                }
+
+                if (F0 === 0) return 0;
+
+                // --- FIX: Add a special case for undamped resonance to prevent division by zero ---
+                const isResonant = Math.abs(omega_d - omega0) < 1e-5;
+                const isUndamped = Math.abs(zeta) < 1e-5;
+                if (isUndamped && isResonant) {
+                    return (F0 / (2 * m * omega0)) * t * Math.sin(omega0 * t);
+                }
+
+                const term1_denom = (omega0 * omega0 - omega_d * omega_d);
+                const term2_denom = 2 * gamma * omega_d;
+                const steady_amp = (F0 / m) / Math.sqrt(term1_denom*term1_denom + term2_denom*term2_denom);
+                const phase_shift = Math.atan2(term2_denom, term1_denom);
+                const steady_state_motion = steady_amp * Math.cos(omega_d * t - phase_shift);
+                
+                const x_steady_at_0 = steady_amp * Math.cos(-phase_shift);
+                const v_steady_at_0 = steady_amp * omega_d * Math.sin(phase_shift); 
+
+                const x_transient_at_0 = -x_steady_at_0;
+                const v_transient_at_0 = -v_steady_at_0;
+                
+                let transient_motion;
+
+                if (zeta < 1) {
+                    const omega1 = omega0 * Math.sqrt(1 - zeta*zeta);
+                    const C1 = x_transient_at_0;
+                    const C2 = (v_transient_at_0 + gamma * C1) / omega1;
+                    transient_motion = Math.exp(-gamma * t) * (C1 * Math.cos(omega1 * t) + C2 * Math.sin(omega1 * t));
+                } else if (Math.abs(zeta - 1) < 0.001) {
+                    const C1 = x_transient_at_0;
+                    const C2 = v_transient_at_0 + gamma * C1;
+                    transient_motion = Math.exp(-gamma * t) * (C1 + C2 * t);
+                } else {
+                    const lambda = omega0 * Math.sqrt(zeta*zeta - 1);
+                    const C1 = (v_transient_at_0 - x_transient_at_0 * (-gamma - lambda)) / (2 * lambda);
+                    const C2 = x_transient_at_0 - C1;
+                    transient_motion = Math.exp(-gamma * t) * (C1 * Math.exp(lambda * t) + C2 * Math.exp(-lambda * t));
+                }
+                
+                return transient_motion + steady_state_motion;
+            }
+
+            function setupCanvas() {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+            }
+
+            function drawSpring(massLeft) {
+                const startY = 50, endX = massLeft;
+                const numSegments = 20, amplitude = 15;
+                const segmentWidth = endX / numSegments;
+                let pathData = `M 0,${startY} `;
+                for (let i = 1; i < numSegments; i++) {
+                    pathData += `L ${i * segmentWidth},${startY + (i % 2 === 0 ? -amplitude : amplitude)} `;
+                }
+                pathData += `L ${endX},${startY}`;
+                springPath.setAttribute('d', pathData);
+            }
+
+            function drawStaticPlotElements() {
+                const plotWidth = canvas.clientWidth, plotHeight = canvas.clientHeight;
+                const style = getComputedStyle(document.documentElement);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                ctx.strokeStyle = style.getPropertyValue('--text-muted');
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, plotHeight / 2);
+                ctx.lineTo(plotWidth, plotHeight / 2);
+                ctx.stroke();
+
+                ctx.fillStyle = style.getPropertyValue('--text-muted');
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Time (0s to ${plotTimeMax.toFixed(1)}s)`, plotWidth / 2, plotHeight - 5);
+                ctx.textAlign = 'left';
+                ctx.fillText('+A', 10, 15);
+                ctx.fillText('-A', 10, plotHeight - 10);
+                
+                if (!isForcedMode && zeta < 1) {
+                    ctx.strokeStyle = style.getPropertyValue('--envelope-color');
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([5, 5]);
+                    const drawEnvelope = (sign) => {
+                        ctx.beginPath();
+                        for (let px = 0; px < plotWidth; px++) {
+                            const t = (px / plotWidth) * plotTimeMax;
+                            const py = plotHeight / 2 - sign * Math.exp(-(b / (2 * m)) * t) * (plotHeight / 2 * 0.9);
+                            if (px === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                        }
+                        ctx.stroke();
+                    };
+                    drawEnvelope(1); drawEnvelope(-1);
+                    ctx.setLineDash([]);
+                }
+            }
+
+            function animate(timestamp) {
+                if (isPaused) {
+                    animationFrameId = requestAnimationFrame(animate);
+                    return;
+                }
+                if (!animationStartTime) animationStartTime = timestamp;
+                let elapsedTime = ((timestamp - animationStartTime) / 1000) + elapsedTimeOnPause;
+
+                if (elapsedTime > plotTimeMax) {
+                    plotTimeMax = elapsedTime;
+                }
+
+                const displacement = getPosition(elapsedTime);
+                positionHistory.push([elapsedTime, displacement]);
+                
+                // --- FIX: Dynamically update maxPossibleAmp for the growing resonance case ---
+                if (isForcedMode && Math.abs(zeta) < 1e-5 && Math.abs(omega_d - omega0) < 1e-5) {
+                    const currentAmp = Math.abs(displacement);
+                    if (currentAmp > maxPossibleAmp) {
+                        maxPossibleAmp = currentAmp;
+                    }
+                }
+                
+                const containerWidth = document.querySelector('.visualization-container').clientWidth;
+                const massWidth = mass.offsetWidth;
+                const equilibriumPos = (containerWidth - massWidth) / 2;
+                const maxDisplacement = equilibriumPos - 20; 
+                
+                const visualDisplacement = displacement / maxPossibleAmp;
+                
+                mass.style.left = `${equilibriumPos + visualDisplacement * maxDisplacement}px`;
+                drawSpring(equilibriumPos + visualDisplacement * maxDisplacement);
+                
+                drawStaticPlotElements();
+                const plotWidth = canvas.clientWidth, plotHeight = canvas.clientHeight;
+
+                ctx.beginPath();
+                for (let i = 0; i < positionHistory.length; i++) {
+                    const [t, pos] = positionHistory[i];
+                    const plotX = (t / plotTimeMax) * plotWidth;
+                    const plotY = plotHeight / 2 - (pos / maxPossibleAmp) * (plotHeight / 2 * 0.9);
+                    if (i === 0) {
+                        ctx.moveTo(plotX, plotY);
+                    } else {
+                        ctx.lineTo(plotX, plotY);
+                    }
+                }
+                ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--plot-line-color');
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                animationFrameId = requestAnimationFrame(animate);
+            }
+            
+            function restartSimulation() {
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                
+                positionHistory = [];
+                plotTimeMax = initialTimeMax;
+
+                if (isForcedMode && F0 > 0) {
+                     // --- FIX: Handle max amplitude calculation for the resonant case ---
+                    const isResonant = Math.abs(omega_d - omega0) < 1e-5;
+                    const isUndamped = Math.abs(zeta) < 1e-5;
+                    if (isUndamped && isResonant) {
+                        maxPossibleAmp = 1.0; // Start with a nominal amplitude; it will grow dynamically
+                    } else {
+                        const gamma = b / (2 * m);
+                        const term1 = (omega0 * omega0 - omega_d * omega_d);
+                        const term2 = 2 * gamma * omega_d;
+                        const denom = Math.sqrt(term1*term1 + term2*term2);
+                        if (denom > 1e-6) {
+                            const steady_amp = (F0 / m) / denom;
+                            maxPossibleAmp = Math.max(0.1, steady_amp);
+                        } else { 
+                            // This case handles near-resonance with tiny damping
+                            maxPossibleAmp = 50; 
+                        }
+                    }
+                } else {
+                    maxPossibleAmp = 1.0;
+                }
+
+                isPaused = false;
+                playPauseButton.textContent = 'Pause';
+                animationStartTime = 0;
+                elapsedTimeOnPause = 0;
+                animationFrameId = requestAnimationFrame(animate);
+            }
+
+            function togglePlayPause() {
+                isPaused = !isPaused;
+                if (isPaused) {
+                    playPauseButton.textContent = 'Play';
+                    elapsedTimeOnPause = ((performance.now() - animationStartTime) / 1000) + elapsedTimeOnPause;
+                } else {
+                    playPauseButton.textContent = 'Pause';
+                    animationStartTime = performance.now();
+                }
+            }
+            
+            function updateActiveCard(currentZeta) {
+                presetButtons.forEach(btn => btn.classList.remove('active'));
+                if (Math.abs(currentZeta - 1) < 0.02) {
+                    document.getElementById('criticalBtn').classList.add('active');
+                } else if (currentZeta < 1) {
+                    document.getElementById('underdampedBtn').classList.add('active');
+                } else {
+                    document.getElementById('overdampedBtn').classList.add('active');
+                }
+            }
+
+            function handleSliderChange() {
+                zeta = parseFloat(dampingSlider.value);
+                const frequencyRatio = parseFloat(omegaDSlider.value);
+                F0 = parseFloat(F0Slider.value);
+                b = zeta * 2 * m * omega0;
+                omega_d = frequencyRatio * omega0;
+
+                dampingValueSpan.textContent = zeta.toFixed(2);
+                F0ValueSpan.textContent = F0.toFixed(1);
+                omegaDValueSpan.textContent = frequencyRatio.toFixed(2);
+
+                if (!isForcedMode) updateActiveCard(zeta);
+                restartSimulation();
+            }
+            
+            function handlePresetClick(event) {
+                dampingSlider.value = event.target.dataset.zeta;
+                dampingSlider.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            function setMode(forced) {
+                isForcedMode = forced;
+                dampedModeBtn.classList.toggle('active', !forced);
+                forcedModeBtn.classList.toggle('active', forced);
+                dampedControls.style.display = forced ? 'none' : 'flex';
+                forcedControls.style.display = forced ? 'flex' : 'none';
+
+                if (forced) {
+                    dampingSlider.max = 2.0;
+                    if (parseFloat(dampingSlider.value) > 2.0) {
+                       dampingSlider.value = 0.10;
+                    }
+                } else {
+                    dampingSlider.max = 5.0;
+                }
+
+                handleSliderChange();
+            }
+
+            function initialize() {
+                setupCanvas();
+                [dampingSlider, F0Slider, omegaDSlider].forEach(s => s.addEventListener('input', handleSliderChange));
+                playPauseButton.addEventListener('click', togglePlayPause);
+                resetButton.addEventListener('click', restartSimulation);
+                presetButtons.forEach(button => button.addEventListener('click', handlePresetClick));
+                dampedModeBtn.addEventListener('click', () => setMode(false));
+                forcedModeBtn.addEventListener('click', () => setMode(true));
+                window.addEventListener('resize', initialize);
+                
+                setMode(false);
+            }
+
+            initialize();
+        });
+    </script>
+</body>
+</html>
