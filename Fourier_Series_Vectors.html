@@ -11,12 +11,14 @@
             --primary-color: #e94560;
             --text-color: #f0f0f0;
             --text-muted: #aaa;
+            --text-plot-label: #e0e0e0;
             --canvas-bg: #16213e;
             --vector-color: #FFFFFF;
             --reconstructed-path-color: #00f5d4;
             --grid-color: rgba(0, 100, 150, 0.4);
             --spectrum-bar-inactive: #4a5a7e;
             --spectrum-bar-active: var(--primary-color);
+            --control-bg: rgba(0,0,0,0.2);
         }
         * { box-sizing: border-box; }
         body {
@@ -27,7 +29,7 @@
             overscroll-behavior: contain;
         }
         .main-container {
-            width: 100%; max-width: 900px;
+            width: 100%; max-width: 800px;
             background-color: var(--container-color);
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
@@ -38,12 +40,10 @@
             margin: 0 0 2rem 0;
             font-weight: 400; text-align: center;
         }
-        .canvas-container {
-            display: flex; gap: 2rem; justify-content: center;
-        }
         .canvas-wrapper {
             display: flex; flex-direction: column; align-items: center;
-            flex: 1; min-width: 280px;
+            width: 100%; max-width: 500px;
+            margin: 0 auto;
         }
         .canvas-label {
             font-weight: bold; margin-bottom: 0.75rem; font-size: 1.1em;
@@ -54,9 +54,9 @@
             border-radius: 8px; cursor: crosshair;
             touch-action: none; width: 100%; height: auto;
         }
-        .actions-container {
+        .actions-container, .input-controls-container {
             margin-top: 2rem; padding: 1.5rem;
-            background-color: rgba(0,0,0,0.2);
+            background-color: var(--control-bg);
             border-radius: 8px; display: flex;
             flex-direction: column; gap: 1.5rem;
         }
@@ -66,7 +66,7 @@
         }
         .control-group label { font-weight: 500; }
         input[type="range"] {
-            width: 60%; -webkit-appearance: none; height: 8px;
+            flex-grow: 1; -webkit-appearance: none; height: 8px;
             background: var(--canvas-bg); border-radius: 5px;
             outline: none; cursor: pointer;
         }
@@ -75,19 +75,6 @@
             width: 20px; height: 20px;
             background: var(--primary-color); border-radius: 50%;
         }
-        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider-toggle {
-            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: var(--canvas-bg); transition: .4s; border-radius: 28px;
-        }
-        .slider-toggle:before {
-            position: absolute; content: ""; height: 20px; width: 20px;
-            left: 4px; bottom: 4px; background-color: white;
-            transition: .4s; border-radius: 50%;
-        }
-        input:checked + .slider-toggle { background-color: var(--primary-color); }
-        input:checked + .slider-toggle:before { transform: translateX(22px); }
         .button-group { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
         .action-btn {
             background-color: var(--primary-color); color: white; border: none;
@@ -103,15 +90,66 @@
             color: var(--text-muted); font-style: italic;
             text-align: center; margin-top: 1.5rem;
         }
-        .sub-controls {
-            display: flex; justify-content: center; align-items: center;
-            gap: 10px; margin-top: 10px; font-size: 0.9em;
+        .view-switcher {
+            display: flex; width: 100%;
+            margin-bottom: 1rem; border-radius: 8px;
+            overflow: hidden; background-color: var(--canvas-bg);
         }
+        .view-btn {
+            flex: 1; padding: 10px; border: none;
+            background-color: transparent; color: var(--text-muted);
+            font-weight: bold; cursor: pointer; transition: background-color 0.3s;
+            font-size: 0.9em;
+        }
+        .view-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .view-btn:disabled {
+             background-color: var(--canvas-bg) !important;
+             color: #666 !important;
+             cursor: not-allowed;
+        }
+        
+        .canvas-options-container {
+            display: none;
+            gap: 1rem;
+            justify-content: center;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .canvas-options-container.visible {
+            display: flex;
+        }
+        .option-card {
+            flex: 1;
+            max-width: 200px;
+            padding: 8px 12px;
+            font-size: 0.85em;
+            font-weight: 500;
+            color: var(--text-muted);
+            background-color: transparent;
+            border: 1px solid var(--text-muted);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        .option-card.active {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+        .option-card:disabled {
+            border-color: #555;
+            color: #777;
+            cursor: not-allowed;
+            background-color: transparent;
+        }
+        
         @media (max-width: 768px) {
             body { padding: 0; }
             .main-container { padding: 1.5rem 1rem; border-radius: 0; }
             h1 { font-size: 1.5em; }
-            .canvas-container { flex-direction: column; }
             .control-group { flex-direction: column; text-align: center; gap: 0.75rem; }
             input[type="range"] { width: 100%; }
         }
@@ -122,59 +160,41 @@
     <div class="main-container">
         <h1>Fourier Series Designer</h1>
 
-        <div class="canvas-container">
-            <div class="canvas-wrapper">
-                <h2 class="canvas-label">1. Drawing Pad</h2>
-                <div class="sub-controls">
-                    <label for="showResampledCheckbox">Show Resampled Path</label>
-                    <label class="switch">
-                        <input type="checkbox" id="showResampledCheckbox" disabled>
-                        <span class="slider-toggle"></span>
-                    </label>
-                </div>
-                <canvas id="drawingCanvas" style="margin-top: 5px;"></canvas>
-                <div class="button-group" style="margin-top: 1rem;">
-                    <button class="action-btn secondary preset-btn" data-shape="square">Square</button>
-                    <button class="action-btn secondary preset-btn" data-shape="triangle">Triangle</button>
-                    <button class="action-btn secondary preset-btn" data-shape="star">Star</button>
-                </div>
-                <div class="control-group" style="margin-top: 1.5rem; padding: 0 1rem;">
-                    <label for="nSlider">Vectors:</label>
-                    <input type="range" id="nSlider" min="1" max="100" value="10">
-                    <span id="nValue" style="min-width: 25px; text-align: right;">10</span>
-                </div>
+        <div class="canvas-wrapper">
+            <h2 class="canvas-label" id="canvas-label">Drawing Pad</h2>
+            <div class="view-switcher" id="viewSwitcher">
+                <button class="view-btn active" data-view="animation">Animation</button>
+                <button class="view-btn" data-view="spectrum">Spectrum</button>
             </div>
-            <div class="canvas-wrapper">
-                <h2 class="canvas-label">2. Reconstruction</h2>
-                <canvas id="fourierCanvas"></canvas>
+            <canvas id="mainCanvas"></canvas>
+            
+            <div class="canvas-options-container" id="canvasOptionsContainer">
+                <button class="option-card" id="toggleVectorPathsBtn" data-controls="showCirclesCheckbox">Vector Paths</button>
+                <button class="option-card" id="toggleOriginalDrawingBtn" data-controls="showOriginalCheckbox">Original Drawing</button>
+            </div>
+            
+            <div class="button-group" style="margin-top: 1.5rem;">
+                <button class="action-btn secondary preset-btn" data-shape="square">Square</button>
+                <button class="action-btn secondary preset-btn" data-shape="triangle">Triangle</button>
+                <button class="action-btn secondary preset-btn" data-shape="star">Star</button>
             </div>
         </div>
         
-        <div class="canvas-wrapper" style="margin-top: 2rem; width: 100%;">
-            <h2 class="canvas-label">3. Frequency Spectrum</h2>
-            <canvas id="spectrumCanvas" style="height: 150px;"></canvas>
-        </div>
-
         <div class="actions-container">
             <div class="button-group">
                 <button class="action-btn" id="mainActionBtn">Analyze Drawing</button>
-                <button class="action-btn secondary" id="buildUpBtn" disabled>Build-Up</button>
-                <button class="action-btn secondary" id="resetAnimBtn" disabled>Reset Anim</button>
-                <button class="action-btn secondary" id="clearBtn">Clear All</button>
+                <button class="action-btn secondary" id="clearBtn">Clear Pad</button>
             </div>
-            <hr style="border-color: rgba(255,255,255,0.1); width: 100%;">
+        </div>
+
+        <div class="input-controls-container" style="margin-top: 1rem;">
             <div class="control-group">
-                <label for="smoothingSlider">Smoothing (Low-Pass Filter):</label>
-                <input type="range" id="smoothingSlider" min="1" max="100" value="100">
-                <span id="smoothingValue" style="min-width: 25px; text-align: right;">100</span>
+                <label for="nSlider">Vectors:</label>
+                <input type="range" id="nSlider" min="1" max="100" value="10">
+                <span id="nValue" style="min-width: 25px; text-align: right;">10</span>
             </div>
-            <div class="control-group">
-                <label for="showCirclesCheckbox">Show Vector Paths</label>
-                <label class="switch">
-                    <input type="checkbox" id="showCirclesCheckbox">
-                    <span class="slider-toggle"></span>
-                </label>
-            </div>
+            <input type="checkbox" id="showCirclesCheckbox" style="display: none;">
+            <input type="checkbox" id="showOriginalCheckbox" style="display: none;">
         </div>
         
         <p class="instructions">Draw shapes on the pad, or choose a preset, then click "Analyze Drawing".</p>
@@ -184,15 +204,22 @@
     const SPEED_FACTOR = 0.3, MIN_CIRCLE_RADIUS = 0.5;
     const MAX_COEFFICIENTS = 100, TARGET_SAMPLE_COUNT = 2000;
 
-    const drawingCanvas = document.getElementById('drawingCanvas'), fourierCanvas = document.getElementById('fourierCanvas'), spectrumCanvas = document.getElementById('spectrumCanvas');
-    const drawingCtx = drawingCanvas.getContext('2d'), fourierCtx = fourierCanvas.getContext('2d'), spectrumCtx = spectrumCanvas.getContext('2d');
-    const mainActionBtn = document.getElementById('mainActionBtn'), resetAnimBtn = document.getElementById('resetAnimBtn'), clearBtn = document.getElementById('clearBtn'), buildUpBtn = document.getElementById('buildUpBtn');
-    const nSlider = document.getElementById('nSlider'), nValueSpan = document.getElementById('nValue'), showCirclesCheckbox = document.getElementById('showCirclesCheckbox');
-    const smoothingSlider = document.getElementById('smoothingSlider'), smoothingValueSpan = document.getElementById('smoothingValue');
-    const showResampledCheckbox = document.getElementById('showResampledCheckbox');
-    
-    let userPath = [], resampledUserPath = [], fourierCoefficients = [], rawCoefficients = [], spectrumCoefficients = [], reconstructedPath = [], normalizedSignal = [];
-    let isDrawing = false, animationFrameId, buildUpAnimationId, time = 0, isBuildUpAnimating = false, isPaused = false;
+    const mainCanvas = document.getElementById('mainCanvas');
+    const mainCtx = mainCanvas.getContext('2d');
+    const mainActionBtn = document.getElementById('mainActionBtn'), clearBtn = document.getElementById('clearBtn');
+    const nSlider = document.getElementById('nSlider'), nValueSpan = document.getElementById('nValue');
+    const showCirclesCheckbox = document.getElementById('showCirclesCheckbox');
+    const showOriginalCheckbox = document.getElementById('showOriginalCheckbox');
+    const canvasLabel = document.getElementById('canvas-label');
+    const viewSwitcher = document.getElementById('viewSwitcher');
+    const toggleVectorPathsBtn = document.getElementById('toggleVectorPathsBtn');
+    const toggleOriginalDrawingBtn = document.getElementById('toggleOriginalDrawingBtn');
+    const canvasOptionsContainer = document.getElementById('canvasOptionsContainer');
+
+    let userPath = [], fourierCoefficients = [], spectrumCoefficients = [], reconstructedPath = [], originalNormalizedPath = [];
+    let isDrawing = false, animationFrameId, time = 0, isPaused = false;
+    let appState = 'drawing';
+    let currentView = 'animation';
     
     const colors = {};
     function loadThemeColors() {
@@ -202,6 +229,7 @@
         colors.grid = rootStyle.getPropertyValue('--grid-color').trim();
         colors.barInactive = rootStyle.getPropertyValue('--spectrum-bar-inactive').trim();
         colors.barActive = rootStyle.getPropertyValue('--spectrum-bar-active').trim();
+        colors.plotLabel = rootStyle.getPropertyValue('--text-plot-label').trim();
     }
 
     const PRESET_SHAPES = {
@@ -212,26 +240,23 @@
     
     function resizeCanvases() {
         const size = document.querySelector('.canvas-wrapper').clientWidth;
-        [drawingCanvas, fourierCanvas].forEach(canvas => { canvas.width = size; canvas.height = size; });
-        const spectrumWrapper = document.querySelector('#spectrumCanvas').parentElement;
-        spectrumCanvas.width = spectrumWrapper.clientWidth; spectrumCanvas.height = 150;
-        setupCanvasStyles(); drawInstructions();
-        if (fourierCoefficients.length > 0) { startAnalysis(false); drawSpectrum(); } 
-        else { drawGridAndAxes(fourierCtx); drawSpectrum(); }
+        mainCanvas.width = size; mainCanvas.height = size;
+        setupCanvasStyles();
+        redrawCurrentState();
     }
 
-    function setupCanvasStyles() { [drawingCtx, fourierCtx, spectrumCtx].forEach(ctx => { ctx.imageSmoothingEnabled = true; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; }); }
+    function setupCanvasStyles() { [mainCtx].forEach(ctx => { ctx.imageSmoothingEnabled = true; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; }); }
     
     function drawInstructions() {
-        drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-        drawingCtx.fillStyle = '#888'; drawingCtx.font = '18px sans-serif';
-        drawingCtx.textAlign = 'center'; drawingCtx.textBaseline = 'middle';
-        drawingCtx.fillText('Draw here or', drawingCanvas.width / 2, drawingCanvas.height / 2 - 10);
-        drawingCtx.fillText('select a preset', drawingCanvas.width / 2, drawingCanvas.height / 2 + 10);
+        mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+        mainCtx.fillStyle = '#888'; mainCtx.font = '18px sans-serif';
+        mainCtx.textAlign = 'center'; mainCtx.textBaseline = 'middle';
+        mainCtx.fillText('Draw here or', mainCanvas.width / 2, mainCanvas.height / 2 - 10);
+        mainCtx.fillText('select a preset', mainCanvas.width / 2, mainCanvas.height / 2 + 10);
     }
     
     function getEventCoords(event) {
-        const rect = drawingCanvas.getBoundingClientRect();
+        const rect = mainCanvas.getBoundingClientRect();
         const clientX = event.touches ? event.touches[0].clientX : event.clientX;
         const clientY = event.touches ? event.touches[0].clientY : event.clientY;
         return { x: clientX - rect.left, y: clientY - rect.top };
@@ -258,34 +283,31 @@
     }
     
     function startDrawing(event) {
+        if (appState !== 'drawing') return;
         stopAllAnimations(); event.preventDefault(); isDrawing = true;
-        drawingCtx.strokeStyle = '#f0f0f0'; drawingCtx.lineWidth = 3;
+        mainCtx.strokeStyle = '#f0f0f0'; mainCtx.lineWidth = 3;
 
         const currentPoint = getEventCoords(event);
         if (userPath.length > 0 && userPath[userPath.length - 1] !== null) { userPath.push(null); }
-        if(userPath.length === 0) drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-        drawingCtx.beginPath(); drawingCtx.moveTo(currentPoint.x, currentPoint.y);
+        if(userPath.length === 0) mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+        mainCtx.beginPath(); mainCtx.moveTo(currentPoint.x, currentPoint.y);
         userPath.push(currentPoint);
     }
 
-    function draw(event) { if (!isDrawing) return; event.preventDefault(); const currentPoint = getEventCoords(event); drawingCtx.lineTo(currentPoint.x, currentPoint.y); drawingCtx.stroke(); userPath.push(currentPoint); }
-    function stopDrawing() { if (!isDrawing) return; isDrawing = false; drawingCtx.closePath(); }
+    function draw(event) { if (!isDrawing) return; event.preventDefault(); const currentPoint = getEventCoords(event); mainCtx.lineTo(currentPoint.x, currentPoint.y); mainCtx.stroke(); userPath.push(currentPoint); }
+    function stopDrawing() { if (!isDrawing) return; isDrawing = false; mainCtx.closePath(); }
     
     function redrawDrawingCanvas() {
-        drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
         if (userPath.length === 0) { drawInstructions(); return; }
-
-        let path_to_draw = showResampledCheckbox.checked ? resampledUserPath : userPath;
-        if(showResampledCheckbox.checked) { drawingCtx.strokeStyle = colors.reconstructedPath; drawingCtx.lineWidth = 1.5; } 
-        else { drawingCtx.strokeStyle = '#f0f0f0'; drawingCtx.lineWidth = 3; }
-
-        drawingCtx.beginPath(); let isFirstPointOfStroke = true;
-        for(const p of path_to_draw) {
+        mainCtx.strokeStyle = '#f0f0f0'; mainCtx.lineWidth = 3;
+        mainCtx.beginPath(); let isFirstPointOfStroke = true;
+        for(const p of userPath) {
             if(p === null) { isFirstPointOfStroke = true; continue; }
-            if(isFirstPointOfStroke) { drawingCtx.moveTo(p.x, p.y); isFirstPointOfStroke = false; } 
-            else { drawingCtx.lineTo(p.x, p.y); }
+            if(isFirstPointOfStroke) { mainCtx.moveTo(p.x, p.y); isFirstPointOfStroke = false; } 
+            else { mainCtx.lineTo(p.x, p.y); }
         }
-        drawingCtx.stroke();
+        mainCtx.stroke();
     }
 
     function resamplePath(path) {
@@ -302,10 +324,10 @@
         });
         if (totalLength === 0) return [];
         const finalPath = [];
-        strokes.forEach((stroke, strokeIndex) => {
-            const numSamplesForStroke = Math.round((strokeLengths[strokeIndex] / totalLength) * TARGET_SAMPLE_COUNT);
+        strokes.forEach((stroke) => {
+            const numSamplesForStroke = Math.round((strokeLengths[strokes.indexOf(stroke)] / totalLength) * TARGET_SAMPLE_COUNT);
             if(numSamplesForStroke < 2) { if(stroke.length > 0) finalPath.push(stroke[0]); return; }
-            const interval = strokeLengths[strokeIndex] / (numSamplesForStroke - 1);
+            const interval = strokeLengths[strokes.indexOf(stroke)] / (numSamplesForStroke - 1);
             let distSinceLastSample = 0; finalPath.push(stroke[0]);
             for(let i = 1; i < stroke.length; i++) {
                 let p1 = stroke[i-1], p2 = stroke[i]; let segmentLength = Math.hypot(p2.x-p1.x, p2.y-p1.y);
@@ -317,9 +339,7 @@
                 }
                 distSinceLastSample += segmentLength;
             }
-            finalPath.push(null);
         });
-        if(finalPath[finalPath.length-1] === null) finalPath.pop();
         return finalPath;
     }
 
@@ -327,27 +347,41 @@
         stopAllAnimations(); isPaused = false;
         if (recalculate) {
             if (userPath.length < 2) return;
-            resampledUserPath = resamplePath(userPath);
-            const pathForAnalysis = resampledUserPath.filter(p => p !== null);
-            normalizedSignal = normalizePath(pathForAnalysis);
-            calculateFourierCoefficients(normalizedSignal);
+            const pathForAnalysis = resamplePath(userPath);
+            originalNormalizedPath = normalizePath(pathForAnalysis);
+            calculateFourierCoefficients(originalNormalizedPath);
         }
-        if (rawCoefficients.length === 0) return;
+        if (fourierCoefficients.length === 0) return;
         
-        applyLowPassFilter(); time = 0; reconstructedPath = [];
-        [resetAnimBtn, buildUpBtn, showResampledCheckbox, mainActionBtn].forEach(el => el.disabled = false);
-        mainActionBtn.textContent = 'Pause';
-        animate(); drawSpectrum();
+        appState = 'animating';
+        currentView = 'animation';
+        updateUIForState();
+        time = 0; reconstructedPath = [];
+        animate();
     }
 
+    // --- FUNCTION FIX ---
     function normalizePath(path) {
-        let centerX = 0, centerY = 0; path.forEach(p => { centerX += p.x; centerY += p.y; });
-        centerX /= path.length; centerY /= path.length;
+        if (path.length === 0) return [];
+
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+        path.forEach(p => {
+            minX = Math.min(minX, p.x);
+            maxX = Math.max(maxX, p.x);
+            minY = Math.min(minY, p.y);
+            maxY = Math.max(maxY, p.y);
+        });
+
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+
         return path.map(p => ({ re: p.x - centerX, im: p.y - centerY }));
     }
 
     function calculateFourierCoefficients(signal) {
-        const N = signal.length; rawCoefficients = []; const maxN = MAX_COEFFICIENTS;
+        const N = signal.length;
+        fourierCoefficients = []; const maxN = MAX_COEFFICIENTS;
         for (let n = -maxN; n <= maxN; n++) {
             let sum = { re: 0, im: 0 };
             for (let k = 0; k < N; k++) {
@@ -356,146 +390,203 @@
                 sum.im += signal[k].re * Math.sin(angle) + signal[k].im * Math.cos(angle);
             }
             sum.re /= N; sum.im /= N;
-            rawCoefficients.push({ freq: n, amp: Math.hypot(sum.re, sum.im), phase: Math.atan2(sum.im, sum.re) });
+            fourierCoefficients.push({ freq: n, amp: Math.hypot(sum.re, sum.im), phase: Math.atan2(sum.im, sum.re) });
         }
-    }
-
-    function applyLowPassFilter() {
-        if(rawCoefficients.length === 0) return;
-        const cutoff = parseInt(smoothingSlider.value);
-        let filtered = rawCoefficients.map(c => Math.abs(c.freq) > cutoff ? {...c, amp: 0} : c);
-        spectrumCoefficients = [...filtered].sort((a,b) => a.freq - b.freq);
-        fourierCoefficients = filtered.sort((a, b) => b.amp - a.amp);
+        spectrumCoefficients = [...fourierCoefficients].sort((a,b) => a.freq - b.freq);
+        fourierCoefficients.sort((a, b) => b.amp - a.amp);
     }
     
-    function animate() {
-        if (isPaused) { animationFrameId = null; return; }
-        fourierCtx.clearRect(0, 0, fourierCanvas.width, fourierCanvas.height);
-        drawGridAndAxes(fourierCtx);
-        let currentPos = { x: fourierCanvas.width / 2, y: fourierCanvas.height / 2 };
+    function drawOriginalShapeGhost(ctx) {
+        if (originalNormalizedPath.length === 0) return;
+        ctx.strokeStyle = colors.reconstructedPath;
+        ctx.globalAlpha = 0.3; ctx.lineWidth = 2;
+        ctx.beginPath();
+        const center = { x: ctx.canvas.width / 2, y: ctx.canvas.height / 2 };
+        ctx.moveTo(originalNormalizedPath[0].re + center.x, originalNormalizedPath[0].im + center.y);
+        for (let i = 1; i < originalNormalizedPath.length; i++) {
+            ctx.lineTo(originalNormalizedPath[i].re + center.x, originalNormalizedPath[i].im + center.y);
+        }
+        ctx.stroke(); ctx.globalAlpha = 1.0;
+    }
+    
+    function drawAnimationFrame() {
+        mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+        drawGridAndAxes(mainCtx);
+        let currentPos = { x: mainCanvas.width / 2, y: mainCanvas.height / 2 };
         const numVectors = parseInt(nSlider.value);
+        if (showOriginalCheckbox.checked) { drawOriginalShapeGhost(mainCtx); }
+
         for (let i = 0; i < numVectors; i++) {
             const coeff = fourierCoefficients[i]; if (!coeff) continue;
             const prevX = currentPos.x, prevY = currentPos.y;
             const angle = (coeff.freq * 2 * Math.PI * time) + coeff.phase;
             currentPos.x += coeff.amp * Math.cos(angle); currentPos.y += coeff.amp * Math.sin(angle);
             if (showCirclesCheckbox.checked && coeff.amp > MIN_CIRCLE_RADIUS) {
-                fourierCtx.beginPath(); fourierCtx.arc(prevX, prevY, coeff.amp, 0, 2 * Math.PI);
-                fourierCtx.strokeStyle = 'rgba(150, 150, 150, 0.5)'; fourierCtx.lineWidth = 1; fourierCtx.stroke();
+                mainCtx.beginPath(); mainCtx.arc(prevX, prevY, coeff.amp, 0, 2 * Math.PI);
+                mainCtx.strokeStyle = 'rgba(150, 150, 150, 0.5)'; mainCtx.lineWidth = 1; mainCtx.stroke();
             }
-            fourierCtx.strokeStyle = colors.vector; fourierCtx.lineWidth = 2;
-            drawArrow(fourierCtx, prevX, prevY, currentPos.x, currentPos.y);
+            mainCtx.strokeStyle = colors.vector; mainCtx.lineWidth = 2;
+            drawArrow(mainCtx, prevX, prevY, currentPos.x, currentPos.y);
         }
         reconstructedPath.unshift({x: currentPos.x, y: currentPos.y});
-        fourierCtx.beginPath(); fourierCtx.moveTo(reconstructedPath[0].x, reconstructedPath[0].y);
-        for (let i = 1; i < reconstructedPath.length; i++) fourierCtx.lineTo(reconstructedPath[i].x, reconstructedPath[i].y);
-        fourierCtx.strokeStyle = colors.reconstructedPath; fourierCtx.lineWidth = 2; fourierCtx.stroke();
         if (reconstructedPath.length > 4000) reconstructedPath.pop();
+
+        if (!showOriginalCheckbox.checked) {
+            mainCtx.beginPath(); mainCtx.moveTo(reconstructedPath[0].x, reconstructedPath[0].y);
+            for (let i = 1; i < reconstructedPath.length; i++) mainCtx.lineTo(reconstructedPath[i].x, reconstructedPath[i].y);
+            mainCtx.strokeStyle = colors.reconstructedPath; mainCtx.lineWidth = 2; mainCtx.stroke();
+        }
+    }
+
+    function animate() {
+        if (isPaused || currentView !== 'animation') { animationFrameId = null; return; }
+        drawAnimationFrame();
         const dt = 1 / TARGET_SAMPLE_COUNT; time += dt * SPEED_FACTOR * 10;
         if (time > 1) time -= 1;
         animationFrameId = requestAnimationFrame(animate);
     }
 
-    function drawSpectrum() {
-        spectrumCtx.clearRect(0,0,spectrumCanvas.width,spectrumCanvas.height);
-        const w = spectrumCanvas.width, h = spectrumCanvas.height;
-        const margin = { top: 10, right: 20, bottom: 20, left: 30 };
-        const graphW = w - margin.left - margin.right, graphH = h - margin.top - margin.bottom;
+    function redrawPausedFrame() {
+        if (appState !== 'animating' || currentView !== 'animation') return;
+        drawAnimationFrame();
+    }
+
+    function drawSpectrumOnMainCanvas() {
+        mainCtx.clearRect(0,0,mainCanvas.width,mainCanvas.height);
         if (spectrumCoefficients.length === 0) return;
-        const maxAmp = rawCoefficients.reduce((max,c)=>Math.max(max,c.amp),0);
+
+        const w = mainCanvas.width, h = mainCanvas.height;
+        const margin = { top: 30, right: 20, bottom: 50, left: 50 };
+        const graphW = w - margin.left - margin.right, graphH = h - margin.top - margin.bottom;
+        
+        const maxAmp = fourierCoefficients.length > 0 ? fourierCoefficients[0].amp : 0;
         const activeCoeffs = fourierCoefficients.slice(0, nSlider.value);
-        const barWidth = graphW / (2 * MAX_COEFFICIENTS + 1);
+
+        const ampThreshold = maxAmp * 0.02;
+        let minFreq = 0, maxFreq = 0;
+        const significantCoeffs = spectrumCoefficients.filter(c => c.amp >= ampThreshold);
+        if (significantCoeffs.length > 1) {
+            minFreq = significantCoeffs[0].freq;
+            maxFreq = significantCoeffs[significantCoeffs.length - 1].freq;
+        }
+        
+        let freqRange = maxFreq - minFreq;
+        let padding = Math.max(5, Math.floor(freqRange * 0.1));
+        let minDynamicFreq = Math.max(-MAX_COEFFICIENTS, minFreq - padding);
+        let maxDynamicFreq = Math.min(MAX_COEFFICIENTS, maxFreq + padding);
+        if (maxDynamicFreq - minDynamicFreq < 30) {
+            const mid = (maxDynamicFreq + minDynamicFreq) / 2;
+            minDynamicFreq = Math.floor(mid - 15);
+            maxDynamicFreq = Math.ceil(mid + 15);
+        }
+
+        const totalFreqsInRange = maxDynamicFreq - minDynamicFreq + 1;
+        const barWidth = graphW / totalFreqsInRange;
+
         spectrumCoefficients.forEach(coeff => {
+            if (coeff.freq < minDynamicFreq || coeff.freq > maxDynamicFreq) return;
+
             const isActive = activeCoeffs.includes(coeff);
-            spectrumCtx.fillStyle = isActive && coeff.amp > 0 ? colors.barActive : colors.barInactive;
+            mainCtx.fillStyle = isActive && coeff.amp > 0 ? colors.barActive : colors.barInactive;
             const barHeight = maxAmp > 0 ? (coeff.amp / maxAmp) * graphH : 0;
-            const x = margin.left + (coeff.freq + MAX_COEFFICIENTS) * barWidth;
-            spectrumCtx.fillRect(x, h - margin.bottom - barHeight, barWidth * 0.8, barHeight);
+            const x = margin.left + (coeff.freq - minDynamicFreq) * barWidth;
+            if(barHeight > 0) mainCtx.fillRect(x, h - margin.bottom - barHeight, Math.max(1, barWidth * 0.8), barHeight);
         });
-        spectrumCtx.strokeStyle = colors.grid; spectrumCtx.lineWidth = 1;
-        spectrumCtx.beginPath(); spectrumCtx.moveTo(margin.left, margin.top); spectrumCtx.lineTo(margin.left, h - margin.bottom);
-        spectrumCtx.lineTo(w - margin.right, h - margin.bottom); spectrumCtx.stroke();
-        spectrumCtx.fillStyle = colors.textMuted; spectrumCtx.font = '10px sans-serif';
-        spectrumCtx.textAlign = 'center'; spectrumCtx.textBaseline = 'top';
-        for(let f = -MAX_COEFFICIENTS; f <= MAX_COEFFICIENTS; f += 50) {
-            const x = margin.left + (f + MAX_COEFFICIENTS) * barWidth;
-            spectrumCtx.fillText(f, x, h - margin.bottom + 4);
-        }
-        spectrumCtx.textAlign = 'right'; spectrumCtx.textBaseline = 'middle';
-        spectrumCtx.fillText('0', margin.left - 4, h - margin.bottom);
-        spectrumCtx.fillText(maxAmp.toFixed(1), margin.left - 4, margin.top);
-    }
-
-    async function runOneBuildUpCycle(numVectors) {
-        return new Promise(resolve => {
-            let t = 0;
-            function cycle() {
-                if (!isBuildUpAnimating) { resolve(); return; }
-                const dt = 1 / TARGET_SAMPLE_COUNT; t += dt * SPEED_FACTOR * 15;
-                fourierCtx.clearRect(0, 0, fourierCanvas.width, fourierCanvas.height);
-                drawGridAndAxes(fourierCtx);
-                let currentPos = { x: fourierCanvas.width / 2, y: fourierCanvas.height / 2 };
-                for (let i = 0; i < numVectors; i++) {
-                     const coeff = fourierCoefficients[i]; const angle = (coeff.freq * 2 * Math.PI * t) + coeff.phase;
-                     currentPos.x += coeff.amp * Math.cos(angle); currentPos.y += coeff.amp * Math.sin(angle);
-                }
-                reconstructedPath.unshift({x:currentPos.x, y:currentPos.y});
-                fourierCtx.beginPath(); fourierCtx.moveTo(reconstructedPath[0].x, reconstructedPath[0].y);
-                for (let i = 1; i < reconstructedPath.length; i++) fourierCtx.lineTo(reconstructedPath[i].x, reconstructedPath[i].y);
-                fourierCtx.strokeStyle = colors.reconstructedPath; fourierCtx.lineWidth = 2; fourierCtx.stroke();
-                
-                fourierCtx.fillStyle = colors.vector; fourierCtx.font = '16px sans-serif';
-                fourierCtx.textAlign = 'right'; fourierCtx.textBaseline = 'top';
-                fourierCtx.fillText(`Components: ${numVectors}`, fourierCanvas.width - 15, 15);
-
-                if (t < 1) requestAnimationFrame(cycle); else resolve();
+        
+        mainCtx.strokeStyle = colors.grid; mainCtx.lineWidth = 1;
+        mainCtx.beginPath(); mainCtx.moveTo(margin.left, margin.top); mainCtx.lineTo(margin.left, h - margin.bottom);
+        mainCtx.lineTo(w - margin.right, h - margin.bottom); mainCtx.stroke();
+        
+        mainCtx.fillStyle = colors.plotLabel;
+        mainCtx.font = '12px sans-serif';
+        mainCtx.textAlign = 'center'; mainCtx.textBaseline = 'top';
+        
+        const tickCount = Math.min(10, Math.floor(graphW / 50));
+        const tickStep = Math.max(1, Math.round((maxDynamicFreq - minDynamicFreq) / tickCount / 5) * 5);
+        for(let f = minDynamicFreq; f <= maxDynamicFreq; f++) {
+            if (f % tickStep === 0) {
+                 const x = margin.left + (f - minDynamicFreq) * barWidth + (barWidth / 2);
+                 mainCtx.fillText(f, x, h - margin.bottom + 8);
             }
-            cycle();
-        });
-    }
-
-    async function startBuildUpAnimation() {
-        stopAllAnimations(); isBuildUpAnimating = true;
-        [mainActionBtn, resetAnimBtn, clearBtn].forEach(b => b.disabled = true);
-        buildUpBtn.textContent='Stop'; nSlider.disabled = true;
-
-        for (let n = 1; n <= parseInt(smoothingSlider.value); n++) {
-            if (!isBuildUpAnimating) break;
-            nSlider.value = n; nValueSpan.textContent = n;
-            reconstructedPath = []; drawSpectrum();
-            await runOneBuildUpCycle(n);
         }
-        stopBuildUpAnimation();
-        if (fourierCoefficients.length > 0) startAnalysis(false);
+        
+        mainCtx.fillText("Frequency (n)", w / 2, h - margin.bottom + 28);
+        mainCtx.textAlign = 'right'; mainCtx.textBaseline = 'middle';
+        mainCtx.fillText('0', margin.left - 8, h - margin.bottom);
+        mainCtx.fillText(maxAmp.toFixed(1), margin.left - 8, margin.top);
+        
+        mainCtx.save();
+        mainCtx.translate(margin.left-35, h/2);
+        mainCtx.rotate(-Math.PI/2);
+        mainCtx.textAlign = 'center';
+        mainCtx.fillText("Amplitude", 0, 0);
+        mainCtx.restore();
     }
     
     function stopAllAnimations() {
-        if(animationFrameId) cancelAnimationFrame(animationFrameId); animationFrameId = null;
-        if(isBuildUpAnimating) stopBuildUpAnimation();
-    }
-
-    function stopBuildUpAnimation() {
-        isBuildUpAnimating = false;
-        [mainActionBtn, resetAnimBtn, clearBtn, buildUpBtn].forEach(b => {
-            b.disabled = rawCoefficients.length === 0; if(b.id==='buildUpBtn')b.textContent='Build-Up'
-        });
-        nSlider.disabled = false;
+        if(animationFrameId) cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
     }
 
     function handleMainAction() {
-        if(mainActionBtn.textContent === 'Analyze Drawing') {
+        if(appState === 'drawing') {
+            if (userPath.length < 2) return;
             startAnalysis(true);
-        } else if (mainActionBtn.textContent === 'Pause') {
-            isPaused = true; mainActionBtn.textContent = 'Resume';
         } else {
-            isPaused = false; mainActionBtn.textContent = 'Pause';
-            animate();
+            isPaused = !isPaused;
+            updateUIForState();
+            if (!isPaused && currentView === 'animation') {
+                animate();
+            }
         }
+    }
+    
+    function redrawCurrentState() {
+        stopAllAnimations();
+        if (appState === 'drawing') {
+            redrawDrawingCanvas();
+        } else {
+            if (currentView === 'spectrum') {
+                drawSpectrumOnMainCanvas();
+            } else {
+                startAnalysis(false);
+            }
+        }
+    }
+
+    function updateUIForState() {
+        const isAnalyzing = appState === 'animating';
+        canvasLabel.textContent = isAnalyzing ? (currentView === 'animation' ? 'Reconstruction' : 'Frequency Spectrum') : 'Drawing Pad';
+        document.querySelectorAll('.view-btn').forEach(b => b.disabled = !isAnalyzing);
+
+        if (isAnalyzing) {
+            canvasOptionsContainer.classList.add('visible');
+            mainActionBtn.textContent = isPaused ? 'Resume' : 'Pause';
+            viewSwitcher.querySelector('.active').classList.remove('active');
+            viewSwitcher.querySelector(`[data-view="${currentView}"]`).classList.add('active');
+            
+            toggleVectorPathsBtn.disabled = false;
+            toggleOriginalDrawingBtn.disabled = false;
+            showCirclesCheckbox.disabled = false;
+            showOriginalCheckbox.disabled = false;
+
+        } else { 
+            canvasOptionsContainer.classList.remove('visible');
+            mainActionBtn.textContent = 'Analyze Drawing';
+
+            toggleVectorPathsBtn.disabled = true;
+            toggleOriginalDrawingBtn.disabled = true;
+            showCirclesCheckbox.disabled = true;
+            showOriginalCheckbox.disabled = true;
+        }
+
+        toggleVectorPathsBtn.classList.toggle('active', showCirclesCheckbox.checked);
+        toggleOriginalDrawingBtn.classList.toggle('active', showOriginalCheckbox.checked);
     }
 
     function loadPreset(shape) {
         stopAllAnimations(); clearDrawing();
-        const points = PRESET_SHAPES[shape]; const canvasSize = drawingCanvas.width;
+        const points = PRESET_SHAPES[shape]; const canvasSize = mainCanvas.width;
         const scale = canvasSize / 2.5;
         userPath = points.map(p => ({ x: p.x/100 * scale + canvasSize/2, y: p.y/100 * scale + canvasSize/2 }));
         redrawDrawingCanvas();
@@ -503,42 +594,76 @@
     }
     
     function clearDrawing() {
-        stopAllAnimations();
-        userPath = []; resampledUserPath = []; fourierCoefficients = []; rawCoefficients = []; reconstructedPath = []; normalizedSignal = [];
+        stopAllAnimations(); appState = 'drawing';
+        userPath = []; fourierCoefficients = []; reconstructedPath = []; originalNormalizedPath = [];
         isPaused = false;
-        [fourierCtx, spectrumCtx].forEach(ctx => ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height));
-        [resetAnimBtn, buildUpBtn, showResampledCheckbox, mainActionBtn].forEach(b => b.disabled = true);
-        mainActionBtn.textContent = 'Analyze Drawing'; mainActionBtn.disabled = false;
-        showResampledCheckbox.checked = false;
+        showCirclesCheckbox.checked = false;
+        showOriginalCheckbox.checked = false;
+        updateUIForState();
         resizeCanvases();
     }
     
+    function setupOptionCards() {
+        [toggleVectorPathsBtn, toggleOriginalDrawingBtn].forEach(button => {
+            button.addEventListener('click', () => {
+                const checkbox = document.getElementById(button.dataset.controls);
+                if (checkbox.disabled) return;
+                
+                checkbox.checked = !checkbox.checked;
+                button.classList.toggle('active', checkbox.checked);
+                
+                if (appState === 'animating' && currentView === 'animation') {
+                    if (!isPaused) {
+                        startAnalysis(false);
+                    } else {
+                        redrawPausedFrame();
+                    }
+                }
+            });
+        });
+    }
+
     mainActionBtn.addEventListener('click', handleMainAction);
-    resetAnimBtn.addEventListener('click', () => startAnalysis(false));
-    buildUpBtn.addEventListener('click', () => isBuildUpAnimating ? stopBuildUpAnimation() : startBuildUpAnimation());
     clearBtn.addEventListener('click', clearDrawing);
     nSlider.addEventListener('input', (e) => {
         nValueSpan.textContent = e.target.value;
-        if (rawCoefficients.length > 0 && !isBuildUpAnimating) {
-            startAnalysis(false);
+        if (appState === 'animating') { 
+             if (currentView === 'animation' && !isPaused) startAnalysis(false);
+             else if (currentView === 'spectrum') drawSpectrumOnMainCanvas();
+             else if (currentView === 'animation' && isPaused) redrawPausedFrame();
         }
     });
-    smoothingSlider.addEventListener('input', (e) => {
-        smoothingValueSpan.textContent = e.target.value;
-        if (rawCoefficients.length > 0 && !isBuildUpAnimating) {
-            applyLowPassFilter();
+
+    viewSwitcher.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'BUTTON' || e.target.disabled) return;
+        const newView = e.target.dataset.view;
+        if (newView === currentView) return;
+        
+        stopAllAnimations();
+        currentView = newView;
+        
+        if (currentView === 'spectrum') {
+            isPaused = true;
+            drawSpectrumOnMainCanvas();
+        } else {
+            isPaused = false;
             startAnalysis(false);
         }
+        updateUIForState();
     });
-    showResampledCheckbox.addEventListener('change', redrawDrawingCanvas);
+
     document.querySelectorAll('.preset-btn').forEach(btn => btn.addEventListener('click', () => loadPreset(btn.dataset.shape)));
-    drawingCanvas.addEventListener('mousedown', startDrawing); drawingCanvas.addEventListener('mousemove', draw);
-    drawingCanvas.addEventListener('mouseup', stopDrawing); drawingCanvas.addEventListener('mouseleave', stopDrawing);
-    drawingCanvas.addEventListener('touchstart', startDrawing, { passive: false });
-    drawingCanvas.addEventListener('touchmove', draw, { passive: false });
-    drawingCanvas.addEventListener('touchend', stopDrawing); drawingCanvas.addEventListener('touchcancel', stopDrawing);
+    mainCanvas.addEventListener('mousedown', startDrawing); mainCanvas.addEventListener('mousemove', draw);
+    mainCanvas.addEventListener('mouseup', stopDrawing); mainCanvas.addEventListener('mouseleave', stopDrawing);
+    mainCanvas.addEventListener('touchstart', startDrawing, { passive: false });
+    mainCanvas.addEventListener('touchmove', draw, { passive: false });
+    mainCanvas.addEventListener('touchend', stopDrawing); mainCanvas.addEventListener('touchcancel', stopDrawing);
     window.addEventListener('resize', resizeCanvases);
-    document.addEventListener('DOMContentLoaded', () => { loadThemeColors(); resizeCanvases(); });
+    document.addEventListener('DOMContentLoaded', () => { 
+        loadThemeColors(); 
+        setupOptionCards(); 
+        clearDrawing(); 
+    });
 </script>
 </body>
 </html>
