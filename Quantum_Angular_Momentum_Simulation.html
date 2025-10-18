@@ -3,217 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quantum Angular Momentum Simulation (Three.js)</title>
+    <title>Quantum Angular Momentum Explorer</title>
     <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --secondary-color: #0f3460;
+            --primary-color: #e94560; /* Matched to Harmonic Oscillator */
+            --text-color: #f0f0f0;
+            --text-muted: #aaa;
+            --border-color: #16213e;
+            --accent-color: #33d1ff; /* Changed for better contrast with new primary */
+        }
+
         body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            background-color: #111;
-            color: #eee;
-            overflow: hidden; /* Prevent scrollbars */
-        }
-        #container {
-            width: 100vw;
-            height: 100vh;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
-        #title-container {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            text-align: center;
-            pointer-events: none;
-            width: 100%;
-            z-index: 3;
-        }
-        h1 {
-            margin: 0;
-            font-size: 1.8em;
-            color: #00aaff;
-            text-shadow: 0 0 8px rgba(0, 170, 255, 0.6);
-        }
-        #ui-panel {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background-color: rgba(0, 0, 0, 0.75);
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid #444;
-            max-width: 320px;
-            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             display: flex;
             flex-direction: column;
-            z-index: 3;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            -webkit-font-smoothing: antialiased;
+            box-sizing: border-box;
         }
-        #ui-content {
-            transition: opacity 0.3s ease;
-        }
-        label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 10px;
-        }
-        select {
-            width: 100%;
-            padding: 8px;
-            border-radius: 5px;
-            background-color: #333;
-            color: #fff;
-            border: 1px solid #555;
-            font-size: 1em;
-        }
-        #info-panel {
-            margin-top: 20px;
-            font-size: 0.9em;
-            line-height: 1.6;
-        }
-        code {
-            background-color: #222;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-family: 'Courier New', Courier, monospace;
-        }
-        #credit-line {
-            margin-top: 25px;
-            padding-top: 15px;
-            border-top: 1px solid #444;
-            font-size: 0.8em;
-            text-align: right;
-            color: #aaa;
-        }
-        #ui-toggle {
-            margin-bottom: 15px;
+
+        .main-container {
+            width: 95%;
+            max-width: 900px;
+            background-color: var(--secondary-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
             text-align: center;
-            color: #00aaff;
-            font-weight: bold;
-            cursor: pointer;
-            user-select: none;
-        }
-        #ui-toggle:hover {
-            color: #4dc4ff;
-        }
-        .content-hidden {
-            display: none;
+            box-sizing: border-box;
         }
         
-        /* --- Checkbox Styles --- */
-        #label-toggle-container {
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            font-size: 0.9em;
-        }
-        #toggle-labels-checkbox {
-            margin-right: 10px;
-            width: 16px;
-            height: 16px;
-        }
-        #label-toggle-container label {
-            margin-bottom: 0;
-            font-weight: normal;
-            color: #ddd;
-            cursor: pointer;
-        }
-
-        /* --- Label Styles --- */
-        #labels-container {
-            position: absolute;
-            top: 0;
-            left: 0;
+        h1 { color: var(--primary-color); margin-top: 0; margin-bottom: 0.5rem; }
+        .explanation { color: var(--text-muted); line-height: 1.6; margin-bottom: 1.5rem; max-width: 700px; margin-left: auto; margin-right: auto;}
+        
+        .canvas-label { font-weight: bold; margin: 1rem 0 0.5rem 0; font-size: 1.1em; text-align: left; }
+        
+        .canvas-wrapper {
+            position: relative;
             width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 2;
-        }
-        .world-label {
-            position: absolute;
-            font-family: 'Times New Roman', serif;
-            font-style: italic;
-            text-shadow: 0 0 5px #000;
-            transform: translate(-50%, -50%); /* Center the label on the point */
-        }
-        .vector-label {
-            font-size: 1.4em;
-            font-weight: bold;
-        }
-        .projection-label {
-            font-size: 1.1em;
-            color: #ccc;
-        }
-        #z-axis-label {
-            position: absolute;
-            z-index: 2; /* Ensure it's on top */
-            color: #aaaaaa;
-            font-size: 1.2em;
-            font-family: 'Times New Roman', serif;
-            font-style: italic;
-            pointer-events: none;
-            transform: translate(-50%, -100%); /* Center horizontally, place above the point */
-            text-shadow: 0 0 5px #000;
+            padding-top: 125%; 
+            border: 2px solid var(--primary-color);
+            background-color: var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
         }
 
-        /* --- Mobile-friendly layout --- */
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 1.3em;
-            }
-            #ui-panel {
-                top: auto;
-                bottom: 10px;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 95%;
-                padding: 15px;
-            }
+        #container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        }
+
+        /* --- Controls Styling --- */
+        .controls-container {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+        }
+        .mode-selector {
+            display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; width: 100%;
+        }
+        .mode-selector button {
+            background-color: transparent; border: 1px solid var(--text-muted); color: var(--text-muted);
+            padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.2s ease;
+            font-size: 1rem; flex-grow: 1; max-width: 300px;
+        }
+        .mode-selector button:not(.active):hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .mode-selector button.active { background-color: var(--primary-color); border-color: var(--primary-color); color: white; }
+
+        .sim-ui-container { display: flex; flex-direction: column; gap: 20px; }
+        .sim-ui-container.hidden { display: none; }
+        
+        .control-group { text-align: left; width: 100%; }
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        select {
+            width: 100%; padding: 12px; border-radius: 5px; background-color: var(--border-color);
+            color: var(--text-color); border: 1px solid var(--bg-color); font-size: 1em;
+        }
+
+        .presets-container { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; width: 100%; }
+        .presets-container button {
+            background-color: transparent; border: 1px solid var(--text-muted); color: var(--text-muted);
+            padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.2s ease;
+        }
+        .presets-container button:not(.active):hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .presets-container button.active { background-color: var(--primary-color); border-color: var(--primary-color); color: white; }
+
+        .filter-container { text-align: left; }
+        .filter-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 10px;
+            justify-content: center;
+        }
+        .filter-card {
+            background-color: #2a2a4e; color: #ddd;
+            border: 1px solid #445; padding: 8px 12px; border-radius: 5px;
+            cursor: pointer; font-weight: 500; transition: all 0.2s ease;
+        }
+        .filter-card:hover { border-color: var(--primary-color); color: white; }
+        .filter-card.active {
+            background-color: var(--primary-color); color: white; border-color: var(--primary-color);
+        }
+
+        #info-panel {
+            margin-top: 20px; padding: 20px; text-align: left;
+            border-top: 1px solid var(--border-color);
+            background-color: #16213e; border-radius: 8px;
+            font-size: 0.95em; line-height: 1.7;
+        }
+        code {
+            background-color: #222; padding: 3px 6px; border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace; color: var(--accent-color);
+        }
+        #info-panel table {
+            width: 100%; border-collapse: collapse; margin-top: 15px;
+        }
+        #info-panel th, #info-panel td {
+            border: 1px solid #445; padding: 10px; text-align: center;
+        }
+        #info-panel th { background-color: #2a2a4e; }
+
+        #credit-line { margin-top: 25px; color: var(--text-muted); font-size: 0.9em; text-align: center;}
+
+        /* --- Label Styles (Unchanged) --- */
+        #labels-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+        .world-label { position: absolute; font-family: 'Times New Roman', serif; font-style: italic; text-shadow: 0 0 5px #000; transform: translate(-50%, -50%); }
+        .vector-label { font-size: 1.4em; font-weight: bold; }
+        .projection-label { font-size: 1.1em; color: #ccc; }
+        #z-axis-label { position: absolute; z-index: 2; color: #aaaaaa; font-size: 1.2em; font-family: 'Times New Roman', serif; font-style: italic; pointer-events: none; transform: translate(-50%, -100%); text-shadow: 0 0 5px #000; }
+        
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .main-container { width: 100%; padding: 1.5rem 1rem; }
+            h1 { font-size: 1.8rem; }
         }
     </style>
 </head>
 <body>
 
-    <div id="labels-container"></div>
-    <div id="z-axis-label"></div>
-    <div id="container"></div>
+    <div class="main-container">
+        <h1>Quantum Angular Momentum Explorer</h1>
+        <p class="explanation">
+            An interactive 3D visualization of quantized angular momentum vectors. Explore L/S states precessing around a Z-axis and the vector model of L-S (J) coupling.
+        </p>
+        
+        <div class="canvas-label">3D Visualization</div>
+        <div class="canvas-wrapper">
+            <div id="container"></div>
+            <div id="labels-container"></div>
+            <div id="z-axis-label"></div>
+        </div>
 
-    <div id="title-container">
-        <h1>Quantum Angular Momentum Simulation</h1>
-    </div>
-
-    <div id="ui-panel">
-        <div id="ui-toggle">Hide Controls</div>
-        <div id="ui-content">
-            <label for="l-value-selector">Select Quantum Number (l or s):</label>
-            <select id="l-value-selector">
-                <option value="0.5">s = 1/2 (Electron Spin)</option>
-                <option value="0">l = 0 (s orbital)</option>
-                <option value="1" selected>l = 1 (p orbital)</option>
-                <option value="2">l = 2 (d orbital)</option>
-                <option value="3">l = 3 (f orbital)</option>
-            </select>
-            <div id="label-toggle-container">
-                <input type="checkbox" id="toggle-labels-checkbox" checked>
-                <label for="toggle-labels-checkbox">Show Vector & Projection Labels</label>
+        <div class="controls-container">
+            <div class="presets-container mode-selector">
+                <button id="tab-ls" class="active">L / S States</button>
+                <button id="tab-j">J-Coupling (L+S)</button>
             </div>
-            <div id="info-panel">
-                <!-- Info will be populated by JavaScript -->
+            
+            <div id="ls-sim-ui" class="sim-ui-container">
+                <div class="control-group">
+                    <label for="l-value-selector-ls">Select Quantum Number (l or s):</label>
+                    <select id="l-value-selector-ls">
+                        <option value="0.5">s = 1/2 (Electron Spin)</option>
+                        <option value="0">l = 0 (s orbital)</option>
+                        <option value="1" selected>l = 1 (p orbital)</option>
+                        <option value="2">l = 2 (d orbital)</option>
+                        <option value="3">l = 3 (f orbital)</option>
+                    </select>
+                </div>
+                <div class="presets-container">
+                    <button id="toggle-labels-btn" class="active">Hide Labels</button>
+                </div>
             </div>
-            <div id="credit-line">
-                Created by Dr. Devender Garg
+        
+            <div id="j-sim-ui" class="sim-ui-container hidden">
+                 <div class="control-group">
+                    <label for="l-value-selector-j">Select Orbital Quantum Number (l):</label>
+                    <select id="l-value-selector-j">
+                        <option value="1">l = 1 (p orbital)</option>
+                        <option value="2" selected>l = 2 (d orbital)</option>
+                        <option value="3">l = 3 (f orbital)</option>
+                    </select>
+                </div>
+                <div class="presets-container mode-selector">
+                    <button id="no-field-btn">No Field</button>
+                    <button id="with-field-btn" class="active">With Field</button>
+                </div>
+                <div class="presets-container" id="toggle-ls-container">
+                    <button id="toggle-ls-components-btn">Show L & S</button>
+                </div>
+                <div id="j-filter-container" class="filter-container">
+                    <label>Select Total Angular Momentum (j):</label>
+                    <div id="j-selector-container" class="presets-container" style="margin-top:10px;"></div>
+                </div>
+                <div id="mj-filter-container" class="filter-container">
+                    <label>Filter by m<sub>j</sub> values:</label>
+                    <div id="mj-filter-grid" class="filter-grid"></div>
+                </div>
             </div>
         </div>
+        <div id="info-panel"></div>
+        <p id="credit-line">Created by Dr. Devender Garg</p>
     </div>
 
     <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
 
     <script type="module">
@@ -221,49 +227,58 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
         let scene, camera, renderer, controls, simulationGroup;
-        const container = document.getElementById('container');
-        const lSelector = document.getElementById('l-value-selector');
-        const infoPanel = document.getElementById('info-panel');
-        const uiContent = document.getElementById('ui-content');
-        const uiToggle = document.getElementById('ui-toggle');
+        const container = document.getElementById('container'); 
         const zAxisLabelElement = document.getElementById('z-axis-label');
         const labelsContainer = document.getElementById('labels-container');
-        const toggleLabelsCheckbox = document.getElementById('toggle-labels-checkbox');
-        
         const sceneCenter = new THREE.Vector3(0, 0, 0);
-        const zAxisLabelPosition = new THREE.Vector3(0, 0, 4.3); // Position in 3D space for the z-axis label
-
-        let currentObjects = [];
-        let vectorLabels = [];
-        let projectionLabels = [];
-        const stateColors = [ 0xff6347, 0xffa500, 0xffff00, 0x32cd32, 0x00ced1, 0x1e90ff, 0x9370db ];
+        const zAxisLabelPosition = new THREE.Vector3(0, 0, 4.3);
+        
+        const infoPanel = document.getElementById('info-panel');
+        const tabLS = document.getElementById('tab-ls');
+        const tabJ = document.getElementById('tab-j');
+        const lsSimUI = document.getElementById('ls-sim-ui');
+        const jSimUI = document.getElementById('j-sim-ui');
+        const lSelectorLS = document.getElementById('l-value-selector-ls');
+        const lSelectorJ = document.getElementById('l-value-selector-j');
+        const toggleLabelsBtn = document.getElementById('toggle-labels-btn');
+        const noFieldBtn = document.getElementById('no-field-btn');
+        const withFieldBtn = document.getElementById('with-field-btn');
+        const toggleLSBtn = document.getElementById('toggle-ls-components-btn');
+        const toggleLSContainer = document.getElementById('toggle-ls-container');
+        const mjFilterContainer = document.getElementById('mj-filter-container');
+        const jSelectorContainer = document.getElementById('j-selector-container');
+        const mjFilterGrid = document.getElementById('mj-filter-grid');
+        
+        let currentSim = 'ls';
+        let precessingObjects = [];
+        let labels = [];
+        const L_COLOR = 0x1e90ff; const S_COLOR = 0xffa500; const J_COLOR = 0x32cd32;
+        const stateColors = [ 0xff6347, 0xffa500, 0xffff00, 0x32cd32, 0x00ced1, 0x1e90ff, 0x9370db, 0xff1493, 0x7fffd4 ];
+        const tempQuaternion = new THREE.Quaternion();
+        const tempVector = new THREE.Vector3();
+        const Z_AXIS = new THREE.Vector3(0, 0, 1);
 
         function init() {
             scene = new THREE.Scene();
-            
             simulationGroup = new THREE.Group();
-            simulationGroup.position.copy(sceneCenter);
             scene.add(simulationGroup);
-
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             
+            camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
             camera.up.set(0, 0, 1);
-            camera.position.set(0, -9, 2);
+            camera.position.set(0, -6.5, 2);
             camera.lookAt(sceneCenter);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setClearColor(0x111111, 1);
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(container.clientWidth, container.clientHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             container.appendChild(renderer.domElement);
 
             controls = new OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
+            controls.enableDamping = true; controls.dampingFactor = 0.05;
             controls.target.copy(sceneCenter);
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
             const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
             directionalLight.position.set(5, -10, 7.5);
             scene.add(directionalLight);
@@ -271,23 +286,97 @@
             const zAxisHelper = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, -4), 8, 0xaaaaaa, 0.3, 0.1);
             simulationGroup.add(zAxisHelper);
             
-            lSelector.addEventListener('change', runSimulation);
-            window.addEventListener('resize', onWindowResize);
-            uiToggle.addEventListener('click', () => {
-                uiContent.classList.toggle('content-hidden');
-                uiToggle.textContent = uiContent.classList.contains('content-hidden') ? 'Show Controls' : 'Hide Controls';
+            tabLS.addEventListener('click', () => switchTab('ls'));
+            tabJ.addEventListener('click', () => switchTab('j'));
+            lSelectorLS.addEventListener('change', runSimulation);
+            lSelectorJ.addEventListener('change', runSimulation);
+            
+            toggleLabelsBtn.addEventListener('click', (e) => {
+                e.target.classList.toggle('active');
+                e.target.textContent = e.target.classList.contains('active') ? 'Hide Labels' : 'Show Labels';
             });
-            toggleLabelsCheckbox.addEventListener('change', toggleLabelVisibility);
-
+            
+            noFieldBtn.addEventListener('click', () => {
+                noFieldBtn.classList.add('active'); withFieldBtn.classList.remove('active');
+                runSimulation();
+            });
+            withFieldBtn.addEventListener('click', () => {
+                withFieldBtn.classList.add('active'); noFieldBtn.classList.remove('active');
+                runSimulation();
+            });
+            toggleLSBtn.addEventListener('click', (e) => {
+                e.target.classList.toggle('active');
+                e.target.textContent = e.target.classList.contains('active') ? 'Hide L & S' : 'Show L & S';
+                runSimulation(); // Re-run to apply color change and visibility
+            });
+            
+            window.addEventListener('resize', onWindowResize);
             runSimulation();
             animate();
         }
 
-        function toggleLabelVisibility() {
-            labelsContainer.style.display = toggleLabelsCheckbox.checked ? 'block' : 'none';
+        function switchTab(tabName) {
+            if (currentSim === tabName) return;
+            currentSim = tabName;
+            tabLS.classList.toggle('active', tabName === 'ls');
+            tabJ.classList.toggle('active', tabName === 'j');
+            lsSimUI.classList.toggle('hidden', tabName !== 'ls');
+            jSimUI.classList.toggle('hidden', tabName !== 'j');
+            if(tabName === 'j') {
+                toggleLSBtn.classList.remove('active');
+                toggleLSBtn.textContent = 'Show L & S';
+            }
+            runSimulation();
         }
 
-        function updateLabelPosition(element, position, camera, renderer) {
+        function runSimulation() {
+            clearScene();
+            if (currentSim === 'ls') runLSSimulation(); else runJSimulation();
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = Date.now() * 0.0005;
+
+            precessingObjects.forEach(objInfo => {
+                if (objInfo.object.visible) {
+                    if (objInfo.type === 'z-precession') objInfo.object.rotation.z = time * objInfo.speed;
+                    else if (objInfo.type === 'vector-precession') objInfo.object.quaternion.setFromAxisAngle(objInfo.axis, time * objInfo.speed);
+                }
+            });
+
+            updateLabelPositions();
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function updateLabelPositions() {
+            updateLabelPosition(zAxisLabelElement, zAxisLabelPosition);
+            
+            const isJModeNoField = currentSim === 'j' && noFieldBtn.classList.contains('active');
+            const showLSinJModeWithField = currentSim === 'j' && withFieldBtn.classList.contains('active') && toggleLSBtn.classList.contains('active');
+            
+            labels.forEach(label => {
+                if (label.stateGroup && !label.stateGroup.visible) {
+                    label.element.style.display = 'none'; return; 
+                }
+                if (currentSim === 'ls' && !toggleLabelsBtn.classList.contains('active')) {
+                    label.element.style.display = 'none'; return;
+                }
+                if (currentSim === 'j' && (label.component === 'L' || label.component === 'S')) {
+                    if (!isJModeNoField && !showLSinJModeWithField) {
+                         label.element.style.display = 'none'; return;
+                    }
+                }
+                
+                label.object.getWorldPosition(tempVector);
+                label.object.getWorldQuaternion(tempQuaternion);
+                const worldPosition = tempVector.add(label.tipVector.clone().applyQuaternion(tempQuaternion));
+                updateLabelPosition(label.element, worldPosition);
+            });
+        }
+        
+        function updateLabelPosition(element, position) {
             const screenPosition = position.clone().project(camera);
             const x = (screenPosition.x * 0.5 + 0.5) * renderer.domElement.clientWidth;
             const y = (-screenPosition.y * 0.5 + 0.5) * renderer.domElement.clientHeight;
@@ -296,197 +385,263 @@
             element.style.display = screenPosition.z < 1 ? 'block' : 'none';
         }
 
-        function animate() {
-            requestAnimationFrame(animate);
-            const time = Date.now() * 0.0005;
-            currentObjects.forEach(obj => {
-                obj.rotation.z = time;
-            });
-
-            // Always update the permanent Z-axis label position
-            updateLabelPosition(zAxisLabelElement, zAxisLabelPosition, camera, renderer);
-
-            // Update other labels only if they are visible
-            if (toggleLabelsCheckbox.checked) {
-                vectorLabels.forEach(label => {
-                    const worldPosition = label.initialTip.clone().applyQuaternion(label.object.quaternion);
-                    updateLabelPosition(label.element, worldPosition, camera, renderer);
-                });
-
-                projectionLabels.forEach(label => {
-                    updateLabelPosition(label.element, label.position, camera, renderer);
-                });
-            }
-
-            controls.update();
-            renderer.render(scene, camera);
-        }
-        
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-        
-        function clearOtherLabels() {
-            labelsContainer.innerHTML = '';
-            vectorLabels = [];
-            projectionLabels = [];
-        }
-
         function clearScene() {
-            clearOtherLabels();
-            currentObjects.forEach(obj => {
-                obj.traverse(child => {
-                    if (child.geometry) child.geometry.dispose();
-                    if (child.material) child.material.dispose();
-                });
-                simulationGroup.remove(obj);
+            labelsContainer.innerHTML = ''; labels = []; precessingObjects = [];
+            [...simulationGroup.children].forEach(obj => {
+                if (obj.type !== 'ArrowHelper') {
+                    obj.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) child.material.dispose(); });
+                    simulationGroup.remove(obj);
+                }
             });
-            currentObjects = [];
+        }
+        
+        function createLabel(text, color, className, parentObject, tipVector, stateGroup = null, component = null) {
+            const div = document.createElement('div');
+            div.className = `world-label ${className}`; div.innerHTML = text;
+            div.style.color = `#${new THREE.Color(color).getHexString()}`;
+            labelsContainer.appendChild(div);
+            labels.push({ element: div, object: parentObject, tipVector, stateGroup, component });
         }
 
-        function runSimulation() {
-            clearScene();
-
-            const q_num = parseFloat(lSelector.value);
+        function onWindowResize() {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+        
+        function runLSSimulation() {
+            const q_num = parseFloat(lSelectorLS.value);
             const isSpin = q_num === 0.5;
             const vec_symbol = isSpin ? 'S' : 'L';
-            const L_mag = Math.sqrt(q_num * (q_num + 1));
-            let m_values = [];
-            const labeled_m_values = new Set();
-
-            if (isSpin) {
-                m_values = [-0.5, 0.5];
-            } else {
-                for (let i = -q_num; i <= q_num; i++) {
-                    m_values.push(i);
-                }
-            }
-            updateInfoPanel(q_num, L_mag, m_values, isSpin);
+            const mag = Math.sqrt(q_num * (q_num + 1));
+            let m_values = isSpin ? [-0.5, 0.5] : Array.from({length: 2 * q_num + 1}, (_, i) => i - q_num);
             
-            if (q_num === 0) {
-                const dotGeometry = new THREE.BufferGeometry();
-                dotGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3));
-                const dotMaterial = new THREE.PointsMaterial({ size: 0.15, color: stateColors[3] });
-                const dot = new THREE.Points(dotGeometry, dotMaterial);
-                simulationGroup.add(dot);
-                currentObjects.push(dot);
-                return;
-            }
-
+            updateLSInfoPanel(q_num, mag, m_values, isSpin);
+            
+            const labeled_m_values = new Set();
             m_values.forEach((m_val, index) => {
-                const L_z = m_val;
-                let color;
-                if (isSpin) {
-                    color = m_val > 0 ? stateColors[4] : stateColors[2];
-                } else {
-                    color = stateColors[index + 3 - q_num];
-                }
+                const color = isSpin ? (m_val > 0 ? stateColors[4] : stateColors[2]) : stateColors[index];
                 const stateGroup = new THREE.Group();
-                const cone = createParticleCone(L_mag, L_z, color);
-                const L_vector = createLVector(L_mag, L_z, color);
-                stateGroup.add(cone);
-                stateGroup.add(L_vector);
+                stateGroup.add(createParticleCone(mag, m_val, color), createVector(mag, m_val, color));
                 simulationGroup.add(stateGroup);
-                currentObjects.push(stateGroup);
+                precessingObjects.push({ object: stateGroup, type: 'z-precession', speed: 1.0 });
 
-                // --- Create Vector Label ---
-                const r_xy = Math.sqrt(L_mag**2 - L_z**2);
-                const initialTipPosition = new THREE.Vector3(r_xy, 0, L_z).multiplyScalar(1.1); // Slightly outside the tip
-                const vecLabelDiv = document.createElement('div');
-                vecLabelDiv.className = 'world-label vector-label';
-                vecLabelDiv.innerHTML = vec_symbol;
-                // *** BUG FIX HERE ***: Pad the hex string to ensure it's always 6 digits
-                vecLabelDiv.style.color = `#${color.toString(16).padStart(6, '0')}`;
-                labelsContainer.appendChild(vecLabelDiv);
-                vectorLabels.push({ object: stateGroup, initialTip: initialTipPosition, element: vecLabelDiv });
+                const tipPosition = new THREE.Vector3(Math.sqrt(mag**2 - m_val**2), 0, m_val).multiplyScalar(1.1);
+                createLabel(vec_symbol, color, 'vector-label', stateGroup, tipPosition, stateGroup);
 
-                // --- Create Projection Label (if not already created for this m_val) ---
                 if (!labeled_m_values.has(m_val)) {
-                    const projLabelDiv = document.createElement('div');
-                    projLabelDiv.className = 'world-label projection-label';
-                    if (isSpin) {
-                        projLabelDiv.innerHTML = m_val > 0 ? '+ħ/2' : '-ħ/2';
-                    } else {
-                        projLabelDiv.innerHTML = `${m_val}ħ`;
-                    }
-                    labelsContainer.appendChild(projLabelDiv);
-                    projectionLabels.push({
-                        position: new THREE.Vector3(0.3, 0, m_val),
-                        element: projLabelDiv
-                    });
+                    const projLabelText = isSpin ? (m_val > 0 ? '+ħ/2' : '-ħ/2') : `${m_val}ħ`;
+                    createLabel(projLabelText, 0xcccccc, 'projection-label', simulationGroup, new THREE.Vector3(0.3, 0, m_val), stateGroup);
                     labeled_m_values.add(m_val);
                 }
             });
-
-            // Set initial visibility based on checkbox state
-            toggleLabelVisibility();
         }
         
-        function createParticleCone(L_mag, L_z, color) {
-            const numParticles = 10000;
-            const positions = [];
-            const r_xy = Math.sqrt(L_mag**2 - L_z**2);
+        function runJSimulation() {
+            const isMagneticFieldOn = withFieldBtn.classList.contains('active');
+            const showLS = !isMagneticFieldOn || toggleLSBtn.classList.contains('active');
+            
+            toggleLSContainer.style.display = isMagneticFieldOn ? 'flex' : 'none';
+            mjFilterContainer.style.display = isMagneticFieldOn ? 'block' : 'none';
+            zAxisLabelElement.innerHTML = isMagneticFieldOn ? 'J<sub>z</sub>' : 'J';
 
-            for (let i = 0; i < numParticles; i++) {
-                const h_factor = Math.random();
-                const current_L_z = L_z * h_factor;
-                const current_r_xy = r_xy * h_factor;
-                const theta = Math.random() * 2 * Math.PI;
-                const x = current_r_xy * Math.cos(theta);
-                const y = current_r_xy * Math.sin(theta);
-                const z = current_L_z;
-                positions.push(x, y, z);
+            const l = parseFloat(lSelectorJ.value);
+            const s = 0.5;
+            const j_values = (l === 0) ? [s] : [l - s, l + s];
+            
+            if (lSelectorJ.dataset.prevL !== l.toString()) {
+                populateJAndMjFilters(j_values);
+                lSelectorJ.dataset.prevL = l.toString();
+            }
+            updateJInfoPanel(l, s, j_values, isMagneticFieldOn);
+
+            const L_mag = Math.sqrt(l * (l + 1)); const S_mag = Math.sqrt(s * (s + 1));
+            const selectedJ = parseFloat(jSelectorContainer.querySelector('button.active')?.dataset.value);
+
+            j_values.forEach(j => {
+                const J_mag = Math.sqrt(j * (j + 1));
+                const cos_angle_JL = (J_mag**2 + L_mag**2 - S_mag**2) / (2 * J_mag * L_mag);
+                const angle_JL = Math.acos(cos_angle_JL);
+                const cos_angle_JS = (J_mag**2 + S_mag**2 - L_mag**2) / (2 * J_mag * S_mag);
+
+                if (isMagneticFieldOn) {
+                    let m_j_values = [];
+                    for (let m_j = -j; m_j <= j; m_j += 1) m_j_values.push(m_j);
+                    
+                    m_j_values.forEach((m_j, index) => {
+                        const color = showLS ? J_COLOR : stateColors[index % stateColors.length];
+                        buildState(j, m_j, J_mag, L_mag, S_mag, angle_JL, cos_angle_JS, isMagneticFieldOn, color, showLS);
+                    });
+                } else {
+                    if (j === selectedJ) {
+                        buildState(j, null, J_mag, L_mag, S_mag, angle_JL, cos_angle_JS, isMagneticFieldOn, J_COLOR, showLS);
+                    }
+                }
+            });
+            applyJAndMjFilter(); 
+        }
+
+        function buildState(j, m_j, J_mag, L_mag, S_mag, angle_JL, cos_angle_JS, isMagneticFieldOn, color, showLS) {
+            const jStateGroup = new THREE.Group();
+            jStateGroup.userData = { j: j, mj: m_j };
+            simulationGroup.add(jStateGroup);
+            
+            let J_direction = isMagneticFieldOn ? new THREE.Vector3(Math.sqrt(Math.max(0, J_mag**2 - m_j**2)), 0, m_j).normalize() : new THREE.Vector3(0, 0, 1);
+            
+            if (isMagneticFieldOn) {
+                const precessionSpeed = showLS ? 0.0 : 0.3; // Precess if L&S are hidden, stay static if shown
+                precessingObjects.push({ object: jStateGroup, type: 'z-precession', speed: precessionSpeed });
+            }
+
+            const j_vec = new THREE.ArrowHelper(J_direction, new THREE.Vector3(0,0,0), J_mag, color, 0.2, 0.1);
+            jStateGroup.add(j_vec, createParticleCone(J_mag, isMagneticFieldOn ? m_j : J_mag, color));
+            const j_tip = new THREE.Vector3().copy(J_direction).multiplyScalar(J_mag * 1.1);
+            createLabel('J', color, 'vector-label', jStateGroup, j_tip, jStateGroup, 'J');
+            
+            if (isMagneticFieldOn) {
+                const sign = m_j > 0 ? '+' : (m_j < 0 ? '-' : '');
+                const abs_mj = Math.abs(m_j);
+                const numStr = (abs_mj % 1 !== 0) ? `${2 * abs_mj}/2` : abs_mj.toString();
+                const mjLabelText = ((m_j === 0) ? '0' : sign + numStr) + 'ħ';
+                createLabel(mjLabelText, 0xcccccc, 'projection-label', simulationGroup, new THREE.Vector3(0.3, 0, m_j), jStateGroup);
             }
             
-            if (Math.abs(L_z) < 1e-6) {
-                 for (let i=0; i < numParticles / 2; i++) {
-                     const r = Math.random() * r_xy;
-                     const theta = Math.random() * 2 * Math.PI;
-                     positions.push(r * Math.cos(theta), r * Math.sin(theta), 0);
-                 }
+            const lsPrecessionAssembly = new THREE.Group();
+            lsPrecessionAssembly.quaternion.setFromUnitVectors(Z_AXIS, J_direction);
+            jStateGroup.add(lsPrecessionAssembly);
+
+            const lsPrecessionGroup = new THREE.Group();
+            lsPrecessionGroup.visible = showLS;
+            lsPrecessionAssembly.add(lsPrecessionGroup);
+            precessingObjects.push({ object: lsPrecessionGroup, type: 'vector-precession', axis: Z_AXIS, speed: 0.5 });
+
+            const l_vec = new THREE.ArrowHelper(new THREE.Vector3(Math.sin(angle_JL), 0, Math.cos(angle_JL)), new THREE.Vector3(0,0,0), L_mag, L_COLOR, 0.15, 0.1);
+            lsPrecessionGroup.add(l_vec, createParticleCone(L_mag, L_mag * Math.cos(angle_JL), L_COLOR));
+            const l_tip = new THREE.Vector3(L_mag*Math.sin(angle_JL), 0, L_mag*Math.cos(angle_JL)).multiplyScalar(1.1);
+            createLabel('L', L_COLOR, 'vector-label', lsPrecessionGroup, l_tip, jStateGroup, 'L');
+
+            const s_dir = new THREE.Vector3(0, 0, J_mag).sub(new THREE.Vector3(L_mag * Math.sin(angle_JL), 0, L_mag * Math.cos(angle_JL))).normalize();
+            const s_vec = new THREE.ArrowHelper(s_dir, new THREE.Vector3(0,0,0), S_mag, S_COLOR, 0.15, 0.1);
+            const s_z_proj_on_J = S_mag * cos_angle_JS;
+            lsPrecessionGroup.add(s_vec, createParticleCone(S_mag, s_z_proj_on_J, S_COLOR));
+            const s_tip = s_dir.clone().multiplyScalar(S_mag * 1.1);
+            createLabel('S', S_COLOR, 'vector-label', lsPrecessionGroup, s_tip, jStateGroup, 'S');
+        }
+        
+        function applyJAndMjFilter() {
+            const isMagneticFieldOn = withFieldBtn.classList.contains('active');
+            const selectedJ = jSelectorContainer.querySelector('button.active')?.dataset.value;
+            if (!selectedJ) return;
+
+            const selectedMj = new Set();
+            if (isMagneticFieldOn) {
+                mjFilterGrid.querySelectorAll('button.active').forEach(btn => selectedMj.add(btn.dataset.value));
             }
-
-            const geometry = new THREE.BufferGeometry();
-            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-            const material = new THREE.PointsMaterial({ color: color, size: 0.03, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending });
-            return new THREE.Points(geometry, material);
+            
+            simulationGroup.children.forEach(child => {
+                if (child.userData.j !== undefined) {
+                    const isJMatch = child.userData.j.toString() === selectedJ;
+                    child.visible = isMagneticFieldOn ? isJMatch && selectedMj.has(child.userData.mj.toString()) : isJMatch;
+                }
+            });
+        }
+        
+        function populateJAndMjFilters(j_values) {
+            jSelectorContainer.innerHTML = '';
+            j_values.forEach((j, index) => {
+                const jValueStr = (j % 1 !== 0) ? `${2*j}/2` : j;
+                const button = document.createElement('button');
+                button.textContent = `j = ${jValueStr}`;
+                button.dataset.value = j;
+                if (index === 0) button.classList.add('active');
+                
+                button.addEventListener('click', (e) => {
+                    jSelectorContainer.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                    if (!withFieldBtn.classList.contains('active')) {
+                        runSimulation(); 
+                    } else {
+                        updateMjCheckboxes();
+                    }
+                });
+                jSelectorContainer.appendChild(button);
+            });
+            if (withFieldBtn.classList.contains('active')) updateMjCheckboxes();
         }
 
-        function createLVector(L_mag, L_z, color) {
-            const r_xy = Math.sqrt(L_mag**2 - L_z**2);
-            const direction = new THREE.Vector3(r_xy, 0, L_z);
-            const arrow = new THREE.ArrowHelper(direction.normalize(), new THREE.Vector3(0, 0, 0), L_mag, color, 0.2, 0.1);
-            return arrow;
+        function updateMjCheckboxes() {
+            mjFilterGrid.innerHTML = '';
+            const selectedJ = parseFloat(jSelectorContainer.querySelector('button.active').dataset.value);
+            
+            for (let m_j = -selectedJ; m_j <= selectedJ; m_j += 1) {
+                const sign = m_j > 0 ? '+' : (m_j < 0 ? '-' : '');
+                const abs_mj = Math.abs(m_j);
+                const numStr = (abs_mj % 1 !== 0) ? `${2 * abs_mj}/2` : abs_mj.toString();
+                const mjLabelText = (m_j === 0) ? '0' : sign + numStr;
+
+                const card = document.createElement('button');
+                card.className = 'filter-card active';
+                card.textContent = mjLabelText;
+                card.dataset.value = m_j;
+                card.addEventListener('click', (e) => {
+                    e.target.classList.toggle('active');
+                    applyJAndMjFilter();
+                });
+                mjFilterGrid.appendChild(card);
+            }
+            applyJAndMjFilter();
+        }
+        
+        function createVector(mag, z_proj, color) {
+            const r_xy = Math.sqrt(Math.max(0, mag**2 - z_proj**2));
+            const direction = new THREE.Vector3(r_xy, 0, z_proj);
+            return new THREE.ArrowHelper(direction.normalize(), new THREE.Vector3(0,0,0), mag, color, 0.2, 0.1);
+        }
+        
+        function createParticleCone(mag, z_proj, color) {
+            const positions = [];
+            const r_xy = Math.sqrt(Math.max(0, mag**2 - z_proj**2));
+            const numParticles = (r_xy > 0.01) ? 6000 : 0;
+            for (let i = 0; i < numParticles; i++) {
+                const h_factor = Math.random();
+                const current_r_xy = r_xy * h_factor;
+                const theta = Math.random() * 2 * Math.PI;
+                positions.push(current_r_xy * Math.cos(theta), current_r_xy * Math.sin(theta), z_proj * h_factor);
+            }
+            const geometry = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            return new THREE.Points(geometry, new THREE.PointsMaterial({ color, size: 0.03, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending }));
         }
 
-        function updateInfoPanel(q_num, L_mag, m_values, isSpin) {
-            const symbol = isSpin ? 's' : 'l';
-            const vec_symbol = isSpin ? 'S' : 'L';
-            const m_symbol = isSpin ? 'm<sub>s</sub>' : 'm<sub>l</sub>';
-            const z_axis_label_text = isSpin ? 'S<sub>z</sub>' : 'L<sub>z</sub>';
-
-            const m_values_display = isSpin 
-                ? m_values.map(v => v > 0 ? `+1/2` : `-1/2`).join(', ')
-                : m_values.join(', ');
-
-            zAxisLabelElement.innerHTML = z_axis_label_text;
-
-            infoPanel.innerHTML = `
-                <p>Magnitude of ${vec_symbol}: <br>
-                <code>|${vec_symbol}| = ħ * &radic;(${symbol}(${symbol}+1))</code> <br>
-                <code>|${vec_symbol}| ≈ ${L_mag.toFixed(3)} ħ</code>
-                </p>
-                <p>Allowed ${m_symbol} values:<br>
-                (Projection of ${vec_symbol} on z-axis)<br>
-                <code>${m_symbol} = { ${m_values_display} }</code>
-                </p>
-            `;
+        function updateLSInfoPanel(q_num, mag, m_values, isSpin) {
+            zAxisLabelElement.innerHTML = isSpin ? 'S<sub>z</sub>' : 'L<sub>z</sub>';
+            const symbol = isSpin ? 's' : 'l'; const vec_symbol = isSpin ? 'S' : 'L'; const m_symbol = isSpin ? 'm<sub>s</sub>' : 'm<sub>l</sub>';
+            const m_values_display = isSpin ? m_values.map(v => v > 0 ? `+1/2` : `-1/2`).join(', ') : m_values.join(', ');
+            infoPanel.innerHTML = `<p>Magnitude of ${vec_symbol}: <br><code>|${vec_symbol}| = √(${symbol}(${symbol}+1))ħ ≈ ${mag.toFixed(3)} ħ</code></p><p>Allowed ${m_symbol} values:<br><code>${m_symbol} = { ${m_values_display} }</code></p>`;
+        }
+        
+        function updateJInfoPanel(l, s, j_values, isMagneticFieldOn) {
+            let content = `<p>Coupling of <code>l=${l}</code> and <code>s=${s}</code> gives total angular momentum <code>j</code>.</p>`;
+            if (isMagneticFieldOn) {
+                 content += `<table><thead><tr><th>j value</th><th>Allowed m<sub>j</sub> values</th></tr></thead><tbody>`;
+                 j_values.forEach(j => {
+                    const jStr = (j % 1 !== 0) ? `${2*j}/2` : j;
+                    const mj_vals = [];
+                    for(let m_j = -j; m_j <=j; m_j++) {
+                        const sign = m_j > 0 ? '+' : (m_j < 0 ? '' : '');
+                        const abs_mj = Math.abs(m_j);
+                        mj_vals.push((abs_mj % 1 !== 0) ? `${sign}${2*abs_mj}/2` : `${sign}${abs_mj}`);
+                    }
+                    content += `<tr><td>${jStr}</td><td>${mj_vals.join(', ')}</td></tr>`;
+                 });
+                 content += `</tbody></table>`;
+            } else {
+                 const j_values_str = j_values.map(j => (j % 1 !== 0) ? `${2*j}/2` : j).join(', ');
+                 content += `<p>Possible values for total angular momentum <code>j</code> are: <code>{ ${j_values_str} }</code></p>`;
+            }
+            infoPanel.innerHTML = content;
         }
 
         init();
     </script>
-
 </body>
 </html>
