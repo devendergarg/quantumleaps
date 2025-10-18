@@ -310,34 +310,56 @@
         mainCtx.stroke();
     }
 
+    // --- FUNCTION FIX 1 ---
     function resamplePath(path) {
         const strokes = []; let currentStroke = [];
-        for(const p of path) {
-            if (p === null) { if (currentStroke.length > 0) strokes.push(currentStroke); currentStroke = []; } 
-            else { currentStroke.push(p); }
+        for (const p of path) {
+            if (p === null) {
+                if (currentStroke.length > 0) strokes.push(currentStroke);
+                currentStroke = [];
+            } else {
+                currentStroke.push(p);
+            }
         }
         if (currentStroke.length > 0) strokes.push(currentStroke);
+
         let totalLength = 0;
         const strokeLengths = strokes.map(stroke => {
-            let len = 0; for (let i = 1; i < stroke.length; i++) len += Math.hypot(stroke[i].x - stroke[i-1].x, stroke[i].y - stroke[i-1].y);
-            totalLength += len; return len;
+            let len = 0;
+            for (let i = 1; i < stroke.length; i++) len += Math.hypot(stroke[i].x - stroke[i - 1].x, stroke[i].y - stroke[i - 1].y);
+            totalLength += len;
+            return len;
         });
+
         if (totalLength === 0) return [];
+
         const finalPath = [];
-        strokes.forEach((stroke) => {
-            const numSamplesForStroke = Math.round((strokeLengths[strokes.indexOf(stroke)] / totalLength) * TARGET_SAMPLE_COUNT);
-            if(numSamplesForStroke < 2) { if(stroke.length > 0) finalPath.push(stroke[0]); return; }
-            const interval = strokeLengths[strokes.indexOf(stroke)] / (numSamplesForStroke - 1);
-            let distSinceLastSample = 0; finalPath.push(stroke[0]);
-            for(let i = 1; i < stroke.length; i++) {
-                let p1 = stroke[i-1], p2 = stroke[i]; let segmentLength = Math.hypot(p2.x-p1.x, p2.y-p1.y);
-                while (distSinceLastSample + segmentLength >= interval) {
-                    const distNeeded = interval - distSinceLastSample; const ratio = distNeeded / segmentLength;
-                    const newPoint = { x: p1.x + (p2.x - p1.x) * ratio, y: p1.y + (p2.y - p1.y) * ratio };
-                    finalPath.push(newPoint); segmentLength -= distNeeded;
-                    distSinceLastSample = 0; p1 = newPoint;
+        strokes.forEach((stroke, strokeIndex) => {
+            const numSamplesForStroke = Math.round((strokeLengths[strokeIndex] / totalLength) * TARGET_SAMPLE_COUNT);
+            if (numSamplesForStroke < 2) {
+                if (stroke.length > 0) finalPath.push(stroke[0]);
+            } else {
+                const interval = strokeLengths[strokeIndex] / (numSamplesForStroke - 1);
+                let distSinceLastSample = 0;
+                finalPath.push(stroke[0]);
+                for (let i = 1; i < stroke.length; i++) {
+                    let p1 = stroke[i - 1], p2 = stroke[i];
+                    let segmentLength = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+                    while (distSinceLastSample + segmentLength >= interval) {
+                        const distNeeded = interval - distSinceLastSample;
+                        const ratio = distNeeded / segmentLength;
+                        const newPoint = { x: p1.x + (p2.x - p1.x) * ratio, y: p1.y + (p2.y - p1.y) * ratio };
+                        finalPath.push(newPoint);
+                        segmentLength -= distNeeded;
+                        distSinceLastSample = 0;
+                        p1 = newPoint;
+                    }
+                    distSinceLastSample += segmentLength;
                 }
-                distSinceLastSample += segmentLength;
+            }
+            // Add null to represent the gap, except after the very last stroke
+            if (strokeIndex < strokes.length - 1) {
+                finalPath.push(null);
             }
         });
         return finalPath;
@@ -349,7 +371,7 @@
             if (userPath.length < 2) return;
             const pathForAnalysis = resamplePath(userPath);
             originalNormalizedPath = normalizePath(pathForAnalysis);
-            calculateFourierCoefficients(originalNormalizedPath);
+            calculateFourierCoefficients(originalNormalizedPath.filter(p => p !== null)); // Analyze only the points
         }
         if (fourierCoefficients.length === 0) return;
         
@@ -360,13 +382,14 @@
         animate();
     }
 
-    // --- FUNCTION FIX ---
+    // --- FUNCTION FIX 2 ---
     function normalizePath(path) {
-        if (path.length === 0) return [];
+        const pointsOnly = path.filter(p => p !== null);
+        if (pointsOnly.length === 0) return [];
 
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
 
-        path.forEach(p => {
+        pointsOnly.forEach(p => {
             minX = Math.min(minX, p.x);
             maxX = Math.max(maxX, p.x);
             minY = Math.min(minY, p.y);
@@ -376,11 +399,16 @@
         const centerX = (minX + maxX) / 2;
         const centerY = (minY + maxY) / 2;
 
-        return path.map(p => ({ re: p.x - centerX, im: p.y - centerY }));
+        // Return a new array, preserving the nulls
+        return path.map(p => {
+            if (p === null) return null;
+            return { re: p.x - centerX, im: p.y - centerY };
+        });
     }
 
     function calculateFourierCoefficients(signal) {
         const N = signal.length;
+        if (N === 0) { fourierCoefficients = []; spectrumCoefficients = []; return; }
         fourierCoefficients = []; const maxN = MAX_COEFFICIENTS;
         for (let n = -maxN; n <= maxN; n++) {
             let sum = { re: 0, im: 0 };
@@ -396,17 +424,31 @@
         fourierCoefficients.sort((a, b) => b.amp - a.amp);
     }
     
+    // --- FUNCTION FIX 3 ---
     function drawOriginalShapeGhost(ctx) {
         if (originalNormalizedPath.length === 0) return;
         ctx.strokeStyle = colors.reconstructedPath;
         ctx.globalAlpha = 0.3; ctx.lineWidth = 2;
         ctx.beginPath();
         const center = { x: ctx.canvas.width / 2, y: ctx.canvas.height / 2 };
-        ctx.moveTo(originalNormalizedPath[0].re + center.x, originalNormalizedPath[0].im + center.y);
-        for (let i = 1; i < originalNormalizedPath.length; i++) {
-            ctx.lineTo(originalNormalizedPath[i].re + center.x, originalNormalizedPath[i].im + center.y);
+        let isFirstPointOfStroke = true;
+
+        for (const p of originalNormalizedPath) {
+            if (p === null) {
+                isFirstPointOfStroke = true;
+                continue;
+            }
+            const pointX = p.re + center.x;
+            const pointY = p.im + center.y;
+            if (isFirstPointOfStroke) {
+                ctx.moveTo(pointX, pointY);
+                isFirstPointOfStroke = false;
+            } else {
+                ctx.lineTo(pointX, pointY);
+            }
         }
-        ctx.stroke(); ctx.globalAlpha = 1.0;
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
     }
     
     function drawAnimationFrame() {
