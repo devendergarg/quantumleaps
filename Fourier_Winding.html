@@ -15,284 +15,237 @@
             --com-color: #e74c3c;   /* Red */
             --grid-color: rgba(0, 100, 150, 0.4);
         }
-
-        * {
-            box-sizing: border-box;
-        }
-
+        * { box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0;
-            padding: 20px;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            display: flex; flex-direction: column; align-items: center;
+            margin: 0; padding: 20px;
+            background-color: var(--bg-color); color: var(--text-color);
         }
-
         .main-container {
-            width: 100%;
-            max-width: 800px;
+            width: 100%; max-width: 800px;
             background-color: var(--secondary-color);
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             padding: 1.5rem 2rem;
             text-align: center;
         }
-        
-        h1 { 
-            color: var(--primary-color);
-            margin: 0 0 1rem 0;
-        }
-
+        h1 { color: var(--primary-color); margin: 0 0 1rem 0; }
         canvas {
             border: 2px solid var(--primary-color);
             background-color: #16213e;
             border-radius: 8px;
-            width: 100%;
-            height: auto;
-            display: block;
+            width: 100%; height: auto; display: block;
         }
-
         .canvas-label { font-weight: bold; margin: 1rem 0 0.5rem 0; font-size: 1.1em; }
-        
-        .canvas-wrapper {
-            max-width: 500px;
-            margin: 1.5rem auto 0 auto;
-        }
-
+        .canvas-wrapper { max-width: 500px; margin: 1.5rem auto 0 auto; }
         .controls-container { display: flex; flex-direction: column; gap: 1rem; text-align: left; }
-        #input-controls {
-            margin-top: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        
+        #input-controls { margin-top: 1.5rem; margin-bottom: 1rem; }
         label { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 500; }
         input[type="range"] { 
-            width: 100%; 
-            -webkit-appearance: none; 
-            height: 8px; 
-            background: #16213e; 
-            border-radius: 5px; 
-            outline: none; 
-            opacity: 0.8; 
-            transition: opacity .2s; 
-            cursor: pointer; 
+            width: 100%; -webkit-appearance: none; height: 8px; 
+            background: #16213e; border-radius: 5px; outline: none; 
+            opacity: 0.8; transition: opacity .2s; cursor: pointer; 
         }
         input[type="range"]:hover { opacity: 1; }
         input[type="range"]::-webkit-slider-thumb { 
-            -webkit-appearance: none; 
-            appearance: none; 
-            width: 20px; 
-            height: 20px; 
-            background: var(--primary-color); 
-            border-radius: 50%; 
+            -webkit-appearance: none; appearance: none; width: 20px; height: 20px; 
+            background: var(--primary-color); border-radius: 50%; 
         }
+        input:disabled, button:disabled { opacity: 0.5; cursor: not-allowed; }
+        input:disabled::-webkit-slider-thumb { background: #888; }
+        
+        .wave-selector-container {
+            display: flex; flex-wrap: wrap; 
+            gap: 5px; justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        .wave-card {
+            background-color: transparent; border: 1px solid var(--text-muted);
+            color: var(--text-muted); padding: 8px 10px; border-radius: 5px;
+            cursor: pointer; font-weight: bold; transition: all 0.2s ease;
+            font-size: 0.9rem; flex-grow: 1; text-align: center;
+        }
+        .wave-card:not(.active):hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .wave-card.active {
+            background-color: var(--primary-color); border-color: var(--primary-color);
+            color: white;
+        }
+        .hidden { display: none; }
 
-        /* Mobile Responsive Styles */
+        .dc-control-container {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-top: 0.5rem; font-weight: 500;
+        }
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #16213e; transition: .4s; border-radius: 28px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 20px; width: 20px;
+            left: 4px; bottom: 4px; background-color: white;
+            transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary-color); }
+        input:checked + .slider:before { transform: translateX(22px); }
+        .button-controls { display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem; }
+        .button-controls button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 10px 20px; border-radius: 5px; font-weight: bold;
+            cursor: pointer; transition: background-color 0.2s;
+        }
+        .button-controls button:hover { background-color: #d43d51; }
+        .button-controls button:disabled { background-color: #888; }
         @media (max-width: 768px) {
-            body {
-                padding: 0;
-            }
-            .main-container {
-                padding: 1.5rem 1rem;
-                border-radius: 0;
-            }
+            body { padding: 0; }
+            .main-container { padding: 1.5rem 1rem; border-radius: 0; }
             h1 { font-size: 1.5em; }
         }
     </style>
 </head>
 <body>
-
     <div class="main-container">
         <h1>Interactive Fourier Winding</h1>
 
+        <div class="wave-selector-container">
+            <button class="wave-card active" data-wave="sine">Sine Combo</button>
+            <button class="wave-card" data-wave="square">Square</button>
+            <button class="wave-card" data-wave="sawtooth">Sawtooth</button>
+            <button class="wave-card" data-wave="triangle">Triangle</button>
+        </div>
+
         <div class="controls-container" id="input-controls">
             <div>
-                <label for="f1-slider">Input Frequency 1 (f₁): <span id="f1-value">3</span> Hz</label>
+                <label for="f1-slider" id="f1-label">Input Frequency 1 (f₁): <span id="f1-value">3 Hz</span></label>
                 <input type="range" id="f1-slider" min="0" max="5" value="3" step="1">
             </div>
-             <div>
-                <label for="f2-slider">Input Frequency 2 (f₂): <span id="f2-value">0</span> Hz</label>
+            <div id="f2-slider-container">
+                <label for="f2-slider">Input Frequency 2 (f₂): <span id="f2-value">0 Hz</span></label>
                 <input type="range" id="f2-slider" min="0" max="5" value="0" step="1">
+            </div>
+            <div class="dc-control-container">
+                <span>Add DC Offset</span>
+                <label class="switch">
+                    <input type="checkbox" id="dc-toggle">
+                    <span class="slider"></span>
+                </label>
             </div>
         </div>
 
-        <div class="canvas-wrapper">
-            <div class="canvas-label">Input Signal</div>
-            <canvas id="waveformCanvas"></canvas>
-        </div>
+        <div class="canvas-wrapper"><div class="canvas-label">Input Signal</div><canvas id="waveformCanvas"></canvas></div>
+        <div class="canvas-wrapper"><div class="canvas-label">Winding Path</div><canvas id="windingCanvas"></canvas></div>
         
         <div class="canvas-wrapper">
-            <div class="canvas-label">Winding Path</div>
-            <canvas id="windingCanvas"></canvas>
+            <div class="canvas-label">Frequency Spectrum (CoM Magnitude: <span id="com-magnitude-value">0.00</span>)</div>
+            <canvas id="spectrumCanvas"></canvas>
         </div>
         
         <div class="controls-container" style="margin-top: 1.5rem;">
             <div>
-                <label for="freq-slider">Winding Frequency: <span id="slider-value">2.50</span> Hz</label>
+                <label for="freq-slider">Winding Frequency: <span id="slider-value">2.50 Hz</span></label>
                 <input type="range" id="freq-slider" min="0" max="10" value="2.5" step="0.5">
             </div>
+        </div>
+
+        <div class="button-controls">
+            <button id="play-pause-btn">Play Animation</button>
+            <button id="sweep-btn">Auto-Sweep Frequency</button>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const waveformCanvas = document.getElementById('waveformCanvas');
-            const wfmCtx = waveformCanvas.getContext('2d');
-            const windingCanvas = document.getElementById('windingCanvas');
-            const windCtx = windingCanvas.getContext('2d');
+            const waveformCanvas = document.getElementById('waveformCanvas'), wfmCtx = waveformCanvas.getContext('2d');
+            const windingCanvas = document.getElementById('windingCanvas'), windCtx = windingCanvas.getContext('2d');
+            const spectrumCanvas = document.getElementById('spectrumCanvas'), specCtx = spectrumCanvas.getContext('2d');
             
-            const f1Slider = document.getElementById('f1-slider');
-            const f2Slider = document.getElementById('f2-slider');
-            const freqSlider = document.getElementById('freq-slider');
+            const f1Slider = document.getElementById('f1-slider'), f2Slider = document.getElementById('f2-slider'), freqSlider = document.getElementById('freq-slider');
+            const dcToggle = document.getElementById('dc-toggle'), f1Label = document.getElementById('f1-label');
+            const f1Value = document.getElementById('f1-value'), f2Value = document.getElementById('f2-value'), sliderValue = document.getElementById('slider-value');
+            const comMagValue = document.getElementById('com-magnitude-value');
+            const playPauseBtn = document.getElementById('play-pause-btn'), sweepBtn = document.getElementById('sweep-btn');
+            const waveCards = document.querySelectorAll('.wave-card'), f2Container = document.getElementById('f2-slider-container');
+            
+            let animationId = null, sweepAnimationId = null, animationStartTime = null, lastTimestamp = null, effectiveElapsedTime = 0;
+            let currentWaveType = 'sine';
+            let spectrumData = [];
+            let currentMaxMagnitude = 0.5;
 
-            const f1Value = document.getElementById('f1-value');
-            const f2Value = document.getElementById('f2-value');
-            const sliderValue = document.getElementById('slider-value');
+            const timeMax = 4.0, dt = 0.001, dpr = window.devicePixelRatio || 1;
+            const pathAnimationDuration = 16.0, minSpeed = 0.01, resonanceWidth = 0.3;
 
             const signal = (t) => {
-                const f1 = parseFloat(f1Slider.value);
-                const f2 = parseFloat(f2Slider.value);
-                
-                if (f1 > 0 && f2 > 0) {
-                    return (Math.sin(2 * Math.PI * f1 * t) + Math.sin(2 * Math.PI * f2 * t)) / 2;
-                } else if (f1 > 0) {
-                    return Math.sin(2 * Math.PI * f1 * t);
-                } else if (f2 > 0) {
-                    return Math.sin(2 * Math.PI * f2 * t);
+                let waveValue = 0;
+                const f1 = parseFloat(f1Slider.value), f2 = parseFloat(f2Slider.value);
+                switch(currentWaveType) {
+                    case 'sine': if (f1 > 0 && f2 > 0) waveValue = (Math.sin(2 * Math.PI * f1 * t) + Math.sin(2 * Math.PI * f2 * t)) / 2; else if (f1 > 0) waveValue = Math.sin(2 * Math.PI * f1 * t); else if (f2 > 0) waveValue = Math.sin(2 * Math.PI * f2 * t); break;
+                    case 'square': if (f1 > 0) waveValue = Math.sign(Math.sin(2 * Math.PI * f1 * t)); break;
+                    case 'sawtooth': if (f1 > 0) waveValue = 2 * (f1 * t - Math.floor(f1 * t + 0.5)); break;
+                    case 'triangle': if (f1 > 0) waveValue = 2 * Math.abs(2 * (f1 * t - Math.floor(f1 * t + 0.5))) - 1; break;
                 }
-                return 0;
+                if (dcToggle.checked) return (waveValue + 1) / 2;
+                return waveValue;
             };
-
-            // --- CHANGED --- Signal duration now matches the 4-second graph axis
-            const timeMax = 4.0, dt = 0.001;
-            const dpr = window.devicePixelRatio || 1;
-
-            function calculateCenterOfMass(windingFreq) {
-                let sumX = 0, sumY = 0, numPoints = 0;
-                const calculation_dt = 0.005;
-                for (let t = 0; t <= timeMax; t += calculation_dt) {
-                    const r = signal(t);
-                    const angle = -2 * Math.PI * windingFreq * t;
-                    sumX += r * Math.cos(angle);
-                    sumY += r * Math.sin(angle);
-                    numPoints++;
+            
+            const varToCSS = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+            
+            function calculateSpectrum() {
+                spectrumData = [];
+                const maxFreq = parseFloat(freqSlider.max);
+                const step = 0.02; 
+                for (let freq = 0; freq <= maxFreq; freq += step) {
+                    const com = calculateCenterOfMass(freq);
+                    const magnitude = Math.sqrt(com.x**2 + com.y**2);
+                    spectrumData.push({ frequency: freq, magnitude: magnitude });
                 }
-                return { x: sumX / numPoints, y: sumY / numPoints };
-            }
-
-            function drawWaveform() {
-                const w = waveformCanvas.width / dpr, h = waveformCanvas.height / dpr;
-                const margin = { top: 0.1 * h, right: 0.02 * w, bottom: 0.2 * h, left: 0.05 * w };
-                const graphW = w - margin.left - margin.right;
-                const graphH = h - margin.top - margin.bottom;
-
-                wfmCtx.clearRect(0, 0, w * dpr, h * dpr);
-                wfmCtx.save();
-                wfmCtx.scale(dpr, dpr);
-                wfmCtx.font = `12px sans-serif`;
-                wfmCtx.fillStyle = varToCSS('--text-muted');
-
-                wfmCtx.strokeStyle = "#888"; wfmCtx.lineWidth = 1;
-                wfmCtx.beginPath(); wfmCtx.moveTo(margin.left, margin.top); wfmCtx.lineTo(margin.left, margin.top + graphH); wfmCtx.lineTo(margin.left + graphW, margin.top + graphH); wfmCtx.stroke();
-                
-                for (let i = 0; i <= 4; i++) {
-                    const x = margin.left + (i / 4) * graphW;
-                    const y = margin.top + graphH;
-                    wfmCtx.beginPath(); wfmCtx.moveTo(x, y); wfmCtx.lineTo(x, y + 5); wfmCtx.stroke();
-                    wfmCtx.fillText(i, x - 3, y + 20);
-                }
-
-                wfmCtx.strokeStyle = varToCSS('--primary-color'); wfmCtx.lineWidth = 2.5; wfmCtx.beginPath();
-                for (let t = 0; t <= timeMax; t += 0.01) {
-                    const x = margin.left + (t / timeMax) * graphW;
-                    const y = margin.top + (graphH / 2) - (signal(t) * (graphH / 2.2));
-                    (t === 0) ? wfmCtx.moveTo(x, y) : wfmCtx.lineTo(x, y);
-                }
-                wfmCtx.stroke();
-                wfmCtx.restore();
-            }
-
-            function drawWinding(windingFreq) {
-                const w = windingCanvas.width / dpr, h = windingCanvas.height / dpr;
-                const center = { x: w / 2, y: h / 2 };
-                const scale = w * 0.4;
-
-                windCtx.clearRect(0, 0, w * dpr, h * dpr);
-                windCtx.save();
-                windCtx.scale(dpr, dpr);
-
-                windCtx.strokeStyle = "#666";
-                windCtx.lineWidth = 0.5;
-                windCtx.beginPath();
-                windCtx.moveTo(center.x, 0); windCtx.lineTo(center.x, h);
-                windCtx.moveTo(0, center.y); windCtx.lineTo(w, center.y);
-                windCtx.stroke();
-                
-                windCtx.strokeStyle = varToCSS('--wave-color'); windCtx.lineWidth = 2; windCtx.beginPath();
-                for (let t = 0; t <= timeMax; t += dt) {
-                    const r = signal(t);
-                    const angle = -2 * Math.PI * windingFreq * t;
-                    const x = center.x + r * Math.cos(angle) * scale;
-                    const y = center.y + r * Math.sin(angle) * scale;
-                    (t === 0) ? windCtx.moveTo(x, y) : windCtx.lineTo(x, y);
-                }
-                windCtx.stroke();
-
-                const com = calculateCenterOfMass(windingFreq);
-                drawPoint(windCtx, center.x + com.x * scale, center.y + com.y * scale, w * 0.02, varToCSS('--com-color'));
-                windCtx.restore();
-            }
-
-            function drawPoint(ctx, cx, cy, radius, color) {
-                ctx.beginPath();
-                ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
-                ctx.fillStyle = color;
-                ctx.fill();
+                const maxMagValue = spectrumData.reduce((max, p) => Math.max(max, p.magnitude), 0);
+                // --- FIX: Find the tightest "nice" ceiling for the Y-axis ---
+                currentMaxMagnitude = Math.max(0.25, Math.ceil(maxMagValue / 0.25) * 0.25);
             }
             
-            const varToCSS = (name) => getComputedStyle(document.documentElement).getPropertyValue(name);
-
-            function updateWinding() {
-                const windingFreq = parseFloat(freqSlider.value);
-                const freqText = windingFreq.toFixed(2);
-                sliderValue.textContent = `${freqText} Hz`;
-                
-                requestAnimationFrame(() => drawWinding(windingFreq));
-            }
-
-            function updateAll() {
-                 f1Value.textContent = `${f1Slider.value} Hz`;
-                 f2Value.textContent = `${f2Slider.value} Hz`;
-                 drawWaveform();
-                 updateWinding();
-            }
+            function interpolateMagnitude(freq) { if (spectrumData.length === 0) return 0; const index = freq / (parseFloat(freqSlider.max) / (spectrumData.length - 1)); const i0 = Math.floor(index); const i1 = Math.ceil(index); if (i1 >= spectrumData.length) return spectrumData[spectrumData.length - 1].magnitude; const w = index - i0; return spectrumData[i0].magnitude * (1 - w) + spectrumData[i1].magnitude * w; }
+            function calculateCenterOfMass(windingFreq, maxT = timeMax) { if (maxT < 0.01) return { x: 0, y: 0 }; let sumX = 0, sumY = 0, numPoints = 0; const calculation_dt = 0.005; for (let t = 0; t <= maxT; t += calculation_dt) { const r = signal(t), angle = -2 * Math.PI * windingFreq * t; sumX += r * Math.cos(angle); sumY += r * Math.sin(angle); numPoints++; } return { x: sumX / numPoints, y: sumY / numPoints }; }
+            function drawWaveform(windingFreq, maxT = timeMax, isAnimating = false) { const w = waveformCanvas.width / dpr, h = waveformCanvas.height / dpr; const margin = { top: 0.1 * h, right: 0.05 * w, bottom: 0.2 * h, left: 0.1 * w }; const graphW = w - margin.left - margin.right, graphH = h - margin.top - margin.bottom; wfmCtx.clearRect(0, 0, w * dpr, h * dpr); wfmCtx.save(); wfmCtx.scale(dpr, dpr); wfmCtx.font = `12px sans-serif`; wfmCtx.fillStyle = varToCSS('--text-muted'); wfmCtx.strokeStyle = "#888"; wfmCtx.lineWidth = 1; wfmCtx.beginPath(); wfmCtx.moveTo(margin.left, margin.top); wfmCtx.lineTo(margin.left, margin.top + graphH); wfmCtx.lineTo(margin.left + graphW, margin.top + graphH); wfmCtx.stroke(); for (let i = 0; i <= 4; i++) { const x = margin.left + (i / 4) * graphW, y = margin.top + graphH; wfmCtx.beginPath(); wfmCtx.moveTo(x, y); wfmCtx.lineTo(x, y + 5); wfmCtx.stroke(); wfmCtx.fillText(i, x - 3, y + 20); } wfmCtx.textAlign = 'right'; wfmCtx.textBaseline = 'middle'; const labelX = margin.left - 8; const yTop = margin.top, yMid = margin.top + graphH / 2, yBot = margin.top + graphH; if (dcToggle.checked) { wfmCtx.fillText('1', labelX, yTop); wfmCtx.fillText('0.5', labelX, yMid); wfmCtx.fillText('0', labelX, yBot); } else { wfmCtx.fillText('1', labelX, yTop); wfmCtx.fillText('0', labelX, yMid); wfmCtx.fillText('-1', labelX, yBot); } if (!isAnimating && windingFreq > 0.1) { const period = 1 / windingFreq; wfmCtx.strokeStyle = varToCSS('--text-color'); wfmCtx.lineWidth = 1; wfmCtx.globalAlpha = 0.6; wfmCtx.setLineDash([4, 4]); for (let t = period; t <= timeMax; t += period) { const x = margin.left + (t / timeMax) * graphW; wfmCtx.beginPath(); wfmCtx.moveTo(x, margin.top); wfmCtx.lineTo(x, margin.top + graphH); wfmCtx.stroke(); } wfmCtx.setLineDash([]); wfmCtx.globalAlpha = 1.0; } if (isAnimating) { wfmCtx.strokeStyle = varToCSS('--secondary-color'); wfmCtx.lineWidth = 2.5; wfmCtx.globalAlpha = 0.5; wfmCtx.beginPath(); for (let t = 0; t <= timeMax; t += 0.01) { const trueValue = signal(t); let displayValue = dcToggle.checked ? (trueValue * 2) - 1 : trueValue; const x = margin.left + (t / timeMax) * graphW, y = margin.top + (graphH / 2) - (displayValue * (graphH / 2.2)); (t === 0) ? wfmCtx.moveTo(x, y) : wfmCtx.lineTo(x, y); } wfmCtx.stroke(); wfmCtx.globalAlpha = 1.0; } wfmCtx.strokeStyle = varToCSS('--primary-color'); wfmCtx.lineWidth = 2.5; wfmCtx.beginPath(); for (let t = 0; t <= maxT; t += 0.01) { const trueValue = signal(t); let displayValue = dcToggle.checked ? (trueValue * 2) - 1 : trueValue; const x = margin.left + (t / timeMax) * graphW; const y = margin.top + (graphH / 2) - (displayValue * (graphH / 2.2)); (t === 0) ? wfmCtx.moveTo(x, y) : wfmCtx.lineTo(x, y); } wfmCtx.stroke(); if (isAnimating) { const trueMarkerValue = signal(maxT); let displayMarkerValue = dcToggle.checked ? (trueMarkerValue * 2) - 1 : trueMarkerValue; const markerX = margin.left + (maxT / timeMax) * graphW; const markerY = margin.top + (graphH / 2) - (displayMarkerValue * (graphH / 2.2)); drawPoint(wfmCtx, markerX, markerY, 5, varToCSS('--wave-color')); } wfmCtx.restore(); }
+            function drawWinding(windingFreq, maxT = timeMax, isAnimating = false) { const w = windingCanvas.width / dpr, h = windingCanvas.height / dpr; const center = { x: w / 2, y: h / 2 }, scale = w * 0.4; windCtx.clearRect(0, 0, w * dpr, h * dpr); windCtx.save(); windCtx.scale(dpr, dpr); windCtx.strokeStyle = "#666"; windCtx.lineWidth = 0.5; windCtx.beginPath(); windCtx.moveTo(center.x, 0); windCtx.lineTo(center.x, h); windCtx.moveTo(0, center.y); windCtx.lineTo(w, center.y); windCtx.stroke(); windCtx.strokeStyle = varToCSS('--wave-color'); windCtx.lineWidth = 2; windCtx.beginPath(); for (let t = 0; t <= maxT; t += dt) { const r = signal(t), angle = -2 * Math.PI * windingFreq * t; const x = center.x + r * Math.cos(angle) * scale, y = center.y + r * Math.sin(angle) * scale; (t === 0) ? windCtx.moveTo(x, y) : windCtx.lineTo(x, y); } windCtx.stroke(); if (isAnimating && maxT > 0) { const r = signal(maxT), angle = -2 * Math.PI * windingFreq * maxT; const x = center.x + r * Math.cos(angle) * scale, y = center.y + r * Math.sin(angle) * scale; drawPoint(windCtx, x, y, 5, varToCSS('--wave-color')); } const com = calculateCenterOfMass(windingFreq, maxT); drawPoint(windCtx, center.x + com.x * scale, center.y + com.y * scale, w * 0.02, varToCSS('--com-color')); windCtx.restore(); }
+            function drawPoint(ctx, cx, cy, radius, color) { ctx.beginPath(); ctx.arc(cx, cy, radius, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill(); }
+            function drawSpectrum(currentWindingFreq) { const w = spectrumCanvas.width / dpr, h = spectrumCanvas.height / dpr; const margin = { top: 0.1 * h, right: 0.05 * w, bottom: 0.2 * h, left: 0.1 * w }; const graphW = w - margin.left - margin.right, graphH = h - margin.top - margin.bottom; const maxFreq = parseFloat(freqSlider.max); const maxMag = currentMaxMagnitude; const isSweeping = sweepAnimationId !== null; specCtx.clearRect(0, 0, w * dpr, h * dpr); specCtx.save(); specCtx.scale(dpr, dpr); specCtx.font = `12px sans-serif`; specCtx.fillStyle = varToCSS('--text-muted'); specCtx.strokeStyle = "#888"; specCtx.lineWidth = 1; specCtx.beginPath(); specCtx.moveTo(margin.left, margin.top); specCtx.lineTo(margin.left, margin.top + graphH); specCtx.lineTo(margin.left + graphW, margin.top + graphH); specCtx.stroke(); for (let i = 0; i <= 10; i++) { const x = margin.left + (i / maxFreq) * graphW, y = margin.top + graphH; specCtx.beginPath(); specCtx.moveTo(x, y); specCtx.lineTo(x, y + 5); specCtx.stroke(); specCtx.fillText(i, x - (i < 10 ? 3 : 5), y + 20); } specCtx.textAlign = 'right'; specCtx.textBaseline = 'middle'; for(let i = 0; i <= 2; i++) { const mag = (maxMag / 2) * i; const y = margin.top + graphH - (graphH * (i / 2)); specCtx.fillText(mag.toFixed(2), margin.left - 8, y); } specCtx.strokeStyle = varToCSS('--primary-color'); specCtx.lineWidth = 2.5; specCtx.beginPath(); if (isSweeping) { for (let i = 0; i < spectrumData.length; i++) { const point = spectrumData[i]; if (point.frequency > currentWindingFreq) { const prevPoint = spectrumData[i-1] || { frequency: 0, magnitude: 0 }; const freqRange = point.frequency - prevPoint.frequency; const freqRatio = (currentWindingFreq - prevPoint.frequency) / freqRange; const interpolatedMag = prevPoint.magnitude + (point.magnitude - prevPoint.magnitude) * freqRatio; const x = margin.left + (currentWindingFreq / maxFreq) * graphW; const y = margin.top + graphH - (interpolatedMag / maxMag) * graphH; specCtx.lineTo(x, y); break; } const x = margin.left + (point.frequency / maxFreq) * graphW; const y = margin.top + graphH - (point.magnitude / maxMag) * graphH; (i === 0) ? specCtx.moveTo(x, y) : specCtx.lineTo(x, y); } } else { spectrumData.forEach((point, index) => { const x = margin.left + (point.frequency / maxFreq) * graphW; const y = margin.top + graphH - (point.magnitude / maxMag) * graphH; (index === 0) ? specCtx.moveTo(x, y) : specCtx.lineTo(x, y); }); } specCtx.stroke(); const ballX = margin.left + (currentWindingFreq / maxFreq) * graphW, ballMag = interpolateMagnitude(currentWindingFreq); const ballY = margin.top + graphH - (ballMag / maxMag) * graphH; drawPoint(specCtx, ballX, ballY, 5, varToCSS('--wave-color')); specCtx.restore(); }
             
-            function setupAndDrawAll() {
-                [waveformCanvas, windingCanvas].forEach(canvas => {
-                    const rect = canvas.parentElement.getBoundingClientRect();
-                    const cssWidth = rect.width;
-                    let cssHeight;
+            function redrawAll(frequencyOverride) { const windingFreq = (frequencyOverride !== undefined) ? frequencyOverride : parseFloat(freqSlider.value); f1Value.textContent = `${f1Slider.value} Hz`; f2Value.textContent = `${f2Slider.value} Hz`; sliderValue.textContent = `${windingFreq.toFixed(2)} Hz`; comMagValue.textContent = interpolateMagnitude(windingFreq).toFixed(2); requestAnimationFrame(() => { drawWaveform(windingFreq); drawWinding(windingFreq); drawSpectrum(windingFreq); }); }
+            function updateControlsVisibility() { if (currentWaveType === 'sine') { f2Container.classList.remove('hidden'); f1Label.childNodes[0].nodeValue = 'Input Frequency 1 (f₁): '; } else { f2Container.classList.add('hidden'); f1Label.childNodes[0].nodeValue = 'Fundamental Frequency (f): '; } }
+            
+            function animatePath(timestamp) { if (!animationStartTime) animationStartTime = timestamp; const elapsedTime = (timestamp - animationStartTime) / 1000; const windingFreq = parseFloat(freqSlider.value); const progress = Math.min(elapsedTime / pathAnimationDuration, 1); const currentSignalTime = progress * timeMax; drawWaveform(windingFreq, currentSignalTime, true); drawWinding(windingFreq, currentSignalTime, true); if (progress < 1) animationId = requestAnimationFrame(animatePath); else { stopRealTimeAnimation(); redrawAll(); } }
+            function startRealTimeAnimation() { stopSweepAnimation(); animationStartTime = null; playPauseBtn.textContent = 'Pause'; sweepBtn.disabled = true; [f1Slider, f2Slider, freqSlider, dcToggle].forEach(c => c.disabled = true); waveCards.forEach(c => c.disabled = true); animationId = requestAnimationFrame(animatePath); }
+            function stopRealTimeAnimation() { cancelAnimationFrame(animationId); animationId = null; playPauseBtn.textContent = 'Play Animation'; sweepBtn.disabled = false; [f1Slider, f2Slider, freqSlider, dcToggle].forEach(c => c.disabled = false); waveCards.forEach(c => c.disabled = false); }
+            function getSpeedMultiplier(currentFreq) { const f1 = parseFloat(f1Slider.value), f2 = parseFloat(f2Slider.value); let speed1 = 1.0, speed2 = 1.0; if (f1 > 0) { const dist1 = currentFreq - f1, gaussian1 = Math.exp(-(dist1 * dist1) / (2 * resonanceWidth * resonanceWidth)); speed1 = minSpeed + (1 - minSpeed) * (1 - gaussian1); } if (f2 > 0 && currentWaveType === 'sine') { const dist2 = currentFreq - f2, gaussian2 = Math.exp(-(dist2 * dist2) / (2 * resonanceWidth * resonanceWidth)); speed2 = minSpeed + (1 - minSpeed) * (1 - gaussian2); } return Math.min(speed1, speed2); }
+            function animateSweep(timestamp) { if (!lastTimestamp) lastTimestamp = timestamp; const deltaTime = (timestamp - lastTimestamp) / 1000; lastTimestamp = timestamp; const sweepDuration = 15.0; const minFreq = parseFloat(freqSlider.min), maxFreq = parseFloat(freqSlider.max); let tempProgress = Math.min(effectiveElapsedTime / sweepDuration, 1); const freqForSpeedCalc = minFreq + (maxFreq - minFreq) * tempProgress; const speedMultiplier = getSpeedMultiplier(freqForSpeedCalc); effectiveElapsedTime += deltaTime * speedMultiplier; const progress = Math.min(effectiveElapsedTime / sweepDuration, 1); const currentContinuousFreq = minFreq + (maxFreq - minFreq) * progress; freqSlider.value = currentContinuousFreq; redrawAll(currentContinuousFreq); if (progress < 1) sweepAnimationId = requestAnimationFrame(animateSweep); else { stopSweepAnimation(); redrawAll(); } }
+            function startSweepAnimation() { stopRealTimeAnimation(); lastTimestamp = null; effectiveElapsedTime = 0; freqSlider.removeEventListener('input', handleWindingChange); freqSlider.step = 'any'; sweepBtn.textContent = 'Stop Sweep'; playPauseBtn.disabled = true; [f1Slider, f2Slider, dcToggle].forEach(c => c.disabled = true); waveCards.forEach(c => c.disabled = true); sweepAnimationId = requestAnimationFrame(animateSweep); }
+            function stopSweepAnimation() { cancelAnimationFrame(sweepAnimationId); sweepAnimationId = null; freqSlider.step = '0.5'; sweepBtn.textContent = 'Auto-Sweep Frequency'; playPauseBtn.disabled = false; [f1Slider, f2Slider, freqSlider, dcToggle].forEach(c => c.disabled = false); waveCards.forEach(c => c.disabled = false); freqSlider.addEventListener('input', handleWindingChange); }
+            
+            function toggleRealTimeAnimation() { if (animationId) stopRealTimeAnimation(); else startRealTimeAnimation(); }
+            function toggleSweepAnimation() { if (sweepAnimationId) stopSweepAnimation(); else startSweepAnimation(); }
+            function handleSignalChange() { if (animationId) stopRealTimeAnimation(); if (sweepAnimationId) stopSweepAnimation(); calculateSpectrum(); redrawAll(); }
+            function handleWindingChange() { if (animationId) stopRealTimeAnimation(); if (sweepAnimationId) stopSweepAnimation(); redrawAll(); }
 
-                    if (canvas.id === 'waveformCanvas') cssHeight = cssWidth / 2.5;
-                    else cssHeight = cssWidth;
+            function setupAndDrawAll() { [waveformCanvas, windingCanvas, spectrumCanvas].forEach(canvas => { const rect = canvas.parentElement.getBoundingClientRect(); const cssWidth = rect.width; let cssHeight = (canvas.id === 'windingCanvas') ? cssWidth : cssWidth / 2.5; canvas.width = cssWidth * dpr; canvas.height = cssHeight * dpr; canvas.style.width = `${cssWidth}px`; canvas.style.height = `${cssHeight}px`; }); calculateSpectrum(); redrawAll(); }
 
-                    canvas.width = cssWidth * dpr;
-                    canvas.height = cssHeight * dpr;
-                    canvas.style.width = `${cssWidth}px`;
-                    canvas.style.height = `${cssHeight}px`;
+            playPauseBtn.addEventListener('click', toggleRealTimeAnimation);
+            sweepBtn.addEventListener('click', toggleSweepAnimation);
+            freqSlider.addEventListener('input', handleWindingChange);
+            [f1Slider, f2Slider, dcToggle].forEach(el => el.addEventListener('input', handleSignalChange));
+            waveCards.forEach(card => {
+                card.addEventListener('click', (e) => {
+                    waveCards.forEach(c => c.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    currentWaveType = e.currentTarget.dataset.wave;
+                    updateControlsVisibility();
+                    handleSignalChange();
                 });
-                
-                updateAll();
-            }
-
-            freqSlider.addEventListener('input', updateWinding);
-            f1Slider.addEventListener('input', updateAll);
-            f2Slider.addEventListener('input', updateAll);
+            });
             window.addEventListener('resize', setupAndDrawAll);
             
+            updateControlsVisibility();
             setupAndDrawAll();
         });
     </script>
