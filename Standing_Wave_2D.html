@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>2D Standing Wave Explorer</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --secondary-color: #0f3460;
+            --primary-color: #e94560;
+            --text-color: #f0f0f0;
+            --text-muted: #aaa;
+            --border-color: #16213e;
+            --accent-color: #33d1ff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex; flex-direction: column; align-items: center; margin: 0;
+            padding: 20px 0;
+            background-color: var(--bg-color); color: var(--text-color);
+            -webkit-font-smoothing: antialiased; box-sizing: border-box; overflow-x: hidden;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 900px; background-color: var(--secondary-color);
+            border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 2rem 1.5rem;
+            text-align: center; box-sizing: border-box;
+        }
+        
+        h1 { color: var(--primary-color); margin-top: 0; margin-bottom: 0.5rem; }
+        .explanation { color: var(--text-muted); line-height: 1.6; margin-bottom: 1.5rem; max-width: 700px; margin-left: auto; margin-right: auto;}
+        
+        .canvas-wrapper {
+            position: relative; width: 100%; padding-top: 75%;
+            border: 2px solid var(--primary-color); background-color: var(--border-color);
+            border-radius: 8px; overflow: hidden;
+        }
+
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        .controls-container {
+            margin-top: 1.5rem; display: flex; flex-direction: column;
+            gap: 20px; width: 100%;
+        }
+        
+        .control-group { text-align: left; width: 100%; flex: 1; min-width: 280px; }
+        .control-group label { display: block; margin-bottom: 10px; font-weight: 500; }
+        
+        .sim-ui-container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .sim-ui-container.hidden { display: none; }
+        
+        input[type="range"] {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 8px; background: var(--border-color);
+            border-radius: 5px; outline: none; cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 20px; height: 20px; background: var(--primary-color);
+            border-radius: 50%; cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px; height: 20px; background: var(--primary-color);
+            border-radius: 50%; cursor: pointer; border: 0;
+        }
+        
+        .button-container { display: flex; justify-content: center; }
+        #pauseButton {
+            background-color: transparent; border: 1px solid var(--text-muted); color: var(--text-muted);
+            padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;
+            transition: all 0.2s ease; font-size: 1rem;
+        }
+        #pauseButton:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        
+        .selector-container {
+            display: flex; flex-wrap: wrap; gap: 12px;
+            justify-content: center; margin-top: 10px;
+        }
+
+        .selector-no-wrap {
+            flex-wrap: nowrap;
+        }
+        .selector-no-wrap .toggle-btn {
+            flex-grow: 1;
+        }
+
+        .toggle-btn {
+            background-color: #2a2a4e; color: #ddd; border: 1px solid #445;
+            padding: 8px 15px; border-radius: 5px; cursor: pointer;
+            font-weight: 500; transition: all 0.2s ease; font-size: 0.95rem;
+            white-space: nowrap; 
+        }
+        .toggle-btn:hover { border-color: var(--primary-color); color: white; }
+        .toggle-btn.active {
+            background-color: var(--primary-color); color: white; border-color: var(--primary-color);
+        }
+
+        /* MODIFIED: Styles for About section */
+        .about-container {
+            width: 100%;
+            margin-top: 25px;
+            text-align: center;
+        }
+        #about-toggle-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 0.9em;
+            padding: 5px;
+        }
+        #about-toggle-btn:hover {
+            color: var(--primary-color);
+        }
+        #about-section {
+            text-align: left;
+            color: var(--text-muted);
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-top: 15px;
+            border: 1px solid var(--border-color);
+        }
+        #about-section.hidden {
+            display: none;
+        }
+        #about-section h4 {
+            color: var(--text-color);
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+        }
+        #about-section ul {
+            padding-left: 20px;
+            margin-top: 0.5rem;
+        }
+        #about-section p {
+            margin-bottom: 1rem;
+        }
+        
+        #credit-line { margin-top: 25px; color: var(--text-muted); font-size: 0.9em; text-align: center;}
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1>2D Standing Wave Explorer</h1>
+        <p class="explanation">
+            An interactive visualization of standing waves. Explore resonant modes on square and circular membranes. The particle density is proportional to the wave amplitude.
+        </p>
+        <div class="canvas-wrapper">
+            <div id="canvas-container"></div>
+        </div>
+        <div class="controls-container">
+            <!-- Mode Tabs -->
+            <div class="selector-container selector-no-wrap">
+                <button class="toggle-btn active" id="mode-square">Square Membrane</button>
+                <button class="toggle-btn" id="mode-circular">Circular Membrane</button>
+            </div>
+            
+            <!-- Square UI -->
+            <div id="square-ui" class="sim-ui-container">
+                 <div class="control-group">
+                    <label for="frequencySlider">Frequency : <span id="frequencyValue">3.25</span></label>
+                    <input type="range" min="1" max="12" value="3.25" step="0.01" id="frequencySlider">
+                </div>
+                <div class="control-group">
+                    <label>Toggle Resonant Modes:</label>
+                    <div id="modeSelectorContainer" class="selector-container"></div>
+                </div>
+            </div>
+
+            <!-- Circular UI -->
+            <div id="circular-ui" class="sim-ui-container hidden">
+                <div class="control-group">
+                    <label>Angular Modes (l):</label>
+                    <div id="l-selector-container" class="selector-container">
+                        <button class="toggle-btn active" data-value="0">0</button>
+                        <button class="toggle-btn" data-value="1">1</button>
+                        <button class="toggle-btn" data-value="2">2</button>
+                        <button class="toggle-btn" data-value="3">3</button>
+                        <button class="toggle-btn" data-value="4">4</button>
+                    </div>
+                </div>
+                 <div class="control-group">
+                    <label>Radial Modes (n):</label>
+                    <div id="n-selector-container" class="selector-container">
+                        <button class="toggle-btn" data-value="1">1</button>
+                        <button class="toggle-btn" data-value="2">2</button>
+                        <button class="toggle-btn" data-value="3">3</button>
+                        <button class="toggle-btn active" data-value="4">4</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Controls -->
+            <div class="control-group">
+                <label>View Angle Presets:</label>
+                <div id="angleSelectorContainer" class="selector-container selector-no-wrap">
+                    <button class="toggle-btn active" data-angle="xy">Top (XY)</button>
+                    <button class="toggle-btn" data-angle="xz">Side (XZ)</button>
+                    <button class="toggle-btn" data-angle="yz">Front (YZ)</button>
+                </div>
+            </div>
+            <div class="button-container">
+                <button id="pauseButton">Pause</button>
+            </div>
+        </div>
+
+        <!-- MODIFIED: About Section Added -->
+        <div class="about-container">
+            <button id="about-toggle-btn">About This Simulation</button>
+            <div id="about-section" class="hidden">
+                <h4>What are you seeing?</h4>
+                <p>This animation models the behavior of <strong>standing waves</strong> on a two-dimensional surface, like a drumhead. Standing waves occur when waves interfere with their own reflections, creating stable patterns of vibration at specific <strong>resonant frequencies</strong>.</p>
+                <ul>
+                    <li><strong>Nodes:</strong> The areas that remain still (zero amplitude).</li>
+                    <li><strong>Antinodes:</strong> The areas with the largest vibration (maximum amplitude).</li>
+                </ul>
+                <h4>How to Interact</h4>
+                <p><strong>Square Membrane:</strong> Use the <strong>Frequency</strong> slider to discover different resonant modes. The most stable patterns appear when the frequency value is near a specific resonant value.</p>
+                <p><strong>Circular Membrane:</strong> Select modes directly. <strong>Angular Modes (l)</strong> control the number of nodal diameters (lines crossing the center). <strong>Radial Modes (n)</strong> control the number of nodal circles.</p>
+                <p>Use the <strong>View Angle Presets</strong> or drag the visualization with your mouse or finger to change the camera perspective.</p>
+            </div>
+        </div>
+
+        <p id="credit-line">Created by Dr. Devender Garg</p>
+    </div>
+
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- GLOBAL CONFIG ---
+        const PARTICLE_COUNT = 160000, GRID_SIZE = 10, AMPLITUDE = 1.5,
+              PARTICLE_COLOR = 0x33d1ff, PARTICLE_SIZE = 0.08,
+              FREQUENCY_RANGE_WIDTH = 0.5, ORTHO_FRUSTUM_SIZE = 12,
+              ANIMATION_SPEED = 0.3; // REMOVED SLIDER: Fixed speed
+
+        // --- GLOBAL STATE ---
+        let scene, renderer, particles, controls, camera;
+        let activeSquareModes = [], isPaused = false, currentSimMode = 'square';
+        let besselLUT = []; const LUT_SIZE = 1024;
+        const clock = new THREE.Clock();
+        const cameraLookAt = new THREE.Vector3(0, 0, 0);
+
+        const cameraPositions = {
+            xy: new THREE.Vector3(2, 2, 10), xz: new THREE.Vector3(0, -10, 0),
+            yz: new THREE.Vector3(-10, 0, 0)
+        };
+        let targetCameraPosition = new THREE.Vector3().copy(cameraPositions.xy);
+
+        // --- UI ELEMENTS ---
+        const canvasContainer = document.getElementById('canvas-container'),
+              slider = document.getElementById('frequencySlider'),
+              frequencyValueSpan = document.getElementById('frequencyValue'),
+              pauseButton = document.getElementById('pauseButton'),
+              modeSelectorContainer = document.getElementById('modeSelectorContainer'),
+              angleSelector = document.getElementById('angleSelectorContainer'),
+              modeSquareBtn = document.getElementById('mode-square'),
+              modeCircularBtn = document.getElementById('mode-circular'),
+              squareUI = document.getElementById('square-ui'),
+              circularUI = document.getElementById('circular-ui'),
+              lSelectorContainer = document.getElementById('l-selector-container'),
+              nSelectorContainer = document.getElementById('n-selector-container'),
+              aboutToggleBtn = document.getElementById('about-toggle-btn'), // MODIFIED
+              aboutSection = document.getElementById('about-section'); // MODIFIED
+        
+        // --- BESSEL FUNCTION MATH ---
+        const BESSEL_ZEROS = {
+            0: [2.4048, 5.5201, 8.6537, 11.7915, 14.9309], 1: [3.8317, 7.0156, 10.1735, 13.3237, 16.4706],
+            2: [5.1356, 8.4172, 11.6198, 14.7960, 17.9598], 3: [6.3802, 9.7610, 13.0152, 16.2235, 19.4094],
+            4: [7.5883, 11.0647, 14.3725, 17.6160, 20.8269]
+        };
+        function besselJ(l, x) {
+            if (l < 0) return 0; let sum = 0;
+            for (let k = 0; k < 20; k++) {
+                let fact_k = 1, fact_l_k = 1;
+                for(let i=1; i<=k; i++) fact_k*=i; for(let i=1; i<=l+k; i++) fact_l_k*=i;
+                sum += Math.pow(-1, k) * Math.pow(x / 2, l + 2 * k) / (fact_k * fact_l_k);
+            } return sum;
+        }
+        function precomputeBessel(l, k_nl) {
+            besselLUT = new Float32Array(LUT_SIZE);
+            for (let i = 0; i < LUT_SIZE; i++) {
+                besselLUT[i] = besselJ(l, (i / (LUT_SIZE - 1)) * k_nl);
+            }
+        }
+
+        // --- INITIALIZATION ---
+        function init() {
+            scene = new THREE.Scene(); const aspect = canvasContainer.clientWidth/canvasContainer.clientHeight;
+            camera = new THREE.OrthographicCamera(ORTHO_FRUSTUM_SIZE*aspect/-2, ORTHO_FRUSTUM_SIZE*aspect/2, ORTHO_FRUSTUM_SIZE/2, ORTHO_FRUSTUM_SIZE/-2, 0.1, 1000);
+            camera.position.copy(cameraPositions.xy);
+            renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+            canvasContainer.appendChild(renderer.domElement);
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enablePan=false; controls.enableDamping=true; controls.target.copy(cameraLookAt);
+            const material = new THREE.PointsMaterial({color:PARTICLE_COLOR, size:PARTICLE_SIZE, blending:THREE.AdditiveBlending, transparent:true, depthWrite:false});
+            particles = new THREE.Points(new THREE.BufferGeometry(), material);
+            scene.add(particles);
+            setupEventListeners();
+            onSliderChange(); animate();
+        }
+
+        function setupEventListeners() {
+            window.addEventListener('resize', onWindowResize);
+            pauseButton.addEventListener('click', togglePause);
+            angleSelector.querySelectorAll('.toggle-btn').forEach(button => button.addEventListener('click', handleAngleButtonClick));
+            renderer.domElement.addEventListener('mousedown', handleCanvasInteraction);
+            renderer.domElement.addEventListener('touchstart', handleCanvasInteraction, { passive: true });
+            modeSquareBtn.addEventListener('click', () => switchSimMode('square'));
+            modeCircularBtn.addEventListener('click', () => switchSimMode('circular'));
+            slider.addEventListener('input', onSliderChange);
+            
+            lSelectorContainer.querySelectorAll('.toggle-btn').forEach(button => button.addEventListener('click', (e) => {
+                lSelectorContainer.querySelector('.active').classList.remove('active');
+                e.target.classList.add('active');
+                generateParticles();
+            }));
+            nSelectorContainer.querySelectorAll('.toggle-btn').forEach(button => button.addEventListener('click', (e) => {
+                nSelectorContainer.querySelector('.active').classList.remove('active');
+                e.target.classList.add('active');
+                generateParticles();
+            }));
+
+            aboutToggleBtn.addEventListener('click', toggleAboutSection); // MODIFIED
+        }
+        
+        // MODIFIED: Function to toggle about section
+        function toggleAboutSection() {
+            const isHidden = aboutSection.classList.toggle('hidden');
+            aboutToggleBtn.textContent = isHidden ? 'About This Simulation' : 'Hide Details';
+        }
+
+        // --- CORE SIMULATION LOGIC ---
+        function switchSimMode(mode) {
+            if (currentSimMode === mode) return; currentSimMode = mode;
+            modeSquareBtn.classList.toggle('active', mode === 'square');
+            squareUI.classList.toggle('hidden', mode !== 'square');
+            modeCircularBtn.classList.toggle('active', mode === 'circular');
+            circularUI.classList.toggle('hidden', mode !== 'circular');
+            generateParticles();
+        }
+
+        function generateParticles() {
+            const positions = new Float32Array(PARTICLE_COUNT*3), maxAmplitudes = new Float32Array(PARTICLE_COUNT);
+            if (currentSimMode === 'square') {
+                const enabledModes = activeSquareModes.filter(m=>m.enabled);
+                const calculateMaxAmplitude = (xN, yN) => {
+                    if (enabledModes.length === 0) return 0; let z = 0;
+                    for (const m of enabledModes) z += Math.sin(m.n*xN)*Math.sin(m.m*yN); return z/enabledModes.length;
+                };
+                if(enabledModes.length===0){ for(let i=0;i<PARTICLE_COUNT;i++){positions[i*3]=(Math.random()-.5)*GRID_SIZE; positions[i*3+1]=(Math.random()-.5)*GRID_SIZE;}}
+                else { let i=0; while (i<PARTICLE_COUNT) {
+                    const x=(Math.random()-.5)*GRID_SIZE, y=(Math.random()-.5)*GRID_SIZE;
+                    const maxAmp = calculateMaxAmplitude((x/GRID_SIZE+.5)*Math.PI, (y/GRID_SIZE+.5)*Math.PI);
+                    if (Math.random()<Math.abs(maxAmp)){positions[i*3]=x; positions[i*3+1]=y; maxAmplitudes[i]=maxAmp; i++;}}}
+            } else {
+                const l = parseInt(lSelectorContainer.querySelector('.active').dataset.value);
+                const n = parseInt(nSelectorContainer.querySelector('.active').dataset.value);
+                const radius = GRID_SIZE/2, k_nl = BESSEL_ZEROS[l][n-1];
+                precomputeBessel(l, k_nl);
+                const calculateMaxAmplitude = (r, theta) => {
+                    const x = r / radius * k_nl;
+                    const index = Math.min(LUT_SIZE - 1, Math.floor((x / k_nl) * LUT_SIZE));
+                    return besselLUT[index] * Math.cos(l * theta);
+                };
+                let i=0; while (i<PARTICLE_COUNT) {
+                    const x=(Math.random()-.5)*GRID_SIZE, y=(Math.random()-.5)*GRID_SIZE, r=Math.sqrt(x*x+y*y);
+                    if (r <= radius) {
+                        const maxAmp = calculateMaxAmplitude(r, Math.atan2(y, x));
+                        if(Math.random()<Math.abs(maxAmp)){positions[i*3]=x; positions[i*3+1]=y; maxAmplitudes[i]=maxAmp; i++;}}}
+            }
+            if (particles.geometry) particles.geometry.dispose();
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('maxAmp', new THREE.BufferAttribute(maxAmplitudes, 1));
+            particles.geometry = geometry;
+        }
+
+        function updateWave() {
+            const posAttr=particles.geometry.getAttribute('position'), maxAmpAttr=particles.geometry.getAttribute('maxAmp');
+            if (!posAttr || !maxAmpAttr) return;
+            let freq=1.0;
+            if (currentSimMode==='square') freq=parseFloat(slider.value);
+            else { const l=parseInt(lSelectorContainer.querySelector('.active').dataset.value), n=parseInt(nSelectorContainer.querySelector('.active').dataset.value); freq=BESSEL_ZEROS[l][n-1]; }
+            let timeFactor = 1.0;
+            if(!isPaused) timeFactor=Math.cos(clock.getElapsedTime()*freq*2*ANIMATION_SPEED);
+            for(let i=0; i<posAttr.count; i++) posAttr.setZ(i, maxAmpAttr.getX(i)*AMPLITUDE*timeFactor);
+            posAttr.needsUpdate = true;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (angleSelector.querySelector('.active')) {
+                if(camera.position.distanceTo(targetCameraPosition)>0.01) {
+                    camera.position.lerp(targetCameraPosition, 0.1);
+                    controls.target.lerp(cameraLookAt, 0.1);
+                }
+            }
+            controls.update(); updateWave(); renderer.render(scene, camera);
+        }
+        
+        function handleAngleButtonClick(e) {
+            const angle = e.target.dataset.angle; setActiveAngle(angle);
+            targetCameraPosition.copy(cameraPositions[angle]);
+            if(angle==='xz'||angle==='yz') camera.up.set(0,0,1); else camera.up.set(0,1,0);
+        }
+        function handleCanvasInteraction() {
+            if (angleSelector.querySelector('.active')) { setActiveAngle(null); camera.up.set(0, 1, 0); }
+        }
+        function setActiveAngle(angle) {
+            angleSelector.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+            if(angle) angleSelector.querySelector(`[data-angle="${angle}"]`).classList.add('active');
+        }
+        function onSliderChange() {
+            frequencyValueSpan.textContent=parseFloat(slider.value).toFixed(2);
+            activeSquareModes=findModesInRange(parseFloat(slider.value),FREQUENCY_RANGE_WIDTH).map(m=>({...m,enabled:true}));
+            updateModeSelector(); generateParticles();
+        }
+        function findModesInRange(centerFreq, rangeWidth) {
+            const modes=[], minFreqSq=Math.pow(Math.max(0,centerFreq-rangeWidth/2),2),
+                  maxFreqSq=Math.pow(centerFreq+rangeWidth/2,2), limit=Math.ceil(Math.sqrt(maxFreqSq));
+            for(let n=1;n<=limit;n++){for(let m=1;m<=limit;m++){if(n*n+m*m>=minFreqSq&&n*n+m*m<=maxFreqSq)modes.push({n,m});}}
+            modes.sort((a,b)=>(a.n**2+a.m**2)-(b.n**2+b.m**2)); return modes;
+        }
+        function handleModeToggle(e) {
+            const btn=e.currentTarget, i=parseInt(btn.dataset.modeIndex);
+            if(activeSquareModes[i]){btn.classList.toggle('active'); activeSquareModes[i].enabled=btn.classList.contains('active'); generateParticles();}
+        }
+        function updateModeSelector() {
+            modeSelectorContainer.innerHTML='';
+            if (activeSquareModes.length>0) {
+                activeSquareModes.forEach((mode, index) => {
+                    const btn=document.createElement('button'); btn.className='toggle-btn active';
+                    btn.textContent=`(${mode.n}, ${mode.m})`; btn.dataset.modeIndex=index;
+                    btn.addEventListener('click', handleModeToggle); modeSelectorContainer.appendChild(btn);
+                });
+            } else { modeSelectorContainer.innerHTML=`<span style="color:var(--text-muted);font-style:italic;">No modes found</span>`;}
+        }
+        function onWindowResize() {
+            const aspect=canvasContainer.clientWidth/canvasContainer.clientHeight;
+            camera.left=ORTHO_FRUSTUM_SIZE*aspect/-2; camera.right=ORTHO_FRUSTUM_SIZE*aspect/2;
+            camera.top=ORTHO_FRUSTUM_SIZE/2; camera.bottom=ORTHO_FRUSTUM_SIZE/-2;
+            camera.updateProjectionMatrix(); renderer.setSize(canvasContainer.clientWidth,canvasContainer.clientHeight);
+        }
+        function togglePause() { isPaused=!isPaused; pauseButton.textContent=isPaused?'Resume':'Pause';}
+        init();
+    </script>
+</body>
+</html>
