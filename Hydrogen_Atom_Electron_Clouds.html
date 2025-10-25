@@ -3,184 +3,218 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Hydrogen Atom Orbitals with 2D Cross-Sections</title>
+    <title>Hydrogen Atom Orbital Explorer</title>
 
     <style>
-        html, body {
-            min-height: 100vh;
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            background-color: #111;
-            color: #eee;
+        :root {
+            --bg-color: #1a1a2e;
+            --secondary-color: #0f3460;
+            --primary-color: #e94560;
+            --text-color: #f0f0f0;
+            --text-muted: #aaa;
+            --border-color: #16213e;
+            --accent-color: #33d1ff;
+            --orange-lobe: #ff8000;
+            --cyan-lobe: #00bfff;
+            --sum-color: #ff8000; /* CHANGED from #ffff00 to orange */
+        }
+
+        html {
+            box-sizing: border-box;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             display: flex;
             flex-direction: column;
-            overflow-x: hidden;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .main-container {
+            width: 95%;
+            max-width: 900px;
+            background-color: var(--secondary-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            text-align: center;
         }
         
-        #canvas-container {
-            height: 65vh;
-            min-height: 400px;
-            width: 100%;
+        h1 { color: var(--primary-color); margin-top: 0; margin-bottom: 0.5rem; }
+        .explanation { color: var(--text-muted); line-height: 1.6; margin-bottom: 1.5rem; max-width: 700px; margin-left: auto; margin-right: auto;}
+        
+        .canvas-label { font-weight: bold; margin: 1.5rem 0 0.5rem 0; font-size: 1.1em; text-align: left; }
+        
+        .canvas-wrapper {
             position: relative;
-        }
-        #canvas-container canvas {
-            display: block;
+            width: 100%;
+            padding-top: 100%; /* This makes height equal to width, creating a square */
+            border: 2px solid var(--primary-color);
+            background-color: var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
         }
 
-        #ui-container {
-            padding: 15px;
-            background-color: #222;
-            text-align: center;
-            border-top: 2px solid #555;
-            border-bottom: 2px solid #555;
-            flex-shrink: 0;
+        #canvas-container {
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
         }
-        #orbital-select {
-            padding: 8px;
-            font-size: 1.1em;
-            border-radius: 5px;
-            background-color: #333;
-            color: #eee;
-            border: 1px solid #555;
+        #canvas-container canvas { display: block; }
+
+        .controls-container {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
-        #filter-container {
-            margin-top: 12px;
-            font-size: 0.9em;
+        .control-group { text-align: left; }
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
         }
-        #filter-container label {
-            margin: 0 10px;
+        select {
+            width: 100%; padding: 12px; border-radius: 5px; background-color: var(--border-color);
+            color: var(--text-color); border: 1px solid var(--bg-color); font-size: 1em;
             cursor: pointer;
         }
-        #orbital-info {
-            margin-top: 10px;
-            font-size: 0.9em;
-            font-family: 'Courier New', Courier, monospace;
-            line-height: 1.4;
-        }
 
+        .presets-container { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        .presets-container button {
+            background-color: transparent; border: 1px solid var(--text-muted); color: var(--text-muted);
+            padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.2s ease;
+        }
+        .presets-container button:not(.active):hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .presets-container button.active { background-color: var(--primary-color); border-color: var(--primary-color); color: white; }
+        
         #cross-section-container {
             display: flex;
             justify-content: center;
             align-items: center;
             flex-wrap: wrap;
-            background-color: #1a1a1a;
+            background-color: var(--border-color);
             padding: 20px 10px;
             gap: 20px;
+            border-radius: 8px;
+            margin-top: 10px;
         }
-        .cross-section-view {
-            text-align: center;
-        }
+        .cross-section-view { text-align: center; }
         .cross-section-view h3 {
-            margin: 0 0 5px 0;
-            font-weight: normal;
-            font-size: 0.9em;
+            margin: 0 0 8px 0; font-weight: normal; font-size: 0.9em; color: var(--text-muted);
         }
         .cross-section-view canvas {
-            background-color: #000;
-            border: 1px solid #444;
-            max-width: 100%;
+            background-color: #000; border: 1px solid #444; max-width: 100%; border-radius: 4px;
         }
 
-        #info {
-            position: absolute;
-            top: 15px;
-            left: 10px;
-            padding: 10px;
-            background-color: rgba(0, 0, 0, 0.6);
-            border-radius: 5px;
-            max-width: 300px;
-            pointer-events: none;
+        #info-panel {
+            margin-top: 20px; padding: 20px; text-align: left;
+            border-top: 2px solid var(--border-color);
+            background-color: #16213e; border-radius: 8px;
+            font-size: 0.95em; line-height: 1.7;
         }
-        h1 {
-            margin: 0 0 10px 0;
-            font-size: 1.2em;
+        #info-panel p { margin: 0.5em 0; }
+        code {
+            background-color: #222; padding: 3px 6px; border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace; color: var(--accent-color);
         }
-        p {
-            margin: 5px 0;
-            font-size: 0.9em;
+        .color-key {
+            display: inline-block; width: 12px; height: 12px; border-radius: 3px;
+            vertical-align: middle; margin-right: 5px;
         }
+
+        #credit-line { margin-top: 25px; color: var(--text-muted); font-size: 0.9em; text-align: center;}
+        
         #loader {
-            position: absolute;
-            top: 50%;
-            left: 50%;
+            position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            color: #000;
-            border-radius: 10px;
-            font-size: 1.5em;
-            z-index: 100;
+            padding: 20px; background: rgba(255, 255, 255, 0.9);
+            color: #000; border-radius: 10px; font-size: 1.5em; z-index: 100;
         }
-        #credits {
-            position: absolute;
-            bottom: 10px;
-            right: 15px;
-            color: #aaa;
-            font-size: 12px;
-            font-style: italic;
-            pointer-events: none;
-        }
-        .hidden {
-            display: none;
+        .hidden { display: none; }
+
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .main-container { width: 100%; padding: 1.5rem 1rem; }
+            h1 { font-size: 1.8rem; }
         }
     </style>
 </head>
 <body>
-    <!-- 3D simulation area -->
-    <div id="canvas-container">
-        <div id="info">
-            <h1>Hydrogen Atom Electron Clouds</h1>
-            <p>Visualizing the probability density |ψ|² for an electron in a hydrogen atom.</p>
-            <p>Positive lobes of the wave function (ψ) are colored <span style="color:#ff8000;">orange</span>, negative lobes are <span style="color:#00bfff;">cyan</span>.</p>
-        </div>
-        <div id="loader" class="hidden">Generating...</div>
-        <div id="credits">Created by Dr. Devender Garg</div>
-    </div>
-    
-    <!-- UI controls area -->
-    <div id="ui-container">
-        <label for="orbital-select">Select Orbital:</label>
-        <select id="orbital-select">
-            <option value="1s" selected>1s</option>
-            <option value="2s">2s</option>
-            <option value="2px">2p_x</option>
-            <option value="2py">2p_y</option>
-            <option value="2pz">2p_z</option>
-            <option value="3s">3s</option>
-            <option value="3px">3p_x</option>
-            <option value="3py">3p_y</option>
-            <option value="3pz">3p_z</option>
-            <option value="3d_z2">3d_{z^2}</option>
-            <option value="3d_xz">3d_{xz}</option>
-            <option value="3d_yz">3d_{yz}</option>
-            <option value="3d_xy">3d_{xy}</option>
-            <option value="3d_x2-y2">3d_{x^2-y^2}</option>
-        </select>
-        <div id="filter-container">
-            <label>
-                <input type="checkbox" id="positive-checkbox" checked> Show Positive (Orange)
-            </label>
-            <label>
-                <input type="checkbox" id="negative-checkbox" checked> Show Negative (Cyan)
-            </label>
-        </div>
-        <div id="orbital-info"></div>
-    </div>
+    <div class="main-container">
+        <h1>Hydrogen Atom Orbital Explorer</h1>
+        <p class="explanation">
+            An interactive 3D visualization of the probability density |ψ|² for an electron in a hydrogen atom, generated using a Monte Carlo method.
+        </p>
 
-    <!-- 2D cross-sections area -->
-    <div id="cross-section-container">
-        <div class="cross-section-view">
-            <h3>XY Plane (at z=0)</h3>
-            <canvas id="xy-canvas" width="300" height="300"></canvas>
+        <div class="canvas-label">3D Orbital Visualization</div>
+        <div class="canvas-wrapper">
+            <div id="canvas-container">
+                 <div id="loader" class="hidden">Generating...</div>
+            </div>
         </div>
-        <div class="cross-section-view">
-            <h3>XZ Plane (at y=0)</h3>
-            <canvas id="xz-canvas" width="300" height="300"></canvas>
+
+        <div class="controls-container">
+            <div class="control-group">
+                <label for="orbital-select">Select Orbital:</label>
+                <select id="orbital-select">
+                    <optgroup label="Individual Orbitals">
+                        <option value="1s">1s</option>
+                        <option value="2s">2s</option>
+                        <option value="2px">2p_x</option>
+                        <option value="2py">2p_y</option>
+                        <option value="2pz">2p_z</option>
+                        <option value="3s">3s</option>
+                        <option value="3px">3p_x</option>
+                        <option value="3py">3p_y</option>
+                        <option value="3pz">3p_z</option>
+                        <option value="3d_z2">3d_{z^2}</option>
+                        <option value="3d_xz">3d_{xz}</option>
+                        <option value="3d_yz">3d_{yz}</option>
+                        <option value="3d_xy">3d_{xy}</option>
+                        <option value="3d_x2-y2" selected>3d_{x^2-y^2}</option>
+                    </optgroup>
+                    <optgroup label="--- Summed Subshells ---">
+                        <option value="sum_2p">Sum: 2p Subshell</option>
+                        <option value="sum_3p">Sum: 3p Subshell</option>
+                        <option value="sum_3d">Sum: 3d Subshell</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div class="presets-container" id="filter-container">
+                <button id="positive-toggle" class="active">Show Positive (Orange)</button>
+                <button id="negative-toggle" class="active">Show Negative (Cyan)</button>
+            </div>
         </div>
-        <div class="cross-section-view">
-            <h3>YZ Plane (at x=0)</h3>
-            <canvas id="yz-canvas" width="300" height="300"></canvas>
+        
+        <div class="canvas-label" style="margin-top: 2rem;">2D Cross-Sections</div>
+        <div id="cross-section-container">
+            <div class="cross-section-view">
+                <h3>XY Plane (at z=0)</h3>
+                <canvas id="xy-canvas" width="250" height="250"></canvas>
+            </div>
+            <div class="cross-section-view">
+                <h3>XZ Plane (at y=0)</h3>
+                <canvas id="xz-canvas" width="250" height="250"></canvas>
+            </div>
+            <div class="cross-section-view">
+                <h3>YZ Plane (at x=0)</h3>
+                <canvas id="yz-canvas" width="250" height="250"></canvas>
+            </div>
         </div>
+        
+        <div id="info-panel"></div>
+        <p id="credit-line">Created by Dr. Devender Garg</p>
     </div>
 
     <script type="importmap">
@@ -191,156 +225,184 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        const NUM_POINTS_3D = 75000;
-        const NUM_POINTS_2D = 25000;
         const AXIS_LENGTH = 25;
         let scene, camera, renderer, controls, points;
         let allPositions = [], allColors = [];
         
-        // Cache to store generated orbital data
         const orbitalCache = {};
 
         const canvasContainer = document.getElementById('canvas-container');
-        const canvas2D = {
-            xy: document.getElementById('xy-canvas'),
-            xz: document.getElementById('xz-canvas'),
-            yz: document.getElementById('yz-canvas')
-        };
-        const ctx2D = {
-            xy: canvas2D.xy.getContext('2d'),
-            xz: canvas2D.xz.getContext('2d'),
-            yz: canvas2D.yz.getContext('2d')
-        };
+        const canvas2D = { xy: document.getElementById('xy-canvas'), xz: document.getElementById('xz-canvas'), yz: document.getElementById('yz-canvas') };
+        const ctx2D = { xy: canvas2D.xy.getContext('2d'), xz: canvas2D.xz.getContext('2d'), yz: canvas2D.yz.getContext('2d') };
 
         const loader = document.getElementById('loader');
         const orbitalSelect = document.getElementById('orbital-select');
-        const orbitalInfoDiv = document.getElementById('orbital-info');
-        const positiveCheckbox = document.getElementById('positive-checkbox');
-        const negativeCheckbox = document.getElementById('negative-checkbox');
-
-        const waveFunctions = { /* ... (wave functions are unchanged) ... */ '1s': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const val = Math.exp(-r); return { val: val, prob: val*val }; }, '2s': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const val = (2 - r) * Math.exp(-r / 2); return { val: val, prob: val*val }; }, '2px': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const val = x * Math.exp(-r / 2); return { val: val, prob: val*val }; }, '2py': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const val = y * Math.exp(-r / 2); return { val: val, prob: val*val }; }, '2pz': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const val = z * Math.exp(-r / 2); return { val: val, prob: val*val }; }, '3s': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const val = (27 - 18 * r + 2 * r * r) * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3px': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const val = (6 - r) * x * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3py': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const val = (6 - r) * y * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3pz': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const val = (6 - r) * z * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3d_z2': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); if (r === 0) return { val: 0, prob: 0 }; const cosTheta = z / r; const val = (3 * cosTheta * cosTheta - 1) * r*r * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3d_xz': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const val = x * z * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3d_yz': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const val = y * z * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3d_xy': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const val = x * y * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3d_x2-y2': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const val = (x * x - y * y) * Math.exp(-r / 3); return { val: val, prob: val*val }; } };
-        const orbitalProperties = { /* ... (orbital properties are unchanged) ... */ '1s': { n: 1, l: 0, m: 0, maxProb: 1.0, boxSize: 15 }, '2s': { n: 2, l: 0, m: 0, maxProb: 4.0, boxSize: 25 }, '2px': { n: 2, l: 1, m: '±1',maxProb: 0.6, boxSize: 25 }, '2py': { n: 2, l: 1, m: '±1',maxProb: 0.6, boxSize: 25 }, '2pz': { n: 2, l: 1, m: 0, maxProb: 0.6, boxSize: 25 }, '3s': { n: 3, l: 0, m: 0, maxProb: 730.0, boxSize: 45 }, '3px': { n: 3, l: 1, m: '±1',maxProb: 15.0, boxSize: 45 }, '3py': { n: 3, l: 1, m: '±1',maxProb: 15.0, boxSize: 45 }, '3pz': { n: 3, l: 1, m: 0, maxProb: 15.0, boxSize: 45 }, '3d_z2': { n: 3, l: 2, m: 0, maxProb: 12.0, boxSize: 45 }, '3d_xz': { n: 3, l: 2, m: '±1',maxProb: 3.0, boxSize: 45 }, '3d_yz': { n: 3, l: 2, m: '±1',maxProb: 3.0, boxSize: 45 }, '3d_xy': { n: 3, l: 2, m: '±2',maxProb: 3.0, boxSize: 45 }, '3d_x2-y2':{ n: 3, l: 2, m: '±2',maxProb: 3.0, boxSize: 45 } };
+        const infoPanel = document.getElementById('info-panel');
+        const positiveToggle = document.getElementById('positive-toggle');
+        const negativeToggle = document.getElementById('negative-toggle');
         
-        function init() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 1000);
-            camera.position.z = 65; 
-
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            canvasContainer.appendChild(renderer.domElement);
-            
-            controls = new OrbitControls(camera, renderer.domElement);
-            controls.target.set(0, 8, 0); 
-            controls.enableDamping = true;
-            
-            const axesHelper = new THREE.AxesHelper(AXIS_LENGTH);
-            scene.add(axesHelper);
-            
-            const labelX = createAxisLabel('X', new THREE.Vector3(AXIS_LENGTH + 2, 0, 0), '#FF4444');
-            const labelY = createAxisLabel('Y', new THREE.Vector3(0, AXIS_LENGTH + 2, 0), '#44FF44');
-            const labelZ = createAxisLabel('Z', new THREE.Vector3(0, 0, AXIS_LENGTH + 2), '#4444FF');
-            scene.add(labelX, labelY, labelZ);
-
-            // Create the points object once and add it to the scene
-            const geometry = new THREE.BufferGeometry();
-            const material = new THREE.PointsMaterial({ size: 0.25, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.7, depthWrite: false });
-            points = new THREE.Points(geometry, material);
-            scene.add(points);
-            
-            window.addEventListener('resize', onWindowResize, false);
-            orbitalSelect.addEventListener('change', (event) => updateOrbital(event.target.value));
-            positiveCheckbox.addEventListener('change', applyColorFilter);
-            negativeCheckbox.addEventListener('change', applyColorFilter);
-            
-            updateOrbital(orbitalSelect.value);
-            animate();
-        }
+        const waveFunctions = { '1s': (x, y, z, r_precalc) => { const r = r_precalc ?? Math.sqrt(x*x + y*y + z*z); const val = Math.exp(-r); return { val: val, prob: val*val }; }, '2s': (x, y, z, r_precalc) => { const r = r_precalc ?? Math.sqrt(x*x + y*y + z*z); const val = (2 - r) * Math.exp(-r / 2); return { val: val, prob: val*val }; }, '2px': (x, y, z, r_precalc) => { const r = r_precalc ?? Math.sqrt(x*x + y*y + z*z); const val = x * Math.exp(-r / 2); return { val: val, prob: val*val }; }, '2py': (x, y, z, r_precalc) => { const r = r_precalc ?? Math.sqrt(x*x + y*y + z*z); const val = y * Math.exp(-r / 2); return { val: val, prob: val*val }; }, '2pz': (x, y, z, r_precalc) => { const r = r_precalc ?? Math.sqrt(x*x + y*y + z*z); const val = z * Math.exp(-r / 2); return { val: val, prob: val*val }; }, '3s': (x, y, z, r_precalc) => { const r = r_precalc ?? Math.sqrt(x*x + y*y + z*z); const val = (27 - 18 * r + 2 * r * r) * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3px': (x, y, z, r_precalc) => { const r = r_precalc ?? Math.sqrt(x*x + y*y + z*z); const val = (6 - r) * x * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3py': (x, y, z, r_precalc) => { const r = r_precalc ?? Math.sqrt(x*x + y*y + z*z); const val = (6 - r) * y * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3pz': (x, y, z, r_precalc) => { const r = r_precalc ?? Math.sqrt(x*x + y*y + z*z); const val = (6 - r) * z * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3d_z2': (x, y, z, r_precalc) => { const r = r_precalc ?? Math.sqrt(x*x + y*y + z*z); if (r === 0) return { val: 0, prob: 0 }; const val = (3 * z*z - r*r) * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3d_xz': (x, y, z, r_precalc) => { const r = r_precalc ?? Math.sqrt(x*x + y*y + z*z); const val = x * z * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3d_yz': (x, y, z, r_precalc) => { const r = r_precalc ?? Math.sqrt(x*x + y*y + z*z); const val = y * z * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3d_xy': (x, y, z, r_precalc) => { const r = r_precalc ?? Math.sqrt(x*x + y*y + z*z); const val = x * y * Math.exp(-r / 3); return { val: val, prob: val*val }; }, '3d_x2-y2': (x, y, z, r_precalc) => { const r = r_precalc ?? Math.sqrt(x*x + y*y + z*z); const val = (x * x - y * y) * Math.exp(-r / 3); return { val: val, prob: val*val }; }, 'sum_2p': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const p_x = waveFunctions['2px'](x, y, z, r).prob; const p_y = waveFunctions['2py'](x, y, z, r).prob; const p_z = waveFunctions['2pz'](x, y, z, r).prob; return { val: 1, prob: p_x + p_y + p_z }; }, 'sum_3p': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const p_x = waveFunctions['3px'](x, y, z, r).prob; const p_y = waveFunctions['3py'](x, y, z, r).prob; const p_z = waveFunctions['3pz'](x, y, z, r).prob; return { val: 1, prob: p_x + p_y + p_z }; }, 'sum_3d': (x, y, z) => { const r = Math.sqrt(x*x + y*y + z*z); const p_z2 = waveFunctions['3d_z2'](x, y, z, r).prob; const p_x2y2 = waveFunctions['3d_x2-y2'](x, y, z, r).prob; const p_xz = waveFunctions['3d_xz'](x, y, z, r).prob; const p_yz = waveFunctions['3d_yz'](x, y, z, r).prob; const p_xy = waveFunctions['3d_xy'](x, y, z, r).prob; return { val: 1, prob: (0.25 * p_z2) + (0.75 * p_x2y2) + (3 * p_xz) + (3 * p_yz) + (3 * p_xy) }; } };
+        const orbitalProperties = { '1s': { n: 1, l: 0, m: 0, maxProb: 1.0, boxSize: 12 }, '2s': { n: 2, l: 0, m: 0, maxProb: 4.0, boxSize: 25 }, '2px': { n: 2, l: 1, m: '±1',maxProb: 0.6, boxSize: 25 }, '2py': { n: 2, l: 1, m: '±1',maxProb: 0.6, boxSize: 25 }, '2pz': { n: 2, l: 1, m: 0, maxProb: 0.6, boxSize: 25 }, '3s': { n: 3, l: 0, m: 0, maxProb: 730.0, boxSize: 45 }, '3px': { n: 3, l: 1, m: '±1',maxProb: 15.0, boxSize: 45 }, '3py': { n: 3, l: 1, m: '±1',maxProb: 15.0, boxSize: 45 }, '3pz': { n: 3, l: 1, m: 0, maxProb: 15.0, boxSize: 45 }, '3d_z2': { n: 3, l: 2, m: 0, maxProb: 12.0, boxSize: 45 }, '3d_xz': { n: 3, l: 2, m: '±1',maxProb: 3.0, boxSize: 45 }, '3d_yz': { n: 3, l: 2, m: '±1',maxProb: 3.0, boxSize: 45 }, '3d_xy': { n: 3, l: 2, m: '±2',maxProb: 3.0, boxSize: 45 }, '3d_x2-y2':{ n: 3, l: 2, m: '±2',maxProb: 3.0, boxSize: 45 }, 'sum_2p': { n: 2, l: 1, m: 'all', maxProb: 0.7, boxSize: 25, isSum: true, name: 'Sum of 2p Orbitals' }, 'sum_3p': { n: 3, l: 1, m: 'all', maxProb: 16.0, boxSize: 45, isSum: true, name: 'Sum of 3p Orbitals' }, 'sum_3d': { n: 3, l: 2, m: 'all', maxProb: 120.0, boxSize: 45, isSum: true, name: 'Sum of 3d Orbitals' } };
         
-        function createAxisLabel(text, position, color) { /* ... (function unchanged) ... */ const canvas = document.createElement('canvas'); const context = canvas.getContext('2d'); const size = 64; canvas.width = size; canvas.height = size; context.font = `Bold 40px Arial`; context.fillStyle = color; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(text, size / 2, size / 2); const texture = new THREE.CanvasTexture(canvas); const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true }); const sprite = new THREE.Sprite(spriteMaterial); sprite.position.copy(position); sprite.scale.set(3, 3, 1.0); return sprite; }
-
-        function generateOrbitalCloud3D(orbitalName) { /* ... (function unchanged) ... */ const props = orbitalProperties[orbitalName]; const waveFunc = waveFunctions[orbitalName]; const maxProb = props.maxProb; const boxSize = props.boxSize; const positions = []; const colors = []; const colorPositive = new THREE.Color(0xff8000); const colorNegative = new THREE.Color(0x00bfff); let pointsFound = 0; let attempts = 0; const maxAttempts = 20000000; while (pointsFound < NUM_POINTS_3D && attempts < maxAttempts) { const x = (Math.random() - 0.5) * boxSize; const y = (Math.random() - 0.5) * boxSize; const z = (Math.random() - 0.5) * boxSize; const { val, prob } = waveFunc(x, y, z); if (Math.random() < prob / maxProb) { positions.push(x, y, z); const color = (val > 0) ? colorPositive : colorNegative; colors.push(color.r, color.g, color.b); pointsFound++; } attempts++; } if (attempts >= maxAttempts) console.warn(`3D Generation stopped for ${orbitalName}.`); return { positions, colors }; }
-        function generate2DCrossSectionData(orbitalName, plane) { /* ... (function unchanged) ... */ const props = orbitalProperties[orbitalName]; const waveFunc = waveFunctions[orbitalName]; const maxProb = props.maxProb; const boxSize = props.boxSize; const points2D = []; let pointsFound = 0; let attempts = 0; const maxAttempts = NUM_POINTS_2D * 1000; while (pointsFound < NUM_POINTS_2D && attempts < maxAttempts) { const u = (Math.random() - 0.5) * boxSize; const v = (Math.random() - 0.5) * boxSize; let x=0, y=0, z=0; if (plane === 'xy') { x = u; y = v; z = 0; } else if (plane === 'xz') { x = u; z = v; y = 0; } else if (plane === 'yz') { y = u; z = v; x = 0; } const { val, prob } = waveFunc(x, y, z); if (Math.random() < prob / maxProb) { points2D.push({u, v, val}); pointsFound++; } attempts++; } return points2D; }
-        function drawSlice(ctx, data, boxSize) { /* ... (function unchanged) ... */ const canvas = ctx.canvas; const w = canvas.width; const h = canvas.height; const particleSize = 1; ctx.clearRect(0, 0, w, h); const colorPositive = 'rgb(255, 128, 0)'; const colorNegative = 'rgb(0, 191, 255)'; for (const p of data) { const pixelX = (p.u / boxSize + 0.5) * w; const pixelY = (-p.v / boxSize + 0.5) * h; ctx.fillStyle = (p.val > 0) ? colorPositive : colorNegative; ctx.fillRect(pixelX, pixelY, particleSize, particleSize); } }
-
-        function applyColorFilter() {
-            if (!points || allPositions.length === 0) return;
-            const showPositive = positiveCheckbox.checked;
-            const showNegative = negativeCheckbox.checked;
-            const filteredPositions = [];
-            const filteredColors = [];
-            for (let i = 0; i < allColors.length; i += 3) {
-                const isPositive = allColors[i] > allColors[i+1]; 
-                if ((isPositive && showPositive) || (!isPositive && showNegative)) {
-                    filteredPositions.push(allPositions[i], allPositions[i+1], allPositions[i+2]);
-                    filteredColors.push(allColors[i], allColors[i+1], allColors[i+2]);
-                }
-            }
-            points.geometry.setAttribute('position', new THREE.Float32BufferAttribute(filteredPositions, 3));
-            points.geometry.setAttribute('color', new THREE.Float32BufferAttribute(filteredColors, 3));
-            points.geometry.attributes.position.needsUpdate = true;
-            points.geometry.attributes.color.needsUpdate = true;
-            points.geometry.computeBoundingSphere();
+        function init() { 
+            scene = new THREE.Scene(); 
+            camera = new THREE.PerspectiveCamera(75, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 1000); 
+            camera.position.z = 45; 
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); 
+            renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight); 
+            renderer.setPixelRatio(window.devicePixelRatio); 
+            renderer.setClearColor(0x000000, 0); 
+            canvasContainer.appendChild(renderer.domElement); 
+            controls = new OrbitControls(camera, renderer.domElement); 
+            controls.target.set(0, 0, 0); 
+            controls.enableDamping = true; 
+            const axesHelper = new THREE.AxesHelper(AXIS_LENGTH); 
+            scene.add(axesHelper); 
+            const labelX = createAxisLabel('X', new THREE.Vector3(AXIS_LENGTH + 2, 0, 0), '#FF4444'); 
+            const labelY = createAxisLabel('Y', new THREE.Vector3(0, AXIS_LENGTH + 2, 0), '#44FF44'); 
+            const labelZ = createAxisLabel('Z', new THREE.Vector3(0, 0, AXIS_LENGTH + 2), '#4444FF'); 
+            scene.add(labelX, labelY, labelZ); 
+            const geometry = new THREE.BufferGeometry(); 
+            const material = new THREE.PointsMaterial({ size: 0.25, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.7, depthWrite: false }); 
+            points = new THREE.Points(geometry, material); 
+            scene.add(points); 
+            window.addEventListener('resize', onWindowResize, false); 
+            orbitalSelect.addEventListener('change', (event) => updateOrbital(event.target.value)); 
+            positiveToggle.addEventListener('click', () => { positiveToggle.classList.toggle('active'); applyColorFilter(); }); 
+            negativeToggle.addEventListener('click', () => { negativeToggle.classList.toggle('active'); applyColorFilter(); }); 
+            updateOrbital(orbitalSelect.value); 
+            animate(); 
         }
+        function createAxisLabel(text, position, color) { const canvas = document.createElement('canvas'); const context = canvas.getContext('2d'); const size = 64; canvas.width = size; canvas.height = size; context.font = `Bold 40px Arial`; context.fillStyle = color; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(text, size / 2, size / 2); const texture = new THREE.CanvasTexture(canvas); const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true }); const sprite = new THREE.Sprite(spriteMaterial); sprite.position.copy(position); sprite.scale.set(3, 3, 1.0); return sprite; }
+        
+        function randomPointInSphere(radius) { let x, y, z, d2; do { x = Math.random() * 2 - 1; y = Math.random() * 2 - 1; z = Math.random() * 2 - 1; d2 = x*x + y*y + z*z; } while (d2 > 1); return [x * radius, y * radius, z * radius]; }
 
-        function updateOrbital(orbitalName) {
+        function generateOrbitalCloud3D(orbitalName, numPoints) {
             const props = orbitalProperties[orbitalName];
-            orbitalInfoDiv.innerHTML = `Quantum Numbers:<br>n = ${props.n}<br>l = ${props.l}<br>m = ${props.m}`;
+            const waveFunc = waveFunctions[orbitalName];
+            const maxProb = props.maxProb;
+            const radius = props.boxSize / 2.0;
+            const positions = [];
+            const colors = [];
+            const colorPositive = new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--orange-lobe'));
+            const colorNegative = new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--cyan-lobe'));
+            const colorSum = new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--sum-color'));
+            let attempts = 0;
+            const eightFoldSymmetryOrbitals = ['1s', '2pz', '3pz', '3d_z2', '3d_xy', '3d_xz', '3d_yz', '3d_x2-y2'];
+            if (orbitalName === '2s' || orbitalName === '3s') { const nodes = (orbitalName === '2s') ? [2.0] : [1.9, 7.1]; const maxProbs = (orbitalName === '2s') ? [4.0, 0.074] : [730.0, 20.0, 1.0]; const pointRatios = (orbitalName === '2s') ? [0.15, 0.85] : [0.05, 0.35, 0.60]; let lower_r = 0; for(let i=0; i < nodes.length + 1; i++) { const upper_r = (i < nodes.length) ? nodes[i] : radius; const targetPoints = Math.ceil(numPoints * pointRatios[i] / 8); const shellMaxProb = maxProbs[i]; let pointsFound = 0; while (pointsFound < targetPoints) { attempts++; const [x_abs, y_abs, z_abs] = randomPointInSphere(upper_r).map(Math.abs); const r_sq = x_abs*x_abs + y_abs*y_abs + z_abs*z_abs; if (r_sq < lower_r*lower_r) continue; const r = Math.sqrt(r_sq); const { val, prob } = waveFunc(x_abs, y_abs, z_abs, r); if (Math.random() < prob / shellMaxProb) { const color = (val >= 0) ? colorPositive : colorNegative; for (let sx = 1; sx >= -1; sx -= 2) for (let sy = 1; sy >= -1; sy -= 2) for (let sz = 1; sz >= -1; sz -= 2) { positions.push(sx * x_abs, sy * y_abs, sz * z_abs); colors.push(color.r, color.g, color.b); } pointsFound++; } } lower_r = upper_r; } } else if (eightFoldSymmetryOrbitals.includes(orbitalName)) { const targetPoints = Math.ceil(numPoints / 8); let pointsFound = 0; let getSignMultiplier; switch (orbitalName) { case '2pz': case '3pz': getSignMultiplier = (sx, sy, sz) => sz; break; case '3d_xy': getSignMultiplier = (sx, sy, sz) => sx * sy; break; case '3d_xz': getSignMultiplier = (sx, sy, sz) => sx * sz; break; case '3d_yz': getSignMultiplier = (sx, sy, sz) => sy * sz; break; case '3d_x2-y2': getSignMultiplier = (sx, sy, sz) => 1; break; default: getSignMultiplier = (sx, sy, sz) => 1; break; } while (pointsFound < targetPoints) { attempts++; const [x, y, z] = randomPointInSphere(radius).map(Math.abs); const r = Math.sqrt(x*x + y*y + z*z); const { val, prob } = waveFunc(x, y, z, r); if (Math.random() < prob / maxProb) { const baseRadialSign = Math.sign(val); for (let sx = 1; sx >= -1; sx -= 2) { for (let sy = 1; sy >= -1; sy -= 2) { for (let sz = 1; sz >= -1; sz -= 2) { const finalSign = baseRadialSign * getSignMultiplier(sx, sy, sz); const color = (finalSign >= 0) ? colorPositive : colorNegative; positions.push(sx * x, sy * y, sz * z); colors.push(color.r, color.g, color.b); } } } pointsFound++; } } } else { let pointsFound = 0; while (pointsFound < numPoints) { attempts++; const [x, y, z] = randomPointInSphere(radius); const r = Math.sqrt(x*x + y*y + z*z); const { prob } = waveFunc(x, y, z, r); if (Math.random() < prob / maxProb) { positions.push(x, y, z); colors.push(colorSum.r, colorSum.g, colorSum.b); pointsFound++; } } }
+            return { positions, colors, attempts };
+        }
+        
+        function generate2DCrossSectionData(orbitalName, plane, numPoints) { const props = orbitalProperties[orbitalName]; const waveFunc = waveFunctions[orbitalName]; const maxProb = props.maxProb; const boxSize = props.boxSize; const radius = boxSize / 2.0; const radius_squared = radius * radius; const points2D = []; let pointsFound = 0; let attempts = 0; const maxAttempts = numPoints * 1000; while (pointsFound < numPoints && attempts < maxAttempts) { const u = (Math.random() - 0.5) * boxSize; const v = (Math.random() - 0.5) * boxSize; if (u*u + v*v > radius_squared) { attempts++; continue; } let x=0, y=0, z=0; if (plane === 'xy') { x = u; y = v; z = 0; } else if (plane === 'xz') { x = u; z = v; y = 0; } else if (plane === 'yz') { y = u; z = v; x = 0; } const { val, prob } = waveFunc(x, y, z); if (Math.random() < prob / maxProb) { points2D.push({u, v, val}); pointsFound++; } attempts++; } return points2D; }
+        
+        function drawSlice(ctx, data, boxSize, props) { 
+            const canvas = ctx.canvas; const w = canvas.width; const h = canvas.height; 
+            const particleSize = 1; 
+            ctx.clearRect(0, 0, w, h); 
+            const colorPositive = 'rgb(255, 128, 0)'; 
+            const colorNegative = 'rgb(0, 191, 255)'; 
+            const colorSum = 'rgb(255, 128, 0)'; /* CHANGED from yellow to orange */
+            for (const p of data) { 
+                const pixelX = (p.u / boxSize + 0.5) * w; 
+                const pixelY = (-p.v / boxSize + 0.5) * h; 
+                ctx.fillStyle = props.isSum ? colorSum : (p.val > 0) ? colorPositive : colorNegative; 
+                ctx.fillRect(pixelX, pixelY, particleSize, particleSize); 
+            } 
+        }
+        
+        function applyColorFilter() { 
+            if (!points || allPositions.length === 0) return; 
+            const orbitalName = orbitalSelect.value; const props = orbitalProperties[orbitalName]; 
+            if (props.isSum) { 
+                points.geometry.setAttribute('position', new THREE.Float32BufferAttribute(allPositions, 3)); 
+                points.geometry.setAttribute('color', new THREE.Float32BufferAttribute(allColors, 3)); 
+            } else { 
+                const showPositive = positiveToggle.classList.contains('active'); 
+                const showNegative = negativeToggle.classList.contains('active'); 
+                const filteredPositions = []; const filteredColors = []; 
+                for (let i = 0; i < allColors.length; i += 3) { 
+                    const isPositive = allColors[i] > allColors[i+1]; 
+                    if ((isPositive && showPositive) || (!isPositive && showNegative)) { 
+                        filteredPositions.push(allPositions[i], allPositions[i+1], allPositions[i+2]); 
+                        filteredColors.push(allColors[i], allColors[i+1], allColors[i+2]); 
+                    } 
+                } 
+                points.geometry.setAttribute('position', new THREE.Float32BufferAttribute(filteredPositions, 3)); 
+                points.geometry.setAttribute('color', new THREE.Float32BufferAttribute(filteredColors, 3)); 
+            } 
+            points.geometry.attributes.position.needsUpdate = true; 
+            points.geometry.attributes.color.needsUpdate = true; 
+            points.geometry.computeBoundingSphere(); 
+        }
+        function getPointCounts(n) { switch (n) { case 1: return { num3D: 25000, num2D: Math.round(25000 / 3) }; case 2: return { num3D: 50000, num2D: Math.round(50000 / 3) }; default: return { num3D: 75000, num2D: 25000 }; } }
 
-            // Check if data is in the cache
+        async function updateOrbital(orbitalName) {
+            const props = orbitalProperties[orbitalName];
+            const isSum = props.isSum || false;
+            const { num3D, num2D } = getPointCounts(props.n);
+            let pointCloud3D, dataXY, dataXZ, dataYZ;
+
             if (orbitalCache[orbitalName]) {
-                console.log(`Loading ${orbitalName} from cache.`);
-                const cachedData = orbitalCache[orbitalName];
-                
-                // Use cached data
-                allPositions = cachedData.pointCloud3D.positions;
-                allColors = cachedData.pointCloud3D.colors;
-                applyColorFilter();
-                
-                drawSlice(ctx2D.xy, cachedData.crossSections2D.xy, props.boxSize);
-                drawSlice(ctx2D.xz, cachedData.crossSections2D.xz, props.boxSize);
-                drawSlice(ctx2D.yz, cachedData.crossSections2D.yz, props.boxSize);
-
-                return; // Exit the function early
+                 console.log(`Loading ${orbitalName} from cache.`);
+                 const cachedData = orbitalCache[orbitalName];
+                 pointCloud3D = cachedData.pointCloud3D;
+                 dataXY = cachedData.crossSections2D.xy;
+                 dataXZ = cachedData.crossSections2D.xz;
+                 dataYZ = cachedData.crossSections2D.yz;
+            } else if (orbitalName.includes('p') && !orbitalName.includes('sum')) {
+                const n = orbitalName[0];
+                const canonicalName = `${n}pz`;
+                if (!orbitalCache[canonicalName]) {
+                    loader.textContent = `Generating ${canonicalName}...`; loader.classList.remove('hidden'); await new Promise(resolve => setTimeout(resolve, 50));
+                    const generationResult = generateOrbitalCloud3D(canonicalName, num3D);
+                    const canonicalXY = generate2DCrossSectionData(canonicalName, 'xy', num2D); const canonicalXZ = generate2DCrossSectionData(canonicalName, 'xz', num2D); const canonicalYZ = generate2DCrossSectionData(canonicalName, 'yz', num2D);
+                    orbitalCache[canonicalName] = { pointCloud3D: generationResult, crossSections2D: { xy: canonicalXY, xz: canonicalXZ, yz: canonicalYZ } };
+                    loader.classList.add('hidden'); loader.textContent = 'Generating...';
+                }
+                const cachedCanonical = orbitalCache[canonicalName]; const sourcePositions = cachedCanonical.pointCloud3D.positions; const numVerts = sourcePositions.length / 3;
+                let finalPositions;
+                if (orbitalName.endsWith('z')) { finalPositions = sourcePositions; } else {
+                    const rotatedPositions = new Float32Array(sourcePositions.length);
+                    if (orbitalName.endsWith('x')) { for (let i = 0; i < numVerts; i++) { rotatedPositions[i * 3] = sourcePositions[i * 3 + 2]; rotatedPositions[i * 3 + 1] = sourcePositions[i * 3 + 1]; rotatedPositions[i * 3 + 2] = -sourcePositions[i * 3]; } }
+                    else { for (let i = 0; i < numVerts; i++) { rotatedPositions[i * 3] = sourcePositions[i * 3]; rotatedPositions[i * 3 + 1] = sourcePositions[i * 3 + 2]; rotatedPositions[i * 3 + 2] = -sourcePositions[i * 3 + 1]; } }
+                    finalPositions = Array.from(rotatedPositions);
+                }
+                pointCloud3D = { positions: finalPositions, colors: cachedCanonical.pointCloud3D.colors, attempts: cachedCanonical.pointCloud3D.attempts };
+                dataXY = generate2DCrossSectionData(orbitalName, 'xy', num2D); dataXZ = generate2DCrossSectionData(orbitalName, 'xz', num2D); dataYZ = generate2DCrossSectionData(orbitalName, 'yz', num2D);
+                orbitalCache[orbitalName] = { pointCloud3D, crossSections2D: { xy: dataXY, xz: dataXZ, yz: dataYZ } };
+            } else {
+                loader.textContent = `Generating ${orbitalName}...`; loader.classList.remove('hidden'); await new Promise(resolve => setTimeout(resolve, 50));
+                pointCloud3D = generateOrbitalCloud3D(orbitalName, num3D);
+                dataXY = generate2DCrossSectionData(orbitalName, 'xy', num2D); dataXZ = generate2DCrossSectionData(orbitalName, 'xz', num2D); dataYZ = generate2DCrossSectionData(orbitalName, 'yz', num2D);
+                orbitalCache[orbitalName] = { pointCloud3D, crossSections2D: { xy: dataXY, xz: dataXZ, yz: dataYZ } };
+                loader.classList.add('hidden'); loader.textContent = 'Generating...';
+            }
+            
+            const generationAttempts = pointCloud3D.attempts;
+            positiveToggle.disabled = isSum; negativeToggle.disabled = isSum;
+            document.getElementById('filter-container').style.display = isSum ? 'none' : 'flex';
+            
+            const attemptsString = generationAttempts ? `<br>3D Generation Attempts: <code>${generationAttempts.toLocaleString()}</code>` : '';
+            if (isSum) {
+                infoPanel.innerHTML = `<p><b>${props.name}</b></p><p>This visualization shows the total probability density for a filled subshell, which demonstrates spherical symmetry.</p><p><span class="color-key" style="background-color: var(--sum-color);"></span>Total probability density for a filled subshell.</p>`;
+            } else {
+                infoPanel.innerHTML = `<p><b>Quantum Numbers:</b> <code>n=${props.n}</code>, <code>l=${props.l}</code>, <code>m=${props.m}</code>${attemptsString}</p><p>The colors represent the sign of the wave function (ψ):<br><span class="color-key" style="background-color: var(--orange-lobe);"></span>Positive Lobe&nbsp;&nbsp;&nbsp;<span class="color-key" style="background-color: var(--cyan-lobe);"></span>Negative Lobe</p>`;
             }
 
-            // If not in cache, generate it
-            console.log(`Generating and caching ${orbitalName}.`);
-            loader.classList.remove('hidden');
-
-            setTimeout(() => {
-                // Generate all data
-                const pointCloud3D = generateOrbitalCloud3D(orbitalName);
-                const dataXY = generate2DCrossSectionData(orbitalName, 'xy');
-                const dataXZ = generate2DCrossSectionData(orbitalName, 'xz');
-                const dataYZ = generate2DCrossSectionData(orbitalName, 'yz');
-                
-                // Store the newly generated data in the cache
-                orbitalCache[orbitalName] = {
-                    pointCloud3D: pointCloud3D,
-                    crossSections2D: {
-                        xy: dataXY,
-                        xz: dataXZ,
-                        yz: dataYZ
-                    }
-                };
-
-                // Use the new data
-                allPositions = pointCloud3D.positions;
-                allColors = pointCloud3D.colors;
-                applyColorFilter();
-                
-                drawSlice(ctx2D.xy, dataXY, props.boxSize);
-                drawSlice(ctx2D.xz, dataXZ, props.boxSize);
-                drawSlice(ctx2D.yz, dataYZ, props.boxSize);
-
-                loader.classList.add('hidden');
-            }, 50);
+            allPositions = pointCloud3D.positions;
+            allColors = pointCloud3D.colors;
+            applyColorFilter();
+            drawSlice(ctx2D.xy, dataXY, props.boxSize, props);
+            drawSlice(ctx2D.xz, dataXZ, props.boxSize, props);
+            drawSlice(ctx2D.yz, dataYZ, props.boxSize, props);
         }
-
-        function onWindowResize() { /* ... (unchanged) ... */ camera.aspect = canvasContainer.clientWidth / canvasContainer.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight); }
-        function animate() { /* ... (unchanged) ... */ requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+        function onWindowResize() { 
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight; 
+            camera.updateProjectionMatrix(); 
+            renderer.setSize(container.clientWidth, container.clientHeight); 
+        }
+        function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
 
         init();
     </script>
