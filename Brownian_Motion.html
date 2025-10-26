@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Brownian Motion Simulator</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --secondary-color: #0f3460;
+            --primary-color: #e94560;
+            --text-color: #f0f0f0;
+            --text-muted: #aaa;
+            --border-color: #16213e;
+            --accent-color: #33d1ff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            -webkit-font-smoothing: antialiased;
+            box-sizing: border-box;
+        }
+
+        .main-container {
+            width: 95%;
+            max-width: 800px;
+            background-color: var(--secondary-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        
+        h1 { color: var(--primary-color); margin-top: 0; margin-bottom: 1.5rem; }
+
+        .simulation-wrapper {
+            border: 2px solid var(--primary-color);
+            background-color: var(--border-color);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #simulationContainer, #histogramCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #histogramCanvas {
+            background-color: var(--border-color);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+        
+        .controls-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+            margin-bottom: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .control-group { text-align: left; }
+        .control-group label { display: block; margin-bottom: 12px; font-weight: 500; color: var(--text-muted); }
+        .mode-selector { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; width: 100%; }
+        
+        #view-selector-group, #boundary-selector-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .mode-selector button, button#playPauseBtn, button#toggleTrailsBtn, #aboutBtn {
+            background-color: transparent; border: 1px solid var(--text-muted); color: var(--text-muted);
+            padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.2s ease;
+            font-size: 1rem; flex-grow: 1; max-width: 300px;
+        }
+        .mode-selector button:not(.active):hover, button#playPauseBtn:hover, button#toggleTrailsBtn:hover, #aboutBtn:hover {
+            border-color: var(--primary-color); color: var(--primary-color);
+        }
+        .mode-selector button.active, button#playPauseBtn.active, button#toggleTrailsBtn.active {
+            background-color: var(--primary-color); border-color: var(--primary-color); color: white;
+        }
+
+        #aboutBtn {
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            margin-top: 2rem;
+            max-width: 250px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #about-panel {
+            position: relative;
+            padding: 20px;
+            margin-top: 1rem;
+            margin-bottom: 1.5rem;
+            text-align: left;
+            background-color: var(--border-color);
+            border-radius: 8px;
+            line-height: 1.7;
+        }
+        #about-panel p, #about-panel ul { margin: 0 0 1em 0; color: var(--text-muted); }
+        #about-panel strong { color: var(--text-color); }
+        #about-panel code {
+            background-color: #222; padding: 3px 6px; border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace; color: var(--accent-color);
+        }
+        #closeAboutBtn {
+            position: absolute;
+            top: 5px; right: 10px;
+            font-size: 1.8rem;
+            background: none; border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        #closeAboutBtn:hover { color: var(--text-color); }
+
+        input[type="range"] {
+            -webkit-appearance: none; width: 100%; background: transparent;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px; cursor: pointer; background: var(--border-color);
+            border-radius: 3px; border: 1px solid #000;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; border: 2px solid var(--bg-color); height: 18px; width: 18px;
+            border-radius: 50%; background: var(--primary-color); cursor: pointer; margin-top: -7px;
+        }
+        .slider-label-container { display: flex; justify-content: space-between; font-size: 0.9em; color: var(--text-muted); }
+        #particleCount, #speedValue { color: var(--text-color); font-weight: bold; }
+
+        .stats-panel {
+            margin-top: 20px; padding: 20px; text-align: left;
+            border-top: 1px solid var(--border-color); background-color: var(--border-color);
+            border-radius: 8px; font-size: 0.95em; line-height: 1.7;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        .stat-item { font-size: 0.9rem; color: var(--text-muted); }
+        .stat-item strong { font-size: 1.1rem; display: block; margin-top: 4px; color: var(--text-color); }
+        .stat-item .value-msd { color: var(--primary-color); }
+        .stat-item .value-diffusion { color: var(--accent-color); font-weight: bold; }
+        .stat-item .value-theory { color: #32cd32; font-weight: bold; }
+        
+        .main-controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+        #credit-line {
+            margin-top: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) { body { padding: 10px; } .main-container { padding: 1rem; } }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div class="main-container">
+        <h1>3D Brownian Motion Simulator</h1>
+        
+        <div class="control-group" id="boundary-selector-group">
+            <label>Boundary Conditions</label>
+            <div class="mode-selector">
+                <button id="infiniteBtn" class="active">Infinite</button>
+                <button id="boxBtn">Reflective Box</button>
+            </div>
+        </div>
+
+        <div class="control-group" id="view-selector-group">
+            <label>Display Mode</label>
+            <div class="mode-selector" id="view-selector">
+                <button id="view3DBtn" class="active">3D View</button>
+                <button id="viewDistBtn">Pooled Distribution</button>
+            </div>
+        </div>
+
+        <div class="simulation-wrapper">
+            <div id="simulationContainer"></div>
+            <canvas id="histogramCanvas" class="hidden"></canvas>
+        </div>
+
+        <div class="controls-container">
+            <div class="main-controls">
+                <button id="playPauseBtn">Play</button>
+                <button id="toggleTrailsBtn" class="active">Hide Trails</button>
+            </div>
+             <div class="control-group">
+                <label id="speedLabel">Speed Type</label>
+                <div class="mode-selector">
+                    <button id="constantSpeedBtn" class="active">Constant</button>
+                    <button id="distributedSpeedBtn">Maxwell-Boltzmann</button>
+                </div>
+            </div>
+             <div class="control-group">
+                <label for="particleSlider">
+                    <div class="slider-label-container"><span>Particles</span><span id="particleCount">50</span></div>
+                </label>
+                <!-- --- SLIDER OPTIMIZATION: Increased max particles and set step --- -->
+                <input type="range" id="particleSlider" min="1" max="500" value="50" step="1">
+            </div>
+            <div class="control-group">
+                <label for="speedSlider">
+                     <div class="slider-label-container"><span>Speed Value</span><span id="speedValue">1.0</span></div>
+                </label>
+                <input type="range" id="speedSlider" min="0.1" max="2" value="1" step="0.1">
+            </div>
+        </div>
+
+        <div class="stats-panel">
+            <div class="stat-item">Time Steps:<strong id="timeValue">0</strong></div>
+            <div class="stat-item">MSD:<strong class="value-msd" id="meanValue">0.00</strong></div>
+            <div class="stat-item">Simulated D:<strong class="value-diffusion" id="diffusionValue">0.0000</strong></div>
+            <div class="stat-item" id="theoreticalDLabel">Theoretical D:<strong class="value-theory" id="theoreticalDValue">0.0000</strong></div>
+        </div>
+
+        <button id="aboutBtn">About This Simulation</button>
+        <div id="about-panel" class="hidden">
+            <button id="closeAboutBtn">&times;</button>
+            <p><strong>Brownian motion</strong> is the random movement of particles suspended in a medium. This simulation models this phenomenon by giving each particle a random "kick" in a 3D direction at each time step.</p>
+            <p>This process is the foundation of <strong>diffusion</strong>. You can observe key physical concepts:</p>
+            <ul>
+                <li>The <strong>Mean Squared Displacement (MSD)</strong> measures how far, on average, particles have moved from their starting point. It grows linearly with time in an infinite system.</li>
+                <li>The <strong>Diffusion Coefficient (D)</strong> is calculated from the MSD and represents how quickly the particles spread out.</li>
+                <li>The <strong>Pooled Distribution</strong> plot shows how the particles' positions form a <strong>Gaussian (bell curve) distribution</strong>, a hallmark of random processes.</li>
+                <li>Using the <strong>Reflective Box</strong>, you can observe how a confined system reaches <strong>equilibrium</strong>, where the particles are uniformly distributed and the MSD stops growing.</li>
+            </ul>
+        </div>
+        <p id="credit-line">Created by Dr. Devender Garg</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const THEME = {
+                grid: 'rgba(255,255,255,0.1)', text: '#f0f0f0', text_muted: '#aaa',
+                primary: '#e94560', accent: '#33d1ff', theory: '#32cd32'
+            };
+
+            const simWrapper = document.querySelector('.simulation-wrapper');
+            const simContainer = document.getElementById('simulationContainer');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const toggleTrailsBtn = document.getElementById('toggleTrailsBtn');
+            const particleSlider = document.getElementById('particleSlider');
+            const particleCountSpan = document.getElementById('particleCount');
+            const speedSlider = document.getElementById('speedSlider');
+            const speedValueSpan = document.getElementById('speedValue');
+            const timeValueSpan = document.getElementById('timeValue');
+            const meanValueSpan = document.getElementById('meanValue');
+            const diffusionValueSpan = document.getElementById('diffusionValue');
+            const theoreticalDLabel = document.getElementById('theoreticalDLabel');
+            const theoreticalDValueSpan = document.getElementById('theoreticalDValue');
+            const constantSpeedBtn = document.getElementById('constantSpeedBtn');
+            const distributedSpeedBtn = document.getElementById('distributedSpeedBtn');
+            const histogramCanvas = document.getElementById('histogramCanvas');
+            const histogramCtx = histogramCanvas.getContext('2d');
+            const view3DBtn = document.getElementById('view3DBtn');
+            const viewDistBtn = document.getElementById('viewDistBtn');
+            const viewButtons = [view3DBtn, viewDistBtn];
+            const infiniteBtn = document.getElementById('infiniteBtn');
+            const boxBtn = document.getElementById('boxBtn');
+            const aboutBtn = document.getElementById('aboutBtn');
+            const aboutPanel = document.getElementById('about-panel');
+            const closeAboutBtn = document.getElementById('closeAboutBtn');
+
+            let scene, camera, renderer, controls;
+            const DIMENSIONS = 3; 
+            const TRAIL_UPDATE_INTERVAL = 5;
+            const LERP_FACTOR = 0.25;
+            const MAX_PARTICLES = parseInt(particleSlider.max);
+            const HISTOGRAM_BINS = 15;
+            const HISTOGRAM_UPDATE_INTERVAL = 50;
+            const MAX_TRAIL_LENGTH = 31; 
+            
+            const BOX_SIZE = 50;
+            let boundaryType = 'infinite';
+            let boundaryBox;
+
+            let instancedHeads;
+            const dummyMatrix = new THREE.Matrix4();
+            const tempObject = new THREE.Object3D();
+            let trailLine;
+            let trailGeometry;
+
+            let particles = [];
+            let isPlaying = false;
+            let showTrails = true;
+            let animationFrameId;
+            let timeStep = 0;
+            let particleSpeed = parseFloat(speedSlider.value);
+            let useDistributedSpeed = distributedSpeedBtn.classList.contains('active');
+            let histogramData = new Array(HISTOGRAM_BINS).fill(0);
+            let histogramRange = { min: 0, max: 0 };
+            let currentView = '3d';
+
+            // --- SLIDER OPTIMIZATION: Debounce helper function ---
+            function debounce(func, delay) {
+                let timeoutId;
+                return function(...args) {
+                    clearTimeout(timeoutId);
+                    timeoutId = setTimeout(() => {
+                        func.apply(this, args);
+                    }, delay);
+                };
+            }
+
+            function boxMullerTransform() {
+                let u = 0, v = 0;
+                while(u === 0) u = Math.random();
+                while(v === 0) v = Math.random();
+                const R = Math.sqrt(-2.0 * Math.log(u));
+                const theta = 2.0 * Math.PI * v;
+                return [R * Math.cos(theta), R * Math.sin(theta)];
+            }
+
+            class Particle {
+                constructor(x, y, z, color, instanceId) { 
+                    this.instanceId = instanceId;
+                    this.startX = x; this.startY = y; this.startZ = z;
+                    this.x = x; this.y = y; this.z = z;
+                    this.color = color;
+                    this.history = [new THREE.Vector3(x, y, z)]; 
+                    this.visualX = x; this.visualY = y; this.visualZ = z;
+                    instancedHeads.setColorAt(this.instanceId, this.color);
+                }
+                
+                update() {
+                    if (useDistributedSpeed) {
+                        const sigma = particleSpeed; 
+                        const [vx_part1, vx_part2] = boxMullerTransform();
+                        const [vy_part1] = boxMullerTransform();
+                        const vx = vx_part1 * sigma;
+                        const vy = vx_part2 * sigma;
+                        const vz = vy_part1 * sigma;
+                        this.x += vx; this.y += vy; this.z += vz;
+                    } else {
+                        const currentStepSpeed = particleSpeed;
+                        const u = Math.random() * 2 - 1;
+                        const theta = Math.random() * 2 * Math.PI;
+                        const f = Math.sqrt(1 - u * u);
+                        this.x += f * Math.cos(theta) * currentStepSpeed;
+                        this.y += f * Math.sin(theta) * currentStepSpeed;
+                        this.z += u * currentStepSpeed;
+                    }
+
+                    if (boundaryType === 'box') {
+                        const halfBox = BOX_SIZE / 2;
+                        if (Math.abs(this.x) > halfBox) this.x = Math.sign(this.x) * halfBox - (this.x - Math.sign(this.x) * halfBox);
+                        if (Math.abs(this.y) > halfBox) this.y = Math.sign(this.y) * halfBox - (this.y - Math.sign(this.y) * halfBox);
+                        if (Math.abs(this.z) > halfBox) this.z = Math.sign(this.z) * halfBox - (this.z - Math.sign(this.z) * halfBox);
+                    }
+                }
+
+                updateVisuals() {
+                    this.visualX += (this.x - this.visualX) * LERP_FACTOR;
+                    this.visualY += (this.y - this.visualY) * LERP_FACTOR;
+                    this.visualZ += (this.z - this.visualZ) * LERP_FACTOR;
+                    tempObject.position.set(this.visualX, this.visualY, this.visualZ);
+                    tempObject.updateMatrix();
+                    instancedHeads.setMatrixAt(this.instanceId, tempObject.matrix);
+                }
+                updateHistory() { 
+                    this.history.push(new THREE.Vector3(this.x, this.y, this.z)); 
+                    const maxHistory = (boundaryType === 'box') ? 16 : MAX_TRAIL_LENGTH;
+                    if (this.history.length > maxHistory) {
+                        this.history.shift();
+                    }
+                }
+                dispose() {
+                    instancedHeads.setMatrixAt(this.instanceId, dummyMatrix);
+                }
+                getSquaredDisplacement() { 
+                    const dx = this.x - this.startX; const dy = this.y - this.startY; const dz = this.z - this.startZ;
+                    return dx * dx + dy * dy + dz * dz; 
+                }
+            }
+            
+            function initThreeJS() {
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x16213e);
+                const containerRect = simContainer.getBoundingClientRect();
+                camera = new THREE.PerspectiveCamera(75, containerRect.width / containerRect.height, 0.1, 1000);
+                camera.position.z = 50;
+                renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.setSize(containerRect.width, containerRect.height);
+                simContainer.appendChild(renderer.domElement);
+                
+                scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+                directionalLight.position.set(50, 50, 50);
+                scene.add(directionalLight);
+
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+
+                const headGeom = new THREE.SphereGeometry(0.40, 16, 16);
+                const headMat = new THREE.MeshStandardMaterial({ roughness: 0.6, metalness: 0.1 });
+                instancedHeads = new THREE.InstancedMesh(headGeom, headMat, MAX_PARTICLES);
+                scene.add(instancedHeads);
+
+                trailGeometry = new THREE.BufferGeometry();
+                const maxVertices = MAX_PARTICLES * MAX_TRAIL_LENGTH * 2;
+                const positions = new Float32Array(maxVertices * 3);
+                const colors = new Float32Array(maxVertices * 3);
+                trailGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                trailGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                const trailMaterial = new THREE.LineBasicMaterial({ vertexColors: true });
+                trailLine = new THREE.LineSegments(trailGeometry, trailMaterial);
+                scene.add(trailLine);
+                
+                const boxGeom = new THREE.BoxGeometry(BOX_SIZE, BOX_SIZE, BOX_SIZE);
+                const edges = new THREE.EdgesGeometry(boxGeom);
+                boundaryBox = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: THEME.text_muted, transparent: true, opacity: 0.5 }));
+                boundaryBox.visible = false;
+                scene.add(boundaryBox);
+            }
+            
+            function onWindowResize() { 
+                const rect = simWrapper.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1; 
+                renderer.setSize(rect.width, rect.height);
+                renderer.setPixelRatio(dpr);
+                camera.aspect = rect.width / rect.height;
+                camera.updateProjectionMatrix();
+                histogramCanvas.width = rect.width * dpr; 
+                histogramCanvas.height = rect.height * dpr;
+                histogramCanvas.getContext('2d').scale(dpr, dpr);
+                drawHistogram();
+            }
+
+            function resetSimulation() { 
+                if (controls) controls.reset();
+                setActiveView('3d');
+                
+                if (boundaryType === 'box') {
+                    showTrails = false;
+                } else {
+                    showTrails = true;
+                }
+                toggleTrailsBtn.classList.toggle('active', showTrails);
+                toggleTrailsBtn.textContent = showTrails ? 'Hide Trails' : 'Show Trails';
+                
+                particles.forEach(p => p.dispose());
+                particles = []; 
+                
+                timeStep = 0;
+                histogramData.fill(0);
+                const numParticles = parseInt(particleSlider.value);
+                particleCountSpan.textContent = numParticles;
+                for (let i = 0; i < numParticles; i++) {
+                    particles.push(new Particle(0, 0, 0, new THREE.Color(`hsl(${Math.random() * 360}, 90%, 65%)`), i));
+                }
+                instancedHeads.count = numParticles;
+                instancedHeads.instanceMatrix.needsUpdate = true;
+                instancedHeads.instanceColor.needsUpdate = true;
+                
+                displayStats(0, 0); 
+                drawHistogram();
+                updateAllTrails();
+            }
+            
+            function displayStats(sumSquaredDisplacement, currentTimeStep) { 
+                timeValueSpan.textContent = currentTimeStep;
+                
+                const theoreticalD = (useDistributedSpeed) 
+                    ? (particleSpeed ** 2) / 2 
+                    : (particleSpeed ** 2) / (2 * DIMENSIONS);
+                
+                if (boundaryType === 'box') {
+                    theoreticalDLabel.innerHTML = 'Theoretical D (Infinite):<strong class="value-theory" id="theoreticalDValue"></strong>';
+                } else {
+                    theoreticalDLabel.innerHTML = 'Theoretical D:<strong class="value-theory" id="theoreticalDValue"></strong>';
+                }
+                document.getElementById('theoreticalDValue').textContent = theoreticalD.toFixed(4);
+
+                if (particles.length === 0) { 
+                    meanValueSpan.textContent = '0.00'; 
+                    diffusionValueSpan.textContent = '0.0000'; 
+                    return; 
+                }
+                const mean = sumSquaredDisplacement / particles.length;
+                meanValueSpan.textContent = mean.toFixed(2);
+
+                let simulatedD = 0;
+                if (currentTimeStep > 0) { 
+                    simulatedD = mean / (2 * DIMENSIONS * currentTimeStep); 
+                    diffusionValueSpan.textContent = simulatedD.toFixed(4); 
+                } else { 
+                    diffusionValueSpan.textContent = '0.0000'; 
+                }
+            }
+
+            function updateAllTrails() {
+                const positions = trailLine.geometry.attributes.position.array;
+                const colors = trailLine.geometry.attributes.color.array;
+                let vertexIndex = 0;
+
+                if (showTrails) {
+                    for (const particle of particles) {
+                        const history = particle.history;
+                        if (history.length < 2) continue;
+
+                        for (let i = 1; i < history.length; i++) {
+                            const start = history[i - 1];
+                            const end = history[i];
+
+                            if (vertexIndex >= MAX_PARTICLES * MAX_TRAIL_LENGTH * 2) break;
+                            
+                            const p1_idx = vertexIndex * 3;
+                            positions[p1_idx] = start.x;
+                            positions[p1_idx + 1] = start.y;
+                            positions[p1_idx + 2] = start.z;
+                            colors[p1_idx] = particle.color.r;
+                            colors[p1_idx + 1] = particle.color.g;
+                            colors[p1_idx + 2] = particle.color.b;
+                            vertexIndex++;
+
+                            const p2_idx = vertexIndex * 3;
+                            positions[p2_idx] = end.x;
+                            positions[p2_idx + 1] = end.y;
+                            positions[p2_idx + 2] = end.z;
+                            colors[p2_idx] = particle.color.r;
+                            colors[p2_idx + 1] = particle.color.g;
+                            colors[p2_idx + 2] = particle.color.b;
+                            vertexIndex++;
+                        }
+                    }
+                }
+                
+                trailLine.geometry.setDrawRange(0, vertexIndex);
+                trailLine.geometry.attributes.position.needsUpdate = true;
+                trailLine.geometry.attributes.color.needsUpdate = true;
+            }
+            
+            function updateHistogramData() {
+                if (particles.length === 0) return;
+                const pooledPositions = [];
+                for (const p of particles) {
+                    pooledPositions.push(p.x, p.y, p.z);
+                }
+                let minVal = Infinity, maxVal = -Infinity;
+                for (const val of pooledPositions) {
+                    minVal = Math.min(minVal, val);
+                    maxVal = Math.max(maxVal, val);
+                }
+                const buffer = (maxVal - minVal) * 0.01 || 1;
+                minVal -= buffer;
+                maxVal += buffer;
+                histogramRange.min = minVal;
+                histogramRange.max = maxVal;
+                const binWidth = (maxVal - minVal) / HISTOGRAM_BINS;
+                histogramData.fill(0);
+                for (const val of pooledPositions) {
+                    const binIndex = Math.floor((val - minVal) / binWidth);
+                    if (binIndex >= 0 && binIndex < HISTOGRAM_BINS) {
+                        histogramData[binIndex]++;
+                    }
+                }
+            }
+
+            function drawHistogram() {
+                const ctx = histogramCtx;
+                const w = ctx.canvas.clientWidth; const h = ctx.canvas.clientHeight; 
+                const padding = 30;
+                ctx.clearRect(0, 0, w, h);
+                const maxBinValue = Math.max(...histogramData, 1);
+                const barWidth = (w - padding * 2) / HISTOGRAM_BINS;
+                ctx.fillStyle = THEME.primary;
+                for (let i = 0; i < HISTOGRAM_BINS; i++) {
+                    const barHeight = (histogramData[i] / maxBinValue) * (h - padding * 2);
+                    if (barHeight > 0) {
+                        ctx.fillRect(padding + i * barWidth, h - padding - barHeight, barWidth - 1, barHeight);
+                    }
+                }
+                ctx.strokeStyle = THEME.grid;
+                ctx.beginPath(); ctx.moveTo(padding, h - padding); ctx.lineTo(w - padding, h - padding); ctx.stroke();
+                ctx.fillStyle = THEME.text_muted;
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Position (X, Y & Z Pooled)', w / 2, h - 5);
+                const midVal = (histogramRange.min + histogramRange.max) / 2;
+                ctx.fillText(histogramRange.min.toFixed(1), padding, h - padding + 15);
+                ctx.fillText(midVal.toFixed(1), w / 2, h - padding + 15);
+                ctx.fillText(histogramRange.max.toFixed(1), w - padding, h - padding + 15);
+                ctx.textAlign = 'left';
+                ctx.fillText('Count', padding, padding - 10);
+            }
+            
+            function animate() {
+                animationFrameId = requestAnimationFrame(animate);
+                
+                let sumSquaredDisplacement = 0;
+
+                for (const p of particles) {
+                    if (isPlaying) {
+                        p.update();
+                        if (timeStep > 0 && timeStep % TRAIL_UPDATE_INTERVAL === 0) {
+                            p.updateHistory();
+                        }
+                    }
+                    p.updateVisuals();
+                    sumSquaredDisplacement += p.getSquaredDisplacement();
+                }
+
+                if (isPlaying) {
+                    timeStep++; 
+                    if (timeStep % TRAIL_UPDATE_INTERVAL === 0) {
+                        updateAllTrails();
+                    }
+                    if (timeStep % HISTOGRAM_UPDATE_INTERVAL === 0) {
+                        updateHistogramData();
+                        if (currentView === 'dist') drawHistogram();
+                    }
+                }
+
+                instancedHeads.instanceMatrix.needsUpdate = true;
+                
+                if (!isPlaying || timeStep % 5 === 0) {
+                    displayStats(sumSquaredDisplacement, timeStep); 
+                }
+
+                controls.update(); 
+                renderer.render(scene, camera);
+            }
+            
+            function togglePlayPause() { isPlaying = !isPlaying; playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play'; playPauseBtn.classList.toggle('active', isPlaying); }
+            function startFromReset() { resetSimulation(); if (!isPlaying) { togglePlayPause(); } }
+            
+            function setActiveView(view) {
+                currentView = view;
+                viewButtons.forEach(btn => btn.classList.remove('active'));
+                simContainer.classList.add('hidden');
+                histogramCanvas.classList.add('hidden');
+                if(view === '3d') {
+                    view3DBtn.classList.add('active');
+                    simContainer.classList.remove('hidden');
+                } else if (view === 'dist') {
+                    viewDistBtn.classList.add('active');
+                    histogramCanvas.classList.remove('hidden');
+                    updateHistogramData();
+                    drawHistogram();
+                }
+            }
+
+            toggleTrailsBtn.addEventListener('click', (e) => {
+                showTrails = !showTrails;
+                e.target.classList.toggle('active', showTrails);
+                e.target.textContent = showTrails ? 'Hide Trails' : 'Show Trails';
+                if (!showTrails) {
+                    updateAllTrails();
+                }
+            });
+
+            playPauseBtn.addEventListener('click', togglePlayPause);
+            
+            // --- SLIDER OPTIMIZATION: Debounced event listener for particle slider ---
+            const debouncedReset = debounce(() => resetSimulation(), 250);
+            particleSlider.addEventListener('input', e => {
+                // Update the text label immediately for responsiveness
+                particleCountSpan.textContent = e.target.value;
+                // Call the debounced function to reset the simulation
+                debouncedReset();
+            });
+
+            speedSlider.addEventListener('input', e => { particleSpeed = parseFloat(e.target.value); speedValueSpan.textContent = particleSpeed.toFixed(1); startFromReset(); });
+            constantSpeedBtn.addEventListener('click', () => {
+                constantSpeedBtn.classList.add('active'); distributedSpeedBtn.classList.remove('active');
+                useDistributedSpeed = false; startFromReset();
+            });
+            distributedSpeedBtn.addEventListener('click', () => {
+                distributedSpeedBtn.classList.add('active'); constantSpeedBtn.classList.remove('active');
+                useDistributedSpeed = true; startFromReset();
+            });
+
+            view3DBtn.addEventListener('click', () => setActiveView('3d'));
+            viewDistBtn.addEventListener('click', () => setActiveView('dist'));
+
+            infiniteBtn.addEventListener('click', () => {
+                if (boundaryType === 'infinite') return;
+                boundaryType = 'infinite';
+                infiniteBtn.classList.add('active');
+                boxBtn.classList.remove('active');
+                boundaryBox.visible = false;
+                startFromReset();
+            });
+            boxBtn.addEventListener('click', () => {
+                if (boundaryType === 'box') return;
+                boundaryType = 'box';
+                boxBtn.classList.add('active');
+                infiniteBtn.classList.remove('active');
+                boundaryBox.visible = true;
+                startFromReset();
+            });
+
+            aboutBtn.addEventListener('click', () => {
+                aboutPanel.classList.toggle('hidden');
+            });
+            closeAboutBtn.addEventListener('click', () => {
+                aboutPanel.classList.add('hidden');
+            });
+            
+            window.addEventListener('resize', onWindowResize, false);
+            
+            initThreeJS(); 
+            onWindowResize(); 
+            resetSimulation(); 
+            animate(); 
+        });
+    </script>
+</body>
+</html>
