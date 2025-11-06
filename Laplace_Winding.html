@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Laplacian Winding V10</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --primary-color: #e94560;
+            --secondary-color: #0f3460;
+            --text-color: #f0f0f0;
+            --text-muted: #aaa;
+            --wave-color: #f0e68c; /* Khaki yellow */
+            --com-color: #e74c3c;   /* Red */
+            --grid-color: rgba(0, 100, 150, 0.4);
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex; flex-direction: column; align-items: center;
+            margin: 0; padding: 20px;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .main-container {
+            width: 100%; max-width: 800px;
+            background-color: var(--secondary-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 1.5rem 2rem;
+            text-align: center;
+        }
+        h1 { color: var(--primary-color); margin: 0 0 1rem 0; }
+        canvas {
+            border: 2px solid var(--primary-color);
+            background-color: #16213e;
+            border-radius: 8px;
+            width: 100%; height: auto; display: block;
+        }
+        .canvas-label { font-weight: bold; margin: 1rem 0 0.5rem 0; font-size: 1.1em; }
+        .canvas-wrapper { max-width: 500px; margin: 1.5rem auto 0 auto; }
+        .controls-container { display: flex; flex-direction: column; gap: 1rem; text-align: left; }
+        #input-controls { margin-top: 1.5rem; margin-bottom: 1rem; }
+        label { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 500; }
+        input[type="range"] { 
+            width: 100%; -webkit-appearance: none; height: 8px; 
+            background: #16213e; border-radius: 5px; outline: none; 
+            opacity: 0.8; transition: opacity .2s; cursor: pointer; 
+        }
+        input[type="range"]:hover { opacity: 1; }
+        input[type="range"]::-webkit-slider-thumb { 
+            -webkit-appearance: none; appearance: none; width: 20px; height: 20px; 
+            background: var(--primary-color); border-radius: 50%; 
+        }
+        input:disabled, button:disabled { opacity: 0.5; cursor: not-allowed; }
+        input:disabled::-webkit-slider-thumb { background: #888; }
+        
+        .wave-selector-container {
+            display: flex; flex-wrap: wrap; 
+            gap: 5px; justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        .wave-card {
+            background-color: transparent; border: 1px solid var(--text-muted);
+            color: var(--text-muted); padding: 8px 10px; border-radius: 5px;
+            cursor: pointer; font-weight: bold; transition: all 0.2s ease;
+            font-size: 0.9rem; flex-grow: 1; text-align: center;
+        }
+        .wave-card:not(.active):hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .wave-card.active {
+            background-color: var(--primary-color); border-color: var(--primary-color);
+            color: white;
+        }
+
+        .dc-control-container {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-top: 0.5rem; font-weight: 500;
+        }
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #16213e; transition: .4s; border-radius: 28px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 20px; width: 20px;
+            left: 4px; bottom: 4px; background-color: white;
+            transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary-color); }
+        input:checked + .slider:before { transform: translateX(22px); }
+        .button-controls { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-top: 1.5rem; }
+        .button-controls button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 10px 20px; border-radius: 5px; font-weight: bold;
+            cursor: pointer; transition: background-color 0.2s;
+        }
+        .button-controls button:hover { background-color: #d43d51; }
+        .button-controls button:disabled { background-color: #888; }
+        @media (max-width: 768px) {
+            body { padding: 0; }
+            .main-container { padding: 1.5rem 1rem; border-radius: 0; }
+            h1 { font-size: 1.5em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1>Interactive Laplacian Winding</h1>
+
+        <div class="wave-selector-container">
+            <button class="wave-card active" data-wave="sine">Sine</button>
+            <button class="wave-card" data-wave="square">Square</button>
+            <button class="wave-card" data-wave="sawtooth">Sawtooth</button>
+            <button class="wave-card" data-wave="triangle">Triangle</button>
+        </div>
+
+        <div class="controls-container" id="input-controls">
+            <div>
+                <label for="f1-slider" id="f1-label">Input Frequency (f): <span id="f1-value">3 Hz</span></label>
+                <input type="range" id="f1-slider" min="0" max="5" value="3" step="1">
+            </div>
+            <div>
+                <label for="alpha-slider">Signal Decay/Growth (α): <span id="alpha-value">0.00</span></label>
+                <input type="range" id="alpha-slider" min="-1" max="1" value="0" step="0.05">
+            </div>
+            <div class="dc-control-container">
+                <span>Add DC Offset</span>
+                <label class="switch">
+                    <input type="checkbox" id="dc-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="canvas-wrapper"><div class="canvas-label">Input Signal f(t) * e<sup>-αt</sup></div><canvas id="waveformCanvas"></canvas></div>
+        <div class="canvas-wrapper"><div class="canvas-label">Winding Path (s-plane)</div><canvas id="windingCanvas"></canvas></div>
+        
+        <div class="canvas-wrapper">
+            <div class="canvas-label">Frequency Spectrum (Magnitude: <span id="com-magnitude-value">0.00</span>)</div>
+            <canvas id="spectrumCanvas"></canvas>
+        </div>
+        
+        <div class="canvas-wrapper">
+            <div class="canvas-label">Decay Spectrum</div>
+            <canvas id="decaySpectrumCanvas"></canvas>
+        </div>
+        
+        <div class="controls-container" style="margin-top: 1.5rem;">
+            <div>
+                <label for="sigma-slider">Winding Decay/Growth (σ): <span id="sigma-value">0.00</span></label>
+                <input type="range" id="sigma-slider" min="-1" max="1" value="0" step="0.05">
+            </div>
+            <div>
+                <label for="winding-freq-slider">Winding Frequency (f = ω/2π): <span id="winding-freq-value">2.50 Hz</span></label>
+                <input type="range" id="winding-freq-slider" min="0" max="10" value="2.5" step="0.5">
+            </div>
+        </div>
+
+        <div class="button-controls">
+            <button id="play-pause-btn">Play Animation</button>
+            <button id="sweep-freq-btn">Auto-Sweep Freq (ω)</button>
+            <button id="sweep-sigma-btn">Auto-Sweep Decay (σ)</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const waveformCanvas = document.getElementById('waveformCanvas'), wfmCtx = waveformCanvas.getContext('2d');
+            const windingCanvas = document.getElementById('windingCanvas'), windCtx = windingCanvas.getContext('2d');
+            const spectrumCanvas = document.getElementById('spectrumCanvas'), specCtx = spectrumCanvas.getContext('2d');
+            const decaySpectrumCanvas = document.getElementById('decaySpectrumCanvas'), decaySpecCtx = decaySpectrumCanvas.getContext('2d');
+            
+            const f1Slider = document.getElementById('f1-slider');
+            const windingFreqSlider = document.getElementById('winding-freq-slider');
+            const alphaSlider = document.getElementById('alpha-slider');
+            const sigmaSlider = document.getElementById('sigma-slider');
+            
+            const dcToggle = document.getElementById('dc-toggle'), f1Label = document.getElementById('f1-label');
+            const f1Value = document.getElementById('f1-value');
+            const windingFreqValue = document.getElementById('winding-freq-value');
+            const alphaValue = document.getElementById('alpha-value');
+            const sigmaValue = document.getElementById('sigma-value');
+
+            const comMagValue = document.getElementById('com-magnitude-value');
+            const playPauseBtn = document.getElementById('play-pause-btn');
+            const sweepFreqBtn = document.getElementById('sweep-freq-btn');
+            const sweepSigmaBtn = document.getElementById('sweep-sigma-btn');
+            
+            const waveCards = document.querySelectorAll('.wave-card');
+            
+            let animationId = null, freqSweepAnimationId = null, sigmaSweepAnimationId = null;
+            let animationStartTime = null, lastTimestamp = null, effectiveElapsedTime = 0;
+            let currentWaveType = 'sine';
+
+            let freqSpectrumData = [];
+            let decaySpectrumData = [];
+            let currentMaxFreqMagnitude = 0.5;
+            let currentMaxDecayMagnitude = 0.5;
+
+            const timeMax = 4.0, dt = 0.001, dpr = window.devicePixelRatio || 1;
+            const pathAnimationDuration = 16.0;
+            const minSpeed = 0.15; 
+            const resonanceWidthFreq = 0.3;
+            const resonanceWidthSigma = 0.15;
+
+            const signal = (t) => {
+                let waveValue = 0;
+                const f1 = parseFloat(f1Slider.value);
+                const alpha = parseFloat(alphaSlider.value);
+                switch(currentWaveType) {
+                    case 'sine': if (f1 > 0) waveValue = Math.sin(2 * Math.PI * f1 * t); break;
+                    case 'square': if (f1 > 0) waveValue = Math.sign(Math.sin(2 * Math.PI * f1 * t)); break;
+                    case 'sawtooth': if (f1 > 0) waveValue = 2 * (f1 * t - Math.floor(f1 * t + 0.5)); break;
+                    case 'triangle': if (f1 > 0) waveValue = 2 * Math.abs(2 * (f1 * t - Math.floor(f1 * t + 0.5))) - 1; break;
+                }
+                const decayedValue = waveValue * Math.exp(-alpha * t);
+                if (dcToggle.checked) return (decayedValue + 1) / 2;
+                return decayedValue;
+            };
+            
+            const varToCSS = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+            function calculateCenterOfMass(windingFreq, sigma, maxT = timeMax) { 
+                if (maxT < 0.01) return { x: 0, y: 0 }; 
+                let sumX = 0, sumY = 0, numPoints = 0; 
+                const calculation_dt = 0.005; 
+                for (let t = 0; t <= maxT; t += calculation_dt) { 
+                    const r = signal(t);
+                    const windingDecay = Math.exp(-sigma * t); 
+                    const angle = -2 * Math.PI * windingFreq * t; 
+                    sumX += r * windingDecay * Math.cos(angle); 
+                    sumY += r * windingDecay * Math.sin(angle); 
+                    numPoints++; 
+                } 
+                return { x: sumX / numPoints, y: sumY / numPoints }; 
+            }
+            
+            function calculateFreqSpectrum() {
+                freqSpectrumData = [];
+                const fixedSigma = parseFloat(sigmaSlider.value);
+                const maxFreq = parseFloat(windingFreqSlider.max);
+                const step = 0.02; 
+                for (let freq = 0; freq <= maxFreq; freq += step) {
+                    const com = calculateCenterOfMass(freq, fixedSigma);
+                    const magnitude = Math.sqrt(com.x**2 + com.y**2);
+                    freqSpectrumData.push({ frequency: freq, magnitude: magnitude });
+                }
+                const maxMagValue = freqSpectrumData.reduce((max, p) => Math.max(max, p.magnitude), 0);
+                currentMaxFreqMagnitude = Math.max(0.25, Math.ceil(maxMagValue / 0.25) * 0.25);
+            }
+            
+            function calculateDecaySpectrum() {
+                decaySpectrumData = [];
+                const fixedFreq = parseFloat(windingFreqSlider.value);
+                const minSigma = parseFloat(sigmaSlider.min);
+                const maxSigma = parseFloat(sigmaSlider.max);
+                const step = 0.01;
+                for (let sigma = minSigma; sigma <= maxSigma; sigma += step) {
+                    const com = calculateCenterOfMass(fixedFreq, sigma);
+                    const magnitude = Math.sqrt(com.x**2 + com.y**2);
+                    decaySpectrumData.push({ sigma: sigma, magnitude: magnitude });
+                }
+                const maxMagValue = decaySpectrumData.reduce((max, p) => Math.max(max, p.magnitude), 0);
+                currentMaxDecayMagnitude = Math.max(0.25, Math.ceil(maxMagValue / 0.25) * 0.25);
+            }
+
+            function interpolateFreqMagnitude(freq) { if (freqSpectrumData.length === 0) return 0; const index = freq / (parseFloat(windingFreqSlider.max) / (freqSpectrumData.length - 1)); const i0 = Math.floor(index); const i1 = Math.ceil(index); if (i1 >= freqSpectrumData.length) return freqSpectrumData[freqSpectrumData.length - 1].magnitude; const w = index - i0; return freqSpectrumData[i0].magnitude * (1 - w) + freqSpectrumData[i1].magnitude * w; }
+            function interpolateDecayMagnitude(sigma) { if (decaySpectrumData.length === 0) return 0; const minSigma = parseFloat(sigmaSlider.min); const maxSigma = parseFloat(sigmaSlider.max); const index = (sigma - minSigma) / (maxSigma - minSigma) * (decaySpectrumData.length - 1); const i0 = Math.floor(index); const i1 = Math.ceil(index); if (i1 >= decaySpectrumData.length) return decaySpectrumData[decaySpectrumData.length - 1].magnitude; const w = index - i0; return decaySpectrumData[i0].magnitude * (1 - w) + decaySpectrumData[i1].magnitude * w; }
+            
+            function drawWaveform(windingFreq, maxT = timeMax, isAnimating = false) { const w = waveformCanvas.width / dpr, h = waveformCanvas.height / dpr; const margin = { top: 0.1 * h, right: 0.05 * w, bottom: 0.2 * h, left: 0.1 * w }; const graphW = w - margin.left - margin.right, graphH = h - margin.top - margin.bottom; wfmCtx.clearRect(0, 0, w * dpr, h * dpr); wfmCtx.save(); wfmCtx.scale(dpr, dpr); wfmCtx.font = `12px sans-serif`; wfmCtx.fillStyle = varToCSS('--text-muted'); wfmCtx.strokeStyle = "#888"; wfmCtx.lineWidth = 1; wfmCtx.beginPath(); wfmCtx.moveTo(margin.left, margin.top); wfmCtx.lineTo(margin.left, margin.top + graphH); wfmCtx.lineTo(margin.left + graphW, margin.top + graphH); wfmCtx.stroke(); for (let i = 0; i <= 4; i++) { const x = margin.left + (i / 4) * graphW, y = margin.top + graphH; wfmCtx.beginPath(); wfmCtx.moveTo(x, y); wfmCtx.lineTo(x, y + 5); wfmCtx.stroke(); wfmCtx.fillText(i, x - 3, y + 20); } wfmCtx.textAlign = 'right'; wfmCtx.textBaseline = 'middle'; const labelX = margin.left - 8; const yTop = margin.top, yMid = margin.top + graphH / 2, yBot = margin.top + graphH; if (dcToggle.checked) { wfmCtx.fillText('1', labelX, yTop); wfmCtx.fillText('0.5', labelX, yMid); wfmCtx.fillText('0', labelX, yBot); } else { wfmCtx.fillText('1', labelX, yTop); wfmCtx.fillText('0', labelX, yMid); wfmCtx.fillText('-1', labelX, yBot); } if (isAnimating) { wfmCtx.strokeStyle = varToCSS('--secondary-color'); wfmCtx.lineWidth = 2.5; wfmCtx.globalAlpha = 0.5; wfmCtx.beginPath(); for (let t = 0; t <= timeMax; t += 0.01) { const trueValue = signal(t); let displayValue = dcToggle.checked ? (trueValue * 2) - 1 : trueValue; const x = margin.left + (t / timeMax) * graphW, y = margin.top + (graphH / 2) - (displayValue * (graphH / 2.2)); (t === 0) ? wfmCtx.moveTo(x, y) : wfmCtx.lineTo(x, y); } wfmCtx.stroke(); wfmCtx.globalAlpha = 1.0; } wfmCtx.strokeStyle = varToCSS('--primary-color'); wfmCtx.lineWidth = 2.5; wfmCtx.beginPath(); for (let t = 0; t <= maxT; t += 0.01) { const trueValue = signal(t); let displayValue = dcToggle.checked ? (trueValue * 2) - 1 : trueValue; const x = margin.left + (t / timeMax) * graphW; const y = margin.top + (graphH / 2) - (displayValue * (graphH / 2.2)); (t === 0) ? wfmCtx.moveTo(x, y) : wfmCtx.lineTo(x, y); } wfmCtx.stroke(); if (isAnimating) { const trueMarkerValue = signal(maxT); let displayMarkerValue = dcToggle.checked ? (trueMarkerValue * 2) - 1 : trueMarkerValue; const markerX = margin.left + (maxT / timeMax) * graphW; const markerY = margin.top + (graphH / 2) - (displayMarkerValue * (graphH / 2.2)); drawPoint(wfmCtx, markerX, markerY, 5, varToCSS('--wave-color')); } wfmCtx.restore(); }
+            
+            function drawWinding(windingFreq, maxT = timeMax, isAnimating = false) { 
+                const w = windingCanvas.width / dpr, h = windingCanvas.height / dpr; 
+                const center = { x: w / 2, y: h / 2 }; 
+                const sigma = parseFloat(sigmaSlider.value);
+                const alpha = parseFloat(alphaSlider.value);
+
+                // V10 CHANGE: Implement mathematically derived scaling.
+                // This replaces the previous heuristic with a robust calculation.
+                const baseScale = w * 0.4;
+                const combinedDecayRate = alpha + sigma;
+                
+                // If the combined rate is negative, it's a growing exponential.
+                // Calculate the maximum radius it will reach at t=timeMax.
+                // Otherwise, the max radius is 1 (at t=0).
+                const maxRadiusGrowth = Math.exp(Math.max(0, -combinedDecayRate * timeMax));
+                
+                // The final scale perfectly normalizes this growth.
+                const scale = baseScale / maxRadiusGrowth;
+                
+                windCtx.clearRect(0, 0, w * dpr, h * dpr); 
+                windCtx.save(); 
+                windCtx.scale(dpr, dpr); 
+                windCtx.strokeStyle = "#666"; windCtx.lineWidth = 0.5; 
+                windCtx.beginPath(); windCtx.moveTo(center.x, 0); windCtx.lineTo(center.x, h); windCtx.moveTo(0, center.y); windCtx.lineTo(w, center.y); windCtx.stroke(); 
+                windCtx.strokeStyle = varToCSS('--wave-color'); windCtx.lineWidth = 2; 
+                windCtx.beginPath(); 
+                for (let t = 0; t <= maxT; t += dt) { 
+                    const r = signal(t);
+                    const windingDecay = Math.exp(-sigma * t); 
+                    const angle = -2 * Math.PI * windingFreq * t; 
+                    const x = center.x + r * windingDecay * Math.cos(angle) * scale; 
+                    const y = center.y + r * windingDecay * Math.sin(angle) * scale; 
+                    (t === 0) ? windCtx.moveTo(x, y) : windCtx.lineTo(x, y); 
+                } 
+                windCtx.stroke(); 
+                if (isAnimating && maxT > 0) { 
+                    const r = signal(maxT);
+                    const windingDecay = Math.exp(-sigma * maxT); 
+                    const angle = -2 * Math.PI * windingFreq * maxT; 
+                    const x = center.x + r * windingDecay * Math.cos(angle) * scale; 
+                    const y = center.y + r * windingDecay * Math.sin(angle) * scale; 
+                    drawPoint(windCtx, x, y, 5, varToCSS('--wave-color')); 
+                } 
+                const com = calculateCenterOfMass(windingFreq, sigma, maxT); 
+                drawPoint(windCtx, center.x + com.x * scale, center.y + com.y * scale, w * 0.02, varToCSS('--com-color')); 
+                windCtx.restore(); 
+            }
+
+            function drawPoint(ctx, cx, cy, radius, color) { ctx.beginPath(); ctx.arc(cx, cy, radius, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill(); }
+            function drawFreqSpectrum(currentWindingFreq) { const w = spectrumCanvas.width / dpr, h = spectrumCanvas.height / dpr; const margin = { top: 0.1 * h, right: 0.05 * w, bottom: 0.2 * h, left: 0.1 * w }; const graphW = w - margin.left - margin.right, graphH = h - margin.top - margin.bottom; const maxFreq = parseFloat(windingFreqSlider.max); const maxMag = currentMaxFreqMagnitude; const isSweeping = freqSweepAnimationId !== null; specCtx.clearRect(0, 0, w * dpr, h * dpr); specCtx.save(); specCtx.scale(dpr, dpr); specCtx.font = `12px sans-serif`; specCtx.fillStyle = varToCSS('--text-muted'); specCtx.strokeStyle = "#888"; specCtx.lineWidth = 1; specCtx.beginPath(); specCtx.moveTo(margin.left, margin.top); specCtx.lineTo(margin.left, margin.top + graphH); specCtx.lineTo(margin.left + graphW, margin.top + graphH); specCtx.stroke(); for (let i = 0; i <= 10; i++) { const x = margin.left + (i / maxFreq) * graphW, y = margin.top + graphH; specCtx.beginPath(); specCtx.moveTo(x, y); specCtx.lineTo(x, y + 5); specCtx.stroke(); specCtx.fillText(i, x - (i < 10 ? 3 : 5), y + 20); } specCtx.textAlign = 'right'; specCtx.textBaseline = 'middle'; for(let i = 0; i <= 2; i++) { const mag = (maxMag / 2) * i; const y = margin.top + graphH - (graphH * (i / 2)); specCtx.fillText(mag.toFixed(2), margin.left - 8, y); } specCtx.strokeStyle = varToCSS('--primary-color'); specCtx.lineWidth = 2.5; specCtx.beginPath(); if (isSweeping) { for (let i = 0; i < freqSpectrumData.length; i++) { const point = freqSpectrumData[i]; if (point.frequency > currentWindingFreq) { const prevPoint = freqSpectrumData[i-1] || { frequency: 0, magnitude: 0 }; const freqRange = point.frequency - prevPoint.frequency; const freqRatio = (currentWindingFreq - prevPoint.frequency) / freqRange; const interpolatedMag = prevPoint.magnitude + (point.magnitude - prevPoint.magnitude) * freqRatio; const x = margin.left + (currentWindingFreq / maxFreq) * graphW; const y = margin.top + graphH - (interpolatedMag / maxMag) * graphH; specCtx.lineTo(x, y); break; } const x = margin.left + (point.frequency / maxFreq) * graphW; const y = margin.top + graphH - (point.magnitude / maxMag) * graphH; (i === 0) ? specCtx.moveTo(x, y) : specCtx.lineTo(x, y); } } else { freqSpectrumData.forEach((point, index) => { const x = margin.left + (point.frequency / maxFreq) * graphW; const y = margin.top + graphH - (point.magnitude / maxMag) * graphH; (index === 0) ? specCtx.moveTo(x, y) : specCtx.lineTo(x, y); }); } specCtx.stroke(); const ballX = margin.left + (currentWindingFreq / maxFreq) * graphW, ballMag = interpolateFreqMagnitude(currentWindingFreq); const ballY = margin.top + graphH - (ballMag / maxMag) * graphH; drawPoint(specCtx, ballX, ballY, 5, varToCSS('--wave-color')); specCtx.restore(); }
+            function drawDecaySpectrum(currentSigma) { const w = decaySpectrumCanvas.width / dpr, h = decaySpectrumCanvas.height / dpr; const margin = { top: 0.1 * h, right: 0.05 * w, bottom: 0.2 * h, left: 0.1 * w }; const graphW = w - margin.left - margin.right, graphH = h - margin.top - margin.bottom; const minSigma = parseFloat(sigmaSlider.min), maxSigma = parseFloat(sigmaSlider.max); const maxMag = currentMaxDecayMagnitude; const isSweeping = sigmaSweepAnimationId !== null; decaySpecCtx.clearRect(0, 0, w * dpr, h * dpr); decaySpecCtx.save(); decaySpecCtx.scale(dpr, dpr); decaySpecCtx.font = `12px sans-serif`; decaySpecCtx.fillStyle = varToCSS('--text-muted'); decaySpecCtx.strokeStyle = "#888"; decaySpecCtx.lineWidth = 1; decaySpecCtx.beginPath(); decaySpecCtx.moveTo(margin.left, margin.top); decaySpecCtx.lineTo(margin.left, margin.top + graphH); decaySpecCtx.lineTo(margin.left + graphW, margin.top + graphH); decaySpecCtx.stroke(); for (let i = -1; i <= 1; i++) { const x = margin.left + ((i - minSigma) / (maxSigma - minSigma)) * graphW; const y = margin.top + graphH; decaySpecCtx.beginPath(); decaySpecCtx.moveTo(x, y); decaySpecCtx.lineTo(x, y + 5); decaySpecCtx.stroke(); decaySpecCtx.fillText(i.toFixed(0), x - 3, y + 20); } decaySpecCtx.textAlign = 'right'; decaySpecCtx.textBaseline = 'middle'; for(let i = 0; i <= 2; i++) { const mag = (maxMag / 2) * i; const y = margin.top + graphH - (graphH * (i / 2)); decaySpecCtx.fillText(mag.toFixed(2), margin.left - 8, y); } decaySpecCtx.strokeStyle = varToCSS('--primary-color'); decaySpecCtx.lineWidth = 2.5; decaySpecCtx.beginPath(); decaySpectrumData.forEach((point, index) => { const x = margin.left + ((point.sigma - minSigma) / (maxSigma - minSigma)) * graphW; const y = margin.top + graphH - (point.magnitude / maxMag) * graphH; (index === 0) ? decaySpecCtx.moveTo(x, y) : decaySpecCtx.lineTo(x, y); }); decaySpecCtx.stroke(); const ballX = margin.left + ((currentSigma - minSigma) / (maxSigma - minSigma)) * graphW; const ballMag = interpolateDecayMagnitude(currentSigma); const ballY = margin.top + graphH - (ballMag / maxMag) * graphH; drawPoint(decaySpecCtx, ballX, ballY, 5, varToCSS('--wave-color')); decaySpecCtx.restore(); }
+            
+            // Full function bodies (minified for brevity in this response)
+            redrawAll=function(e,t){const a=void 0!==e?e:parseFloat(windingFreqSlider.value),n=void 0!==t?t:parseFloat(sigmaSlider.value),o=parseFloat(alphaSlider.value);f1Value.textContent=`${f1Slider.value} Hz`,alphaValue.textContent=`${o.toFixed(2)}`,sigmaValue.textContent=`${n.toFixed(2)}`,windingFreqValue.textContent=`${a.toFixed(2)} Hz`,comMagValue.textContent=interpolateFreqMagnitude(a).toFixed(2),requestAnimationFrame(()=>{drawWaveform(a),drawWinding(a),drawFreqSpectrum(a),drawDecaySpectrum(n)})};
+            updateLabel=function(){f1Label.childNodes[0].nodeValue="sine"===currentWaveType?"Input Frequency (f): ":"Fundamental Frequency (f): "};
+            stopAllAnimations=function(){cancelAnimationFrame(animationId),animationId=null,cancelAnimationFrame(freqSweepAnimationId),freqSweepAnimationId=null,cancelAnimationFrame(sigmaSweepAnimationId),sigmaSweepAnimationId=null,playPauseBtn.textContent="Play Animation",sweepFreqBtn.textContent="Auto-Sweep Freq (ω)",sweepSigmaBtn.textContent="Auto-Sweep Decay (σ)";[f1Slider,alphaSlider,sigmaSlider,windingFreqSlider,dcToggle,playPauseBtn,sweepFreqBtn,sweepSigmaBtn,...waveCards].forEach(e=>{e.disabled=!1}),windingFreqSlider.step="0.5",sigmaSlider.step="0.05",windingFreqSlider.addEventListener("input",handleWindingChange),sigmaSlider.addEventListener("input",handleSigmaChange)};
+            startRealTimeAnimation=function(){stopAllAnimations(),animationStartTime=null,playPauseBtn.textContent="Pause",[f1Slider,alphaSlider,sigmaSlider,windingFreqSlider,dcToggle,sweepFreqBtn,sweepSigmaBtn,...waveCards].forEach(e=>{e.disabled=!0}),animationId=requestAnimationFrame(animatePath)};
+            animatePath=function(e){animationStartTime||(animationStartTime=e);const t=(e-animationStartTime)/1e3,a=parseFloat(windingFreqSlider.value),n=Math.min(t/pathAnimationDuration,1),o=n*timeMax;drawWaveform(a,o,!0),drawWinding(a,o,!0),n<1?animationId=requestAnimationFrame(animatePath):(stopAllAnimations(),redrawAll())};
+            getFreqSpeedMultiplier=function(e){const t=parseFloat(f1Slider.value);let a=1;return t>0&&(dist=e-t,gaussian=Math.exp(-(dist*dist)/2/resonanceWidthFreq/resonanceWidthFreq),a=minSpeed+(1-minSpeed)*(1-gaussian)),a};
+            animateFreqSweep=function(e){lastTimestamp||(lastTimestamp=e);const t=(e-lastTimestamp)/1e3;lastTimestamp=e;const a=15,n=parseFloat(windingFreqSlider.min),o=parseFloat(windingFreqSlider.max);let i=Math.min(effectiveElapsedTime/a,1);const d=n+(o-n)*i,l=getFreqSpeedMultiplier(d);effectiveElapsedTime+=t*l;const s=Math.min(effectiveElapsedTime/a,1),r=n+(o-n)*s;windingFreqSlider.value=r,calculateDecaySpectrum(),redrawAll(r),s<1?freqSweepAnimationId=requestAnimationFrame(animateFreqSweep):(stopAllAnimations(),redrawAll())};
+            startFreqSweepAnimation=function(){stopAllAnimations(),lastTimestamp=null,effectiveElapsedTime=0,windingFreqSlider.removeEventListener("input",handleWindingChange),windingFreqSlider.step="any",sweepFreqBtn.textContent="Stop Sweep",[f1Slider,alphaSlider,sigmaSlider,dcToggle,playPauseBtn,sweepSigmaBtn,...waveCards].forEach(e=>{e.disabled=!0}),freqSweepAnimationId=requestAnimationFrame(animateFreqSweep)};
+            getSigmaSpeedMultiplier=function(e){const t=parseFloat(alphaSlider.value),a=-t,n=e-a,o=Math.exp(-(n*n)/2/resonanceWidthSigma/resonanceWidthSigma);return minSpeed+(1-minSpeed)*(1-o)};
+            animateSigmaSweep=function(e){lastTimestamp||(lastTimestamp=e);const t=(e-lastTimestamp)/1e3;lastTimestamp=e;const a=20,n=parseFloat(sigmaSlider.min),o=parseFloat(sigmaSlider.max);let i=Math.min(effectiveElapsedTime/a,1);const d=n+(o-n)*i,l=getSigmaSpeedMultiplier(d);effectiveElapsedTime+=t*l;const s=Math.min(effectiveElapsedTime/a,1),r=n+(o-n)*s;sigmaSlider.value=r,calculateFreqSpectrum(),redrawAll(void 0,r),s<1?sigmaSweepAnimationId=requestAnimationFrame(animateSigmaSweep):stopAllAnimations()};
+            startSigmaSweepAnimation=function(){stopAllAnimations(),lastTimestamp=null,effectiveElapsedTime=0,sweepSigmaBtn.textContent="Stop Sweep",sigmaSlider.removeEventListener("input",handleSigmaChange),sigmaSlider.step="any",[f1Slider,alphaSlider,windingFreqSlider,dcToggle,playPauseBtn,sweepFreqBtn,...waveCards].forEach(e=>{e.disabled=!0}),sigmaSweepAnimationId=requestAnimationFrame(animateSigmaSweep)};
+            
+            function toggleRealTimeAnimation() { if (animationId) stopAllAnimations(); else startRealTimeAnimation(); }
+            function toggleFreqSweepAnimation() { if (freqSweepAnimationId) stopAllAnimations(); else startFreqSweepAnimation(); }
+            function toggleSigmaSweepAnimation() { if (sigmaSweepAnimationId) stopAllAnimations(); else startSigmaSweepAnimation(); }
+            
+            function handleSignalChange() { stopAllAnimations(); calculateFreqSpectrum(); calculateDecaySpectrum(); redrawAll(); }
+            function handleWindingChange() { stopAllAnimations(); calculateDecaySpectrum(); redrawAll(); }
+            function handleSigmaChange() { stopAllAnimations(); calculateFreqSpectrum(); redrawAll(); }
+            
+            function setupAndDrawAll() { 
+                [waveformCanvas, windingCanvas, spectrumCanvas, decaySpectrumCanvas].forEach(canvas => { 
+                    const rect = canvas.parentElement.getBoundingClientRect(); 
+                    const cssWidth = rect.width; 
+                    let cssHeight = (canvas.id === 'windingCanvas') ? cssWidth : cssWidth / 2.5; 
+                    canvas.width = cssWidth * dpr; canvas.height = cssHeight * dpr; 
+                    canvas.style.width = `${cssWidth}px`; canvas.style.height = `${cssHeight}px`; 
+                }); 
+                calculateFreqSpectrum(); 
+                calculateDecaySpectrum();
+                redrawAll(); 
+            }
+
+            playPauseBtn.addEventListener('click', toggleRealTimeAnimation);
+            sweepFreqBtn.addEventListener('click', toggleFreqSweepAnimation);
+            sweepSigmaBtn.addEventListener('click', toggleSigmaSweepAnimation);
+            
+            windingFreqSlider.addEventListener('input', handleWindingChange);
+            sigmaSlider.addEventListener('input', handleSigmaChange);
+            [f1Slider, dcToggle, alphaSlider].forEach(el => el.addEventListener('input', handleSignalChange));
+
+            waveCards.forEach(card => {
+                card.addEventListener('click', (e) => {
+                    waveCards.forEach(c => c.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    currentWaveType = e.currentTarget.dataset.wave;
+                    updateLabel();
+                    handleSignalChange();
+                });
+            });
+            window.addEventListener('resize', setupAndDrawAll);
+            
+            updateLabel();
+            setupAndDrawAll();
+        });
+    </script>
+</body>
+</html>
