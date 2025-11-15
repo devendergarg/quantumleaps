@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S-Plane to Time Domain | Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --grid-color: rgba(200, 220, 255, 0.1);
+            --axis-color: rgba(200, 220, 255, 0.3);
+            --pole-color: #ff6b6b;
+            --pole-glow: rgba(255, 107, 107, 0.7);
+            --plot-color: #ffc107;
+            --plot-glow: rgba(255, 193, 7, 0.7);
+            --button-bg: #21262d;
+            --button-border: #30363d;
+        }
+
+        body {
+            font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        header { text-align: center; margin-bottom: 20px; }
+        h1 { font-weight: 700; color: #fff; margin-bottom: 8px; }
+        p { font-weight: 300; max-width: 600px; line-height: 1.6; }
+        
+        #controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; }
+
+        button {
+            padding: 10px 20px; font-size: 16px; cursor: pointer;
+            border: 1px solid var(--button-border); background-color: var(--button-bg);
+            color: var(--text-color); border-radius: 6px; transition: all 0.2s ease-in-out;
+        }
+
+        button:hover { background-color: #30363d; border-color: #8b949e; }
+
+        #s-plane-container {
+            position: relative; width: 100%; max-width: 600px;
+            aspect-ratio: 1 / 1; box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            border-radius: 8px; overflow: hidden;
+        }
+
+        #s-plane-canvas { display: block; width: 100%; height: 100%; }
+
+        .plot-box {
+            position: absolute; width: 90px; height: 65px;
+            background-color: rgba(30, 35, 45, 0.7); border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); pointer-events: none;
+            display: flex; flex-direction: column; align-items: center; padding: 4px;
+            box-sizing: border-box; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            opacity: 0; transform: scale(0.5) translateY(20px);
+            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+        }
+
+        .plot-box.show { opacity: 1; transform: scale(1) translateY(0); }
+        .plot-box-title { font-size: 9px; font-weight: 400; color: var(--text-color); margin-bottom: 2px; white-space: nowrap; }
+        .plot-box canvas { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <header>
+            <h1>The S-Plane Visualizer</h1>
+            <p>
+                Touch or click on the S-Plane to place a system pole. You can see the visual response and hear the sonic result.
+            </p>
+        </header>
+
+        <div id="controls">
+            <button id="toggle-audio-button">Sound: On 🔊</button>
+            <button id="fill-button">Fill with Plots</button>
+            <button id="clear-button">Clear All Poles</button>
+        </div>
+
+        <div id="s-plane-container">
+            <canvas id="s-plane-canvas"></canvas>
+        </div>
+    </div>
+
+<script>
+    const container = document.getElementById('s-plane-container');
+    const canvas = document.getElementById('s-plane-canvas');
+    const ctx = canvas.getContext('2d');
+    const clearButton = document.getElementById('clear-button');
+    const fillButton = document.getElementById('fill-button');
+    const toggleAudioButton = document.getElementById('toggle-audio-button');
+
+    const PLOT_BOX_WIDTH = 90;
+    const PLOT_BOX_HEIGHT = 65;
+    const BOX_PADDING = 10;
+    const FILL_SOUND_DELAY_MS = 250; // NEW: Delay in ms between sounds for the fill feature
+
+    const COLORS = {
+        grid: 'rgba(200, 220, 255, 0.1)', axis: 'rgba(200, 220, 255, 0.3)',
+        pole: '#ff6b6b', poleGlow: 'rgba(255, 107, 107, 0.7)',
+        plot: '#ffc107', plotGlow: 'rgba(255, 193, 7, 0.7)'
+    };
+    
+    let width, height, origin, scale;
+    let points = [];
+    const sMax = 5;
+
+    let audioCtx = null;
+    let isAudioEnabled = true;
+
+    function initAudioContext() { /* ... (no changes in this function) ... */
+        if (!audioCtx) {
+            try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } 
+            catch (e) { console.error("Web Audio API is not supported in this browser"); }
+        }
+    }
+    function playSoundForPole(sigma, omega) { /* ... (no changes in this function) ... */
+        if (!isAudioEnabled || !audioCtx) return;
+        const oscillator = audioCtx.createOscillator(); const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode); gainNode.connect(audioCtx.destination);
+        const baseFrequency = 220;
+        oscillator.frequency.value = baseFrequency * Math.pow(2, Math.abs(omega) / 4);
+        oscillator.type = 'sine'; const now = audioCtx.currentTime;
+        const duration = (sigma > 0.05) ? 1.0 : 1.5;
+        gainNode.gain.cancelScheduledValues(now);
+        if (sigma < -0.05) {
+            gainNode.gain.setValueAtTime(0.5, now);
+            const timeConstant = Math.min(0.5, -1 / sigma); 
+            gainNode.gain.setTargetAtTime(0, now, timeConstant);
+        } else if (sigma > 0.05) {
+            gainNode.gain.setValueAtTime(0.01, now);
+            const rampTime = Math.min(duration - 0.1, 1.5 / (1 + sigma));
+            gainNode.gain.exponentialRampToValueAtTime(0.7, now + rampTime);
+        } else {
+            gainNode.gain.setValueAtTime(0.4, now);
+            gainNode.gain.setValueAtTime(0.0, now + duration - 0.1); 
+        }
+        oscillator.start(now); oscillator.stop(now + duration);
+    }
+    function updateAudioButton() { /* ... (no changes in this function) ... */
+        toggleAudioButton.textContent = isAudioEnabled ? 'Sound: On 🔊' : 'Sound: Off 🔇';
+    }
+    function setupCanvas() { /* ... (no changes in this function) ... */ 
+        const dpr = window.devicePixelRatio || 1;
+        const rect = container.getBoundingClientRect();
+        canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        width = rect.width; height = rect.height;
+        origin = { x: width / 2, y: height / 2 };
+        scale = (width / 2) / sMax;
+    }
+    function drawGridAndAxes() { /* ... (no changes in this function) ... */ 
+        ctx.strokeStyle = COLORS.grid; ctx.lineWidth = 1;
+        for (let i = 1; i <= sMax; i++) {
+            ctx.beginPath(); ctx.moveTo(origin.x + i * scale, 0); ctx.lineTo(origin.x + i * scale, height);
+            ctx.moveTo(origin.x - i * scale, 0); ctx.lineTo(origin.x - i * scale, height); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, origin.y + i * scale); ctx.lineTo(width, origin.y + i * scale);
+            ctx.moveTo(0, origin.y - i * scale); ctx.lineTo(width, origin.y - i * scale); ctx.stroke();
+        }
+        ctx.strokeStyle = COLORS.axis; ctx.lineWidth = 2; ctx.beginPath();
+        ctx.moveTo(0, origin.y); ctx.lineTo(width, origin.y); ctx.moveTo(origin.x, 0); ctx.lineTo(origin.x, height);
+        ctx.stroke(); ctx.fillStyle = COLORS.axis; ctx.font = '14px Lato'; ctx.textAlign = 'center';
+        ctx.fillText('σ (Real)', width - 40, origin.y - 10); ctx.save();
+        ctx.translate(origin.x - 20, 30); ctx.rotate(-Math.PI / 2);
+        ctx.fillText('jω (Imaginary)', 0, 0); ctx.restore();
+    }
+    function drawPole(point) { /* ... (no changes in this function) ... */
+        const radius = 6 * point.animation.scale; ctx.shadowColor = COLORS.poleGlow;
+        ctx.shadowBlur = 15 * point.animation.scale; ctx.fillStyle = COLORS.pole; ctx.beginPath();
+        ctx.arc(point.px, point.py, radius, 0, 2 * Math.PI); ctx.fill(); ctx.shadowBlur = 0;
+    }
+    function drawTimeDomainPlot(plotCanvas, sigma, omega, progress) { /* ... (no changes in this function) ... */
+        const pCtx = plotCanvas.getContext('2d'); const dpr = window.devicePixelRatio || 1;
+        const pRect = plotCanvas.getBoundingClientRect(); if (pRect.width === 0) return;
+        plotCanvas.width = pRect.width * dpr; plotCanvas.height = pRect.height * dpr;
+        pCtx.scale(dpr, dpr); const pWidth = pRect.width; const pHeight = pRect.height;
+        pCtx.clearRect(0, 0, pWidth, pHeight); const tMax = 5; const yCenter = pHeight / 2;
+        pCtx.strokeStyle = COLORS.axis; pCtx.lineWidth = 1; pCtx.beginPath();
+        pCtx.moveTo(5, yCenter); pCtx.lineTo(pWidth - 5, yCenter);
+        pCtx.moveTo(5, 5); pCtx.lineTo(5, pHeight - 5); pCtx.stroke();
+        pCtx.strokeStyle = COLORS.plot; pCtx.lineWidth = 1.5; pCtx.shadowColor = COLORS.plotGlow;
+        pCtx.shadowBlur = 5; pCtx.beginPath(); let maxEnvelope = 0;
+        for (let t = 0; t <= tMax; t += 0.01) { maxEnvelope = Math.max(maxEnvelope, Math.exp(sigma * t)); }
+        const yScale = (yCenter * 0.9) / Math.max(1, maxEnvelope); const numSteps = 200 * progress;
+        for (let i = 0; i <= numSteps; i++) {
+            const t = (i / 200) * tMax; const y = Math.exp(sigma * t) * Math.cos(omega * t);
+            const plotX = (t / tMax) * (pWidth - 10) + 5; const plotY = yCenter - y * yScale;
+            if (i === 0) pCtx.moveTo(plotX, plotY); else pCtx.lineTo(plotX, plotY);
+        }
+        pCtx.stroke(); pCtx.shadowBlur = 0;
+    }
+    function animate() { /* ... (no changes in this function) ... */
+        ctx.clearRect(0, 0, width, height); drawGridAndAxes();
+        let needsAnotherFrame = false;
+        points.forEach(point => {
+            if (point.animation.scale < 1) { point.animation.scale += 0.07; needsAnotherFrame = true; }
+            if (point.animation.plotProgress < 1) { point.animation.plotProgress += 0.02; needsAnotherFrame = true; }
+            point.animation.scale = Math.min(1, point.animation.scale);
+            point.animation.plotProgress = Math.min(1, point.animation.plotProgress);
+            drawPole(point);
+            drawTimeDomainPlot(point.plotCanvas, point.sigma, point.omega, point.animation.plotProgress);
+        });
+        if (needsAnotherFrame) { requestAnimationFrame(animate); }
+    }
+    function addPoint(px, py, options = {}) { /* ... (no changes in this function) ... */
+        const sigma = (px - origin.x) / scale;
+        const omega = -(py - origin.y) / scale;
+        if (!(options.suppressUnstableSound && sigma >= 0)) {
+            playSoundForPole(sigma, omega);
+        }
+        const plotBox = document.createElement('div'); plotBox.className = 'plot-box';
+        const title = document.createElement('div'); title.className = 'plot-box-title';
+        title.textContent = `σ=${sigma.toFixed(2)}, ω=${omega.toFixed(2)}`;
+        const plotCanvas = document.createElement('canvas');
+        plotBox.appendChild(title); plotBox.appendChild(plotCanvas);
+        let boxX, boxY;
+        if (options.forcePosition) {
+            boxX = options.x; boxY = options.y;
+        } else {
+            boxX = px + 15; boxY = py - (PLOT_BOX_HEIGHT / 2);
+            if (boxX + PLOT_BOX_WIDTH + 5 > width) boxX = px - PLOT_BOX_WIDTH - 15;
+            if (boxY < 5) boxY = 5;
+            if (boxY + PLOT_BOX_HEIGHT + 5 > height) boxY = height - PLOT_BOX_HEIGHT - 5;
+        }
+        plotBox.style.left = `${boxX}px`; plotBox.style.top = `${boxY}px`;
+        container.appendChild(plotBox);
+        setTimeout(() => plotBox.classList.add('show'), 10);
+        points.push({ 
+            px, py, sigma, omega, plotCanvas, domElement: plotBox,
+            animation: { scale: 0, plotProgress: 0 }
+        });
+        requestAnimationFrame(animate);
+    }
+    function handleInteraction(event) { /* ... (no changes in this function) ... */
+        event.preventDefault(); initAudioContext();
+        const rect = canvas.getBoundingClientRect();
+        const clientX = event.clientX || event.touches[0].clientX;
+        const clientY = event.clientY || event.touches[0].clientY;
+        addPoint(clientX - rect.left, clientY - rect.top);
+    }
+    function clearAllPoints() { /* ... (no changes in this function) ... */
+        points.forEach(p => p.domElement.remove()); points = [];
+        requestAnimationFrame(animate);
+    }
+    function fillWithPlots() {
+        initAudioContext();
+        clearAllPoints();
+        const totalBoxWidth = PLOT_BOX_WIDTH + BOX_PADDING;
+        const totalBoxHeight = PLOT_BOX_HEIGHT + BOX_PADDING;
+        const numCols = Math.floor(width / totalBoxWidth);
+        const numRows = Math.floor(height / totalBoxHeight);
+        const gridWidth = numCols * totalBoxWidth - BOX_PADDING;
+        const gridHeight = numRows * totalBoxHeight - BOX_PADDING;
+        const startX = (width - gridWidth) / 2;
+        const startY = (height - gridHeight) / 2;
+        for (let row = 0; row < numRows; row++) {
+            for (let col = 0; col < numCols; col++) {
+                const boxX = startX + col * totalBoxWidth;
+                const boxY = startY + row * totalBoxHeight;
+                const polePx = boxX; const polePy = boxY;
+                // MODIFIED: Use the new constant for the delay
+                const delay = (row * numCols + col) * FILL_SOUND_DELAY_MS;
+                setTimeout(() => {
+                    addPoint(polePx, polePy, { 
+                        forcePosition: true, 
+                        x: boxX, 
+                        y: boxY,
+                        suppressUnstableSound: true 
+                    });
+                }, delay);
+            }
+        }
+    }
+    
+    // --- Event Listeners ---
+    canvas.addEventListener('click', handleInteraction);
+    canvas.addEventListener('touchstart', handleInteraction);
+    clearButton.addEventListener('click', clearAllPoints);
+    fillButton.addEventListener('click', fillWithPlots);
+    toggleAudioButton.addEventListener('click', () => {
+        isAudioEnabled = !isAudioEnabled;
+        updateAudioButton();
+    });
+    window.addEventListener('resize', () => { setupCanvas(); clearAllPoints(); });
+
+    setupCanvas();
+    requestAnimationFrame(animate);
+</script>
+
+</body>
+</html>
