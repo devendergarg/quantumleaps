@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Laplace Landscape Explorer</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --secondary-color: #0f3460;
+            --primary-color: #e94560;
+            --text-color: #f0f0f0;
+            --text-muted: #aaa;
+            --border-color: #16213e;
+            --accent-color: #33d1ff;
+            --drive-pole-color: #00ffff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex; flex-direction: column; align-items: center; margin: 0;
+            padding: 20px; background-color: var(--bg-color); color: var(--text-color);
+            box-sizing: border-box;
+        }
+        .main-container {
+            width: 95%; max-width: 900px; background-color: var(--secondary-color);
+            border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 2rem; text-align: center; box-sizing: border-box;
+        }
+        h1 { color: var(--primary-color); margin-top: 0; margin-bottom: 0.5rem; }
+        .explanation { color: var(--text-muted); line-height: 1.6; margin-bottom: 1.5rem; max-width: 700px; margin-left: auto; margin-right: auto;}
+        
+        .plot-wrapper {
+            width: 100%; border: 2px solid var(--border-color); border-radius: 8px;
+            padding: 10px; background-color: #16213e; box-sizing: border-box;
+        }
+        #timeDomainPlotWrapper { margin-bottom: 2rem; }
+        #timeDomainPlot { height: 250px; }
+
+        .canvas-label { font-weight: bold; margin: 1rem 0 0.5rem 0; font-size: 1.1em; text-align: left; }
+        .canvas-wrapper {
+            position: relative;
+            width: 100%; padding-top: 75%; border: 2px solid var(--primary-color);
+            background-color: #0c0c0c; border-radius: 8px; overflow: hidden;
+        }
+        #container, #label-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        }
+        #label-container { pointer-events: none; }
+
+        #slicePlotWrapper { display: none; margin-top: 20px; }
+        #slicePlot { height: 300px; }
+        
+        .axis-label {
+            color: var(--text-muted);
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .controls-container {
+            margin-top: 1.5rem; display: flex; flex-direction: column; gap: 20px; width: 100%;
+        }
+        .control-group { text-align: left; width: 100%; }
+        .control-group label { display: block; margin-bottom: 8px; font-weight: 500; }
+        input[type="range"] {
+            width: 100%; -webkit-appearance: none; appearance: none; height: 8px; background: var(--border-color); border-radius: 5px; outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; background: var(--accent-color); border-radius: 50%; cursor: pointer; }
+        input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; background: var(--accent-color); border-radius: 50%; cursor: pointer; }
+        .value-display { font-weight: bold; color: var(--accent-color); display: inline-block; }
+        .slider-label-container { display: flex; justify-content: space-between; align-items: center; }
+        
+        .selector { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; width: 100%; }
+        .selector button {
+            background-color: transparent; border: 1px solid var(--text-muted); color: var(--text-muted);
+            padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.2s ease;
+            font-size: 0.95rem; flex-grow: 1;
+        }
+        .selector button:not(.active):hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .selector button.active { background-color: var(--primary-color); border-color: var(--primary-color); color: white; }
+        .selector button:disabled { background-color: #333; color: #777; border-color: #444; cursor: not-allowed; }
+
+        #info-panel {
+            margin-top: 20px; padding: 20px; text-align: left;
+            border-top: 1px solid var(--border-color); background-color: #16213e; border-radius: 8px;
+            font-size: 0.95em; line-height: 1.7; min-height: 80px;
+        }
+        code { background-color: #222; padding: 3px 6px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; color: var(--accent-color); }
+        
+        @media (max-width: 700px) {
+            body { padding: 10px; }
+            .main-container { width: 100%; padding: 1.5rem 1rem; }
+            h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <h1>3D Laplace Landscape Explorer</h1>
+        <p class="explanation">
+            An interactive 3D visualization of a Laplace Transform. Select a signal, adjust its parameters, and see how its characteristics are defined by "poles" in the complex s-plane.
+        </p>
+
+        <div class="control-group" style="margin-bottom: 1.5rem;">
+            <label>Select a Signal Type:</label>
+            <div class="selector" id="signal-selector">
+                <button id="signal-damped-sine" class="active">e<sup>-at</sup>sin(&omega;<sub>f</sub>t)</button>
+                <button id="signal-forced">Forced Oscillator</button>
+                <button id="signal-sine">sin(&omega;<sub>f</sub>t)</button>
+                <button id="signal-decay">e<sup>-at</sup></button>
+            </div>
+        </div>
+
+        <div class="plot-wrapper" id="timeDomainPlotWrapper">
+            <div id="timeDomainPlot"></div>
+        </div>
+        
+        <div id="main-canvas-label" class="canvas-label">s-Plane Visualization (σ + iω)</div>
+        <div class="canvas-wrapper">
+            <div id="container"></div>
+            <div id="label-container"></div>
+        </div>
+        
+        <div class="plot-wrapper" id="slicePlotWrapper">
+            <div id="slicePlot"></div>
+        </div>
+
+        <div class="controls-container">
+            <div class="control-group" id="decay-control-group">
+                <div class="slider-label-container">
+                    <label for="signalDecay">Decay/Growth Rate (a):</label>
+                    <span class="value-display" id="signalDecayValue">1.00</span>
+                </div>
+                <input type="range" id="signalDecay" min="-2.0" max="4.0" step="0.05" value="1.0">
+            </div>
+            <div class="control-group" id="freq-control-group">
+                <div class="slider-label-container">
+                    <label for="signalFreq">Natural Frequency (ω<sub>f</sub>):</label>
+                    <span class="value-display" id="signalFreqValue">2.0</span>
+                </div>
+                <input type="range" id="signalFreq" min="0.1" max="4.0" step="0.1" value="2.0">
+            </div>
+            <div class="control-group" id="drive-freq-control-group">
+                <div class="slider-label-container">
+                    <label for="signalDriveFreq">Driving Frequency (ω<sub>d</sub>):</label>
+                    <span class="value-display" id="signalDriveFreqValue">3.0</span>
+                </div>
+                <input type="range" id="signalDriveFreq" min="0.1" max="4.0" step="0.1" value="3.0">
+            </div>
+            <div class="control-group">
+                 <label>Select a Slice to Analyze:</label>
+                 <div class="selector" id="slice-selector">
+                    <button id="slice-none" class="active">No Slice</button>
+                    <button id="slice-fourier">Fourier Slice (σ=0)</button>
+                    <button id="slice-pole">Pole Slice (σ=-a)</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="info-panel"></div>
+    </div>
+
+    <script type="importmap">
+    { "imports": { "three": "https://unpkg.com/three@0.157.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/" } }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        let scene, camera, renderer, labelRenderer, controls, particleSystem, pole1, pole2, pole3, pole4;
+        const container = document.getElementById('container');
+        const labelContainer = document.getElementById('label-container');
+        const slicePlotWrapper = document.getElementById('slicePlotWrapper');
+        const mainCanvasLabel = document.getElementById('main-canvas-label');
+        
+        const decaySlider = document.getElementById('signalDecay');
+        const freqSlider = document.getElementById('signalFreq');
+        const driveFreqSlider = document.getElementById('signalDriveFreq');
+        const decayDisplay = document.getElementById('signalDecayValue');
+        const freqDisplay = document.getElementById('signalFreqValue');
+        const driveFreqDisplay = document.getElementById('signalDriveFreqValue');
+        const infoPanel = document.getElementById('info-panel');
+
+        const sliceButtons = {
+            none: document.getElementById('slice-none'),
+            fourier: document.getElementById('slice-fourier'),
+            pole: document.getElementById('slice-pole'),
+        };
+        const signalButtons = {
+            'damped-sine': document.getElementById('signal-damped-sine'),
+            'forced': document.getElementById('signal-forced'),
+            'sine': document.getElementById('signal-sine'),
+            'decay': document.getElementById('signal-decay'),
+        };
+        
+        let activeSlice = 'none';
+        let activeSignal = 'damped-sine';
+
+        const GRID_SIZE = 16;
+        const NUM_PARTICLES = 75000;
+        const SIGMA_MIN = -GRID_SIZE / 2, SIGMA_MAX = GRID_SIZE / 2;
+        const OMEGA_MIN = -GRID_SIZE / 2, OMEGA_MAX = GRID_SIZE / 2;
+        const MAX_HEIGHT_CAP = 15.0; 
+        const HEIGHT_SCALE = 4.0;
+        const PROB_DENOMINATOR = Math.log(MAX_HEIGHT_CAP + 1);
+
+        function throttle(func, limit) {
+            let inThrottle;
+            return function() {
+                const args = arguments;
+                const context = this;
+                if (!inThrottle) {
+                    func.apply(context, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, limit);
+                }
+            }
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 100);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            labelRenderer = new CSS2DRenderer();
+            labelRenderer.setSize(container.clientWidth, container.clientHeight);
+            labelRenderer.domElement.style.position = 'absolute';
+            labelRenderer.domElement.style.top = '0px';
+            labelContainer.appendChild(labelRenderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            camera.position.set(0, 8, 12);
+            controls.target.set(0, 2, 0);
+            controls.update();
+            
+            scene.add(new THREE.GridHelper(GRID_SIZE, GRID_SIZE, 0x444444, 0x222222));
+
+            const poleSystemMaterial = new THREE.MeshBasicMaterial({ color: 0xff4444 });
+            const poleDriveMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+            const poleGeometry = new THREE.SphereGeometry(0.15, 16, 16);
+            pole1 = new THREE.Mesh(poleGeometry, poleSystemMaterial);
+            pole2 = new THREE.Mesh(poleGeometry, poleSystemMaterial);
+            pole3 = new THREE.Mesh(poleGeometry, poleDriveMaterial);
+            pole4 = new THREE.Mesh(poleGeometry, poleDriveMaterial);
+            scene.add(pole1, pole2, pole3, pole4);
+
+            const sigmaDiv = document.createElement('div');
+            sigmaDiv.className = 'axis-label';
+            sigmaDiv.textContent = 'σ';
+            const sigmaLabel = new CSS2DObject(sigmaDiv);
+            sigmaLabel.position.set(GRID_SIZE / 2 + 0.8, 0, 0);
+            scene.add(sigmaLabel);
+
+            const omegaDiv = document.createElement('div');
+            omegaDiv.className = 'axis-label';
+            omegaDiv.textContent = 'ω';
+            const omegaLabel = new CSS2DObject(omegaDiv);
+            // --- MODIFIED CODE: Place label on negative Z-axis to appear "away" ---
+            omegaLabel.position.set(0, 0, -(GRID_SIZE / 2 + 0.8));
+            scene.add(omegaLabel);
+
+            Object.entries(sliceButtons).forEach(([key, button]) => {
+                button.addEventListener('click', () => {
+                    activeSlice = key;
+                    Object.values(sliceButtons).forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    updateSlicesAndInfo();
+                });
+            });
+
+            Object.entries(signalButtons).forEach(([key, button]) => {
+                button.addEventListener('click', () => {
+                    activeSignal = key;
+                    Object.values(signalButtons).forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    updateVisualization();
+                });
+            });
+
+            const throttledUpdate = throttle(updateVisualization, 50);
+            
+            decaySlider.addEventListener('input', () => {
+                decayDisplay.textContent = parseFloat(decaySlider.value).toFixed(2);
+                throttledUpdate();
+            });
+            freqSlider.addEventListener('input', () => {
+                freqDisplay.textContent = parseFloat(freqSlider.value).toFixed(1);
+                throttledUpdate();
+            });
+            driveFreqSlider.addEventListener('input', () => {
+                driveFreqDisplay.textContent = parseFloat(driveFreqSlider.value).toFixed(1);
+                throttledUpdate();
+            });
+            
+            window.addEventListener('resize', onWindowResize);
+            
+            updateVisualization();
+            animate();
+        }
+
+        function calculateMagnitude(sigma, omega, a, wf, wd) {
+            let magnitude = 0;
+            switch(activeSignal) {
+                case 'damped-sine':
+                    const dist1_ds = Math.sqrt((sigma - (-a))**2 + (omega - wf)**2);
+                    const dist2_ds = Math.sqrt((sigma - (-a))**2 + (omega - (-wf))**2);
+                    if (dist1_ds < 1e-4 || dist2_ds < 1e-4) return MAX_HEIGHT_CAP;
+                    magnitude = Math.abs(wf) / (dist1_ds * dist2_ds);
+                    break;
+                case 'sine':
+                    const dist1_s = Math.sqrt(sigma**2 + (omega - wf)**2);
+                    const dist2_s = Math.sqrt(sigma**2 + (omega - (-wf))**2);
+                    if (dist1_s < 1e-4 || dist2_s < 1e-4) return MAX_HEIGHT_CAP;
+                    magnitude = Math.abs(wf) / (dist1_s * dist2_s);
+                    break;
+                case 'decay':
+                    const dist_decay = Math.sqrt((sigma - (-a))**2 + omega**2);
+                    if (dist_decay < 1e-4) return MAX_HEIGHT_CAP;
+                    magnitude = 1 / dist_decay;
+                    break;
+                case 'forced':
+                    const dist_sys1 = Math.sqrt((sigma - (-a))**2 + (omega - wf)**2);
+                    const dist_sys2 = Math.sqrt((sigma - (-a))**2 + (omega - (-wf))**2);
+                    const dist_drv1 = Math.sqrt(sigma**2 + (omega - wd)**2);
+                    const dist_drv2 = Math.sqrt(sigma**2 + (omega - (-wd))**2);
+
+                    if (dist_sys1 < 1e-4 || dist_sys2 < 1e-4 || dist_drv1 < 1e-4 || dist_drv2 < 1e-4) {
+                        return MAX_HEIGHT_CAP;
+                    }
+                    
+                    const mag_system = Math.abs(wf) / (dist_sys1 * dist_sys2);
+                    const mag_drive = Math.abs(wd) / (dist_drv1 * dist_drv2);
+                    
+                    magnitude = mag_system + mag_drive;
+                    break;
+            }
+            return Math.min(magnitude, MAX_HEIGHT_CAP);
+        }
+        
+        function calculate1DSliceData(a, wf, wd, sigma_slice) {
+            const omega_range = [], magnitude = [];
+            const d_omega = 0.1;
+            for(let omega = OMEGA_MIN; omega <= OMEGA_MAX; omega += d_omega) {
+                omega_range.push(omega);
+                magnitude.push(calculateMagnitude(sigma_slice, omega, a, wf, wd));
+            }
+            return { omega_range, magnitude };
+        }
+
+        function generateParticles(a, wf, wd) {
+            const positions = [], colors = [];
+            const color = new THREE.Color();
+
+            let baseHue, hueShiftFactor;
+            const isUnstable = (activeSignal !== 'sine') && a < 0;
+
+            if (isUnstable) {
+                baseHue = 0.0;
+                hueShiftFactor = 0.15; 
+            } else {
+                baseHue = 0.6;
+                hueShiftFactor = -0.15; 
+            }
+
+            let i = 0;
+            while (i < NUM_PARTICLES) {
+                const sigma = SIGMA_MIN + Math.random() * (SIGMA_MAX - SIGMA_MIN);
+                const omega = OMEGA_MIN + Math.random() * (OMEGA_MAX - OMEGA_MIN);
+                const actualHeight = calculateMagnitude(sigma, omega, a, wf, wd);
+                const acceptanceProbability = Math.log(actualHeight + 1) / PROB_DENOMINATOR;
+                if (Math.random() < acceptanceProbability) {
+                    const y = Math.log(actualHeight + 1) * HEIGHT_SCALE;
+                    // --- MODIFIED CODE: Negate omega for Z-coordinate ---
+                    positions.push(sigma, y, -omega); 
+                    const normalizedHeight = y / (Math.log(MAX_HEIGHT_CAP + 1) * HEIGHT_SCALE);
+                    color.setHSL(baseHue + normalizedHeight * hueShiftFactor, 1.0, 0.5 + normalizedHeight * 0.5);
+                    colors.push(color.r, color.g, color.b);
+                    i++;
+                }
+            }
+            return { positions: new Float32Array(positions), colors: new Float32Array(colors) };
+        }
+
+        function updateControlsVisibility() {
+            const decayControl = document.getElementById('decay-control-group');
+            const freqControl = document.getElementById('freq-control-group');
+            const driveFreqControl = document.getElementById('drive-freq-control-group');
+            
+            decayControl.style.display = ['damped-sine', 'decay', 'forced'].includes(activeSignal) ? 'block' : 'none';
+            freqControl.style.display = ['damped-sine', 'sine', 'forced'].includes(activeSignal) ? 'block' : 'none';
+            driveFreqControl.style.display = activeSignal === 'forced' ? 'block' : 'none';
+            
+            const isPoleSliceRelevant = ['damped-sine', 'decay', 'forced'].includes(activeSignal);
+            sliceButtons.pole.disabled = !isPoleSliceRelevant;
+            if (!isPoleSliceRelevant && activeSlice === 'pole') {
+                 sliceButtons.none.click();
+            }
+        }
+
+        function updateVisualization() {
+            const a = parseFloat(decaySlider.value);
+            const wf = parseFloat(freqSlider.value);
+            const wd = parseFloat(driveFreqSlider.value);
+
+            updateControlsVisibility();
+            
+            pole1.visible = pole2.visible = pole3.visible = pole4.visible = true;
+            switch(activeSignal) {
+                // --- MODIFIED CODE: Negate all Z-coordinates for poles ---
+                case 'damped-sine':
+                    pole1.position.set(-a, 0, -wf); pole2.position.set(-a, 0, wf);
+                    pole3.visible = pole4.visible = false;
+                    break;
+                case 'sine':
+                    pole1.position.set(0, 0, -wf); pole2.position.set(0, 0, wf);
+                    pole3.visible = pole4.visible = false;
+                    break;
+                case 'decay':
+                    pole1.position.set(-a, 0, 0);
+                    pole2.visible = pole3.visible = pole4.visible = false;
+                    break;
+                case 'forced':
+                    pole1.position.set(-a, 0, -wf); pole2.position.set(-a, 0, wf);
+                    pole3.position.set(0, 0, -wd); pole4.position.set(0, 0, wd);
+                    break;
+            }
+
+            if (particleSystem) {
+                scene.remove(particleSystem);
+                particleSystem.geometry.dispose();
+                particleSystem.material.dispose();
+            }
+            const particleData = generateParticles(a, wf, wd);
+            const particleGeometry = new THREE.BufferGeometry();
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(particleData.positions, 3));
+            particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleData.colors, 3));
+            const particleMaterial = new THREE.PointsMaterial({
+                size: 0.1, sizeAttenuation: true, opacity: 0.8, transparent: true,
+                blending: THREE.AdditiveBlending, vertexColors: true
+            });
+            particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+            scene.add(particleSystem);
+            
+            updateTimeDomainPlot();
+            updateSlicesAndInfo();
+        }
+        
+        function updateTimeDomainPlot() {
+            const a = parseFloat(decaySlider.value);
+            const wf = parseFloat(freqSlider.value);
+            const wd = parseFloat(driveFreqSlider.value);
+            const t = [], y = [];
+            const t_max = 25;
+            const steps = 600;
+            
+            for(let i = 0; i < steps; i++) {
+                const time = (i/steps) * t_max;
+                t.push(time);
+                let val = 0;
+                switch(activeSignal) {
+                    case 'damped-sine':
+                        val = Math.exp(-a * time) * Math.sin(wf * time);
+                        break;
+                    case 'sine':
+                        val = Math.sin(wf * time);
+                        break;
+                    case 'decay':
+                        val = Math.exp(-a * time);
+                        break;
+                    case 'forced':
+                        const steady_state = Math.cos(wd * time);
+                        const transient_cancellation = Math.exp(-a * time) * Math.cos(wf * time);
+                        val = steady_state - transient_cancellation;
+                        break;
+                }
+                y.push(val);
+            }
+
+            const isUnstable = (activeSignal !== 'sine') && a < 0;
+            const titleText = isUnstable ? '<b>Unstable Time Signal f(t)</b>' : '<b>Time Domain Signal f(t)</b>';
+            const lineColor = isUnstable ? '#ff4444' : '#33d1ff';
+
+            Plotly.react('timeDomainPlot', [{
+                x: t, y: y, type: 'scatter', mode: 'lines',
+                line: { color: lineColor, width: 3 }
+            }], {
+                title: { text: titleText, font: { color: '#fff', size: 16 } },
+                xaxis: { title: 'Time (t)', color: '#fff', gridcolor: '#444' },
+                yaxis: { title: 'Amplitude', color: '#fff', gridcolor: '#444' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                margin: { l: 50, r: 20, b: 40, t: 40, pad: 4 }
+            }, { staticPlot: true });
+        }
+
+        function updateSlicesAndInfo() {
+            const a = parseFloat(decaySlider.value);
+            const wf = parseFloat(freqSlider.value);
+            const wd = parseFloat(driveFreqSlider.value);
+
+            let infoHTML = '';
+            switch(activeSignal) {
+                case 'damped-sine':
+                    infoHTML = `<p>Signal <code>f(t) = e<sup>-at</sup>sin(ω<sub>f</sub>t)</code> has poles at <code>s = -a ± iω<sub>f</sub></code>. If <code>a > 0</code>, the poles are in the stable Left-Half Plane, the landscape is blue, and the signal decays. If <code>a < 0</code>, they are in the unstable Right-Half Plane, the landscape turns red, and the signal grows.</p>`;
+                    break;
+                case 'forced':
+                    infoHTML = `<p>A forced oscillator combines a system's natural response (poles at <code>s = -a ± iω<sub>f</sub></code>, red) with a driving input (poles at <code>s = ±iω<sub>d</sub></code>, cyan). The time signal shows the transient response dying out, leaving the steady-state oscillation. When <code>ω<sub>d</sub></code> is close to <code>ω<sub>f</sub></code>, <strong>resonance</strong> occurs, creating a huge peak.</p>`;
+                    break;
+                case 'sine':
+                    infoHTML = `<p>The undamped sine wave <code>f(t) = sin(ω<sub>f</sub>t)</code> has two poles directly on the imaginary axis at <code>s = ±iω<sub>f</sub></code>. This represents a <strong>marginally stable</strong> system that oscillates forever without decay or growth.</p>`;
+                    break;
+                case 'decay':
+                    infoHTML = `<p>The exponential signal <code>f(t) = e<sup>-at</sup></code> has a single real pole at <code>s = -a</code>. A positive <code>a</code> places the pole on the negative real axis (stable), while a negative <code>a</code> places it on the positive real axis (unstable).</p>`;
+                    break;
+            }
+
+            if (activeSlice === 'none') {
+                slicePlotWrapper.style.display = 'none';
+                mainCanvasLabel.style.display = 'block';
+            } else {
+                slicePlotWrapper.style.display = 'block';
+                mainCanvasLabel.style.display = 'none';
+                const isFourier = activeSlice === 'fourier';
+                const sigma_slice = isFourier ? 0 : -a;
+                const sliceData = calculate1DSliceData(a, wf, wd, sigma_slice);
+                
+                Plotly.react('slicePlot', [{
+                    x: sliceData.omega_range, y: sliceData.magnitude, type: 'scatter', mode: 'lines',
+                    line: { color: isFourier ? 'var(--drive-pole-color)' : 'var(--primary-color)', width: 3 }
+                }], {
+                    title: {
+                        text: isFourier ? '<b>Fourier Slice at σ=0</b>' : `<b>Pole Slice at σ=${(-a).toFixed(2)}</b>`,
+                        font: { color: '#fff', size: 16 }
+                    },
+                    xaxis: { title: 'Frequency (iω)', color: '#fff', gridcolor: '#444' },
+                    yaxis: { title: 'Magnitude |F(s)|', color: '#fff', gridcolor: '#444' },
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    margin: { l: 50, r: 20, b: 40, t: 40, pad: 4 }
+                }, { staticPlot: true });
+
+                if (isFourier) {
+                    infoHTML += `<p><strong>Fourier Slice (σ=0):</strong> This slice along the imaginary axis shows the frequency content of the signal. For a forced oscillator, you can clearly see the peaks corresponding to the driving frequency and the (damped) natural frequency.</p>`;
+                } else { // Pole slice
+                    infoHTML += `<p><strong>Pole Slice (σ=-a):</strong> This slice passes through the system's natural poles, revealing its true, sharp resonant frequency by compensating for the signal's decay.</p>`;
+                }
+            }
+            infoPanel.innerHTML = infoHTML;
+        }
+        
+        function onWindowResize() {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+            labelRenderer.setSize(w, h);
+            updateTimeDomainPlot();
+            if (activeSlice !== 'none') updateSlicesAndInfo();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+        
+        init();
+    </script>
+</body>
+</html>
