@@ -112,6 +112,18 @@
             height: 100%;
             background-color: #06090f;
         }
+
+        /* NEW: Styles for the footer */
+        footer {
+            margin-top: 40px;
+            width: 100%;
+            text-align: center;
+        }
+        footer p {
+            font-size: 14px;
+            font-weight: 300;
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
@@ -142,6 +154,12 @@
                 </div>
             </div>
         </div>
+        
+        <!-- NEW: Footer with credit -->
+        <footer>
+            <p>Created by Dr. Devender Garg</p>
+        </footer>
+
     </div>
 
 <script>
@@ -184,11 +202,7 @@
         const width = rect.width;
         const height = rect.height;
         const origin = { x: width / 2, y: height / 2 };
-        
-        // =========================================================================================
-        // BUG FIX: Increase the number of steps to prevent jagged lines at the end of the animation.
         const steps = 1200;
-        // =========================================================================================
         
         let tMax;
         const BASE_T_MAX = 5.0;
