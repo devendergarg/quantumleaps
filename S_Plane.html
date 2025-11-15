@@ -170,10 +170,13 @@
     };
     
     let points = [];
-    const sMax = 5;
+    const omegaMax = 5;
+    const visualSigmaMax = 5;
+    const functionalSigmaMax = 1;
+
     let audioCtx = null;
     let isAudioEnabled = true;
-    
+
     function animateComplexPlaneTrajectory(sigma, omega) {
         if (complexAnimationId) cancelAnimationFrame(complexAnimationId);
 
@@ -181,24 +184,22 @@
         const width = rect.width;
         const height = rect.height;
         const origin = { x: width / 2, y: height / 2 };
-        const steps = 400;
         
         // =========================================================================================
-        // MODIFIED: Dynamically calculate simulation time (tMax) to ensure enough rotation is visible.
+        // BUG FIX: Increase the number of steps to prevent jagged lines at the end of the animation.
+        const steps = 1200;
+        // =========================================================================================
+        
         let tMax;
-        const BASE_T_MAX = 5.0; // The default/minimum simulation time.
-        const DESIRED_ROTATIONS = 10;
+        const BASE_T_MAX = 5.0;
+        const DESIRED_ROTATIONS = 20;
 
         if (Math.abs(omega) < 0.1) {
-            // If there's no significant rotation, just use the base time.
             tMax = BASE_T_MAX;
         } else {
-            // Calculate the time required to complete 10 full rotations.
-            const timeForTenRotations = (DESIRED_ROTATIONS * 2 * Math.PI) / Math.abs(omega);
-            // Use this calculated time, but don't let the simulation be shorter than the base time.
-            tMax = Math.max(BASE_T_MAX, timeForTenRotations);
+            const timeForDesiredRotations = (DESIRED_ROTATIONS * 2 * Math.PI) / Math.abs(omega);
+            tMax = Math.max(BASE_T_MAX, timeForDesiredRotations);
         }
-        // =========================================================================================
 
         let maxRadius;
         if (sigma > 0) {
@@ -260,29 +261,22 @@
         complexAnimationId = requestAnimationFrame(drawFrame);
     }
     
-    function clearAllPoints() {
-        points.forEach(p => p.domElement.remove());
-        points = [];
-        lastPole = null;
-        clearComplexPlane();
-        requestAnimationFrame(animateSPlane);
-    }
-
     // Dummy implementations for brevity where unchanged
     initAudioContext = function() { if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { console.error("Web Audio API is not supported."); } } };
     playSoundForPole = function(sigma, omega) { if (!isAudioEnabled || !audioCtx) return; const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.frequency.value = 220 * Math.pow(2, Math.abs(omega) / 4); const n = audioCtx.currentTime, d = sigma > 0.05 ? 1.0 : 1.5; g.gain.cancelScheduledValues(n); if (sigma < -0.05) { g.gain.setValueAtTime(0.5, n); g.gain.setTargetAtTime(0, n, Math.min(0.5, -1/sigma)); } else if (sigma > 0.05) { g.gain.setValueAtTime(0.01, n); g.gain.exponentialRampToValueAtTime(0.7, n + Math.min(d-0.1, 1.5/(1+sigma))); } else { g.gain.setValueAtTime(0.4, n); g.gain.setValueAtTime(0, n + d-0.1); } o.start(n); o.stop(n+d); };
     updateAudioButton = function() { toggleAudioButton.textContent = isAudioEnabled ? 'Sound: On 🔊' : 'Sound: Off 🔇'; };
     setupSPlaneCanvas = function() { const dpr = window.devicePixelRatio || 1, rect = sPlaneContainer.getBoundingClientRect(); sPlaneCanvas.width = rect.width*dpr; sPlaneCanvas.height = rect.height*dpr; sCtx.scale(dpr, dpr); };
-    drawSPlaneGridAndAxes = function() { const w=sPlaneCanvas.getBoundingClientRect().width, h=sPlaneCanvas.getBoundingClientRect().height, o={x:w/2,y:h/2}, s=o.x/sMax; sCtx.strokeStyle=COLORS.grid; sCtx.lineWidth=1; for(let i=1;i<=sMax;i++){sCtx.beginPath();sCtx.moveTo(o.x+i*s,0);sCtx.lineTo(o.x+i*s,h);sCtx.moveTo(o.x-i*s,0);sCtx.lineTo(o.x-i*s,h);sCtx.stroke();sCtx.beginPath();sCtx.moveTo(0,o.y+i*s);sCtx.lineTo(w,o.y+i*s);sCtx.moveTo(0,o.y-i*s);sCtx.lineTo(w,o.y-i*s);sCtx.stroke();} sCtx.strokeStyle=COLORS.axis;sCtx.lineWidth=2;sCtx.beginPath();sCtx.moveTo(0,o.y);sCtx.lineTo(w,o.y);sCtx.moveTo(o.x,0);sCtx.lineTo(o.x,h);sCtx.stroke();sCtx.fillStyle=COLORS.axis;sCtx.font='14px Lato';sCtx.textAlign='center';sCtx.fillText('σ (Real)',w-40,o.y-10);sCtx.save();sCtx.translate(o.x-20,30);sCtx.rotate(-Math.PI/2);sCtx.fillText('jω (Imaginary)',0,0);sCtx.restore();};
+    drawSPlaneGridAndAxes = function() { const w=sPlaneCanvas.getBoundingClientRect().width, h=sPlaneCanvas.getBoundingClientRect().height, o={x:w/2,y:h/2}; sCtx.strokeStyle=COLORS.grid; sCtx.lineWidth=1; for(let i=1;i<=visualSigmaMax;i++){ const xPos=o.x+i*(o.x/visualSigmaMax), xNeg=o.x-i*(o.x/visualSigmaMax); sCtx.beginPath();sCtx.moveTo(xPos,0);sCtx.lineTo(xPos,h);sCtx.stroke(); sCtx.beginPath();sCtx.moveTo(xNeg,0);sCtx.lineTo(xNeg,h);sCtx.stroke();} for(let i=1;i<=omegaMax;i++){ const yPos=o.y+i*(o.y/omegaMax), yNeg=o.y-i*(o.y/omegaMax); sCtx.beginPath();sCtx.moveTo(0,yPos);sCtx.lineTo(w,yPos);sCtx.stroke(); sCtx.beginPath();sCtx.moveTo(0,yNeg);sCtx.lineTo(w,yNeg);sCtx.stroke();} sCtx.strokeStyle=COLORS.axis;sCtx.lineWidth=2;sCtx.beginPath();sCtx.moveTo(0,o.y);sCtx.lineTo(w,o.y);sCtx.moveTo(o.x,0);sCtx.lineTo(o.x,h);sCtx.stroke();sCtx.fillStyle=COLORS.axis;sCtx.font='14px Lato';sCtx.textAlign='center';sCtx.fillText('σ (Real)',w-40,o.y-10);sCtx.save();sCtx.translate(o.x-20,30);sCtx.rotate(-Math.PI/2);sCtx.fillText('jω (Imaginary)',0,0);sCtx.restore();};
     drawPole = function(p) { const r=6*p.animation.scale; sCtx.shadowColor=COLORS.poleGlow; sCtx.shadowBlur=15*p.animation.scale; sCtx.fillStyle=COLORS.pole; sCtx.beginPath(); sCtx.arc(p.px,p.py,r,0,2*Math.PI); sCtx.fill(); sCtx.shadowBlur=0;};
     drawTimeDomainPlot = function(c,s,w,p) { const pCtx=c.getContext('2d'),dpr=window.devicePixelRatio||1,r=c.getBoundingClientRect();if(r.width===0)return; c.width=r.width*dpr;c.height=r.height*dpr; pCtx.scale(dpr,dpr); const pw=r.width,ph=r.height; pCtx.clearRect(0,0,pw,ph);const tm=5,yc=ph/2; pCtx.strokeStyle=COLORS.axis;pCtx.lineWidth=1;pCtx.beginPath(); pCtx.moveTo(5,yc);pCtx.lineTo(pw-5,yc); pCtx.moveTo(5,5);pCtx.lineTo(5,ph-5);pCtx.stroke(); pCtx.strokeStyle=COLORS.plot;pCtx.lineWidth=1.5;pCtx.shadowColor=COLORS.plotGlow;pCtx.shadowBlur=5;pCtx.beginPath();let me=0;for(let t=0;t<=tm;t+=0.01){me=Math.max(me,Math.exp(s*t));}const ys=(yc*0.9)/Math.max(1,me),ns=200*p;for(let i=0;i<=ns;i++){const t=(i/200)*tm,y=Math.exp(s*t)*Math.cos(w*t),px=(t/tm)*(pw-10)+5,py=yc-y*ys;if(i===0)pCtx.moveTo(px,py);else pCtx.lineTo(px,py);} pCtx.stroke();pCtx.shadowBlur=0;};
     animateSPlane = function() { const w=sPlaneCanvas.getBoundingClientRect().width, h=sPlaneCanvas.getBoundingClientRect().height; sCtx.clearRect(0,0,w,h); drawSPlaneGridAndAxes(); let needsFrame=false; points.forEach(p=>{if(p.animation.scale<1){p.animation.scale+=0.07;needsFrame=true;}if(p.animation.plotProgress<1){p.animation.plotProgress+=0.02;needsFrame=true;}p.animation.scale=Math.min(1,p.animation.scale);p.animation.plotProgress=Math.min(1,p.animation.plotProgress);drawPole(p);drawTimeDomainPlot(p.plotCanvas,p.sigma,p.omega,p.animation.plotProgress);}); if(needsFrame)requestAnimationFrame(animateSPlane);};
-    addPoint = function(px, py, options = {}) { const sPlaneRect=sPlaneContainer.getBoundingClientRect(), sW=sPlaneRect.width, sH=sPlaneRect.height, sOrigin={x:sW/2,y:sH/2}, sScale=sOrigin.x/sMax; const sigma=(px-sOrigin.x)/sScale, omega=-(py-sOrigin.y)/sScale; if(!(options.suppressUnstableSound&&sigma>=0)){playSoundForPole(sigma,omega);} lastPole={sigma,omega}; animateComplexPlaneTrajectory(sigma,omega); const pB=document.createElement('div');pB.className='plot-box';const t=document.createElement('div');t.className='plot-box-title';t.textContent=`σ=${sigma.toFixed(2)}, ω=${omega.toFixed(2)}`;const pC=document.createElement('canvas');pB.appendChild(t);pB.appendChild(pC);let bX,bY;if(options.forcePosition){bX=options.x;bY=options.y;}else{bX=px+15;bY=py-(PLOT_BOX_HEIGHT/2);if(bX+PLOT_BOX_WIDTH+5>sW)bX=px-PLOT_BOX_WIDTH-15;if(bY<5)bY=5;if(bY+PLOT_BOX_HEIGHT+5>sH)bY=sH-PLOT_BOX_HEIGHT-5;} pB.style.left=`${bX}px`;pB.style.top=`${bY}px`;sPlaneContainer.appendChild(pB);setTimeout(()=>pB.classList.add('show'),10);points.push({px,py,sigma,omega,plotCanvas:pC,domElement:pB,animation:{scale:0,plotProgress:0}});requestAnimationFrame(animateSPlane);};
+    addPoint = function(px, py, options = {}) { const sPlaneRect=sPlaneContainer.getBoundingClientRect(), sW=sPlaneRect.width, sH=sPlaneRect.height, sOrigin={x:sW/2,y:sH/2}; const sigma=(px-sOrigin.x)/(sOrigin.x/functionalSigmaMax), omega=-(py-sOrigin.y)/(sOrigin.y/omegaMax); if(!(options.suppressUnstableSound&&sigma>=0)){playSoundForPole(sigma,omega);} lastPole={sigma,omega}; animateComplexPlaneTrajectory(sigma,omega); const pB=document.createElement('div');pB.className='plot-box';const t=document.createElement('div');t.className='plot-box-title';t.textContent=`σ=${sigma.toFixed(2)}, ω=${omega.toFixed(2)}`;const pC=document.createElement('canvas');pB.appendChild(t);pB.appendChild(pC);let bX,bY;if(options.forcePosition){bX=options.x;bY=options.y;}else{bX=px+15;bY=py-(PLOT_BOX_HEIGHT/2);if(bX+PLOT_BOX_WIDTH+5>sW)bX=px-PLOT_BOX_WIDTH-15;if(bY<5)bY=5;if(bY+PLOT_BOX_HEIGHT+5>sH)bY=sH-PLOT_BOX_HEIGHT-5;} pB.style.left=`${bX}px`;pB.style.top=`${bY}px`;sPlaneContainer.appendChild(pB);setTimeout(()=>pB.classList.add('show'),10);points.push({px,py,sigma,omega,plotCanvas:pC,domElement:pB,animation:{scale:0,plotProgress:0}});requestAnimationFrame(animateSPlane);};
     handleInteraction = function(e){e.preventDefault();initAudioContext();const r=sPlaneCanvas.getBoundingClientRect(),cX=e.clientX||e.touches[0].clientX,cY=e.clientY||e.touches[0].clientY;addPoint(cX-r.left,cY-r.top);};
     fillWithPlots = function() {initAudioContext();clearAllPoints();const sW=sPlaneCanvas.getBoundingClientRect().width,sH=sPlaneCanvas.getBoundingClientRect().height;const tW=PLOT_BOX_WIDTH+BOX_PADDING,tH=PLOT_BOX_HEIGHT+BOX_PADDING;const nC=Math.floor(sW/tW),nR=Math.floor(sH/tH);const gW=nC*tW-BOX_PADDING,gH=nR*tH-BOX_PADDING;const sX=(sW-gW)/2,sY=(sH-gH)/2;for(let r=0;r<nR;r++){for(let c=0;c<nC;c++){const bX=sX+c*tW,bY=sY+r*tH,pPx=bX,pPy=bY;const d=(r*nC+c)*FILL_SOUND_DELAY_MS;setTimeout(()=>{addPoint(pPx,pPy,{forcePosition:true,x:bX,y:bY,suppressUnstableSound:true});},d);}}};
     setupComplexPlaneCanvas = function() { const dpr=window.devicePixelRatio||1, rect=complexPlaneContainer.getBoundingClientRect(); complexPlaneCanvas.width=rect.width*dpr; complexPlaneCanvas.height=rect.height*dpr; cCtx.scale(dpr,dpr); };
     drawComplexPlaneAxes = function() { const r=complexPlaneContainer.getBoundingClientRect(), w=r.width, h=r.height, o={x:w/2,y:h/2}; cCtx.strokeStyle=COLORS.axis; cCtx.lineWidth=1; cCtx.beginPath(); cCtx.moveTo(0,o.y);cCtx.lineTo(w,o.y);cCtx.moveTo(o.x,0);cCtx.lineTo(o.x,h);cCtx.stroke(); cCtx.fillStyle=COLORS.axis;cCtx.font='12px Lato';cCtx.textAlign='center';cCtx.fillText('Real',w-20,o.y-8);cCtx.fillText('Imaginary',o.x+40,15); };
     clearComplexPlane = function() { if(complexAnimationId)cancelAnimationFrame(complexAnimationId); const r=complexPlaneContainer.getBoundingClientRect(); cCtx.clearRect(0,0,r.width,r.height); drawComplexPlaneAxes(); };
+    clearAllPoints = function() { points.forEach(p => p.domElement.remove()); points = []; lastPole = null; clearComplexPlane(); requestAnimationFrame(animateSPlane); };
     
     function setupEventListeners() {
         sPlaneCanvas.addEventListener('click', handleInteraction);
