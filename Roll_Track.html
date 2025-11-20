@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RollTrack - Unified Report Generator</title>
+    <!-- Link to Tailwind CSS v3 (Play CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link to jsPDF CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Link to jsPDF-AutoTable Plugin CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <!-- Link to SheetJS (xlsx.js) CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        /* Styles for the detailed report table */
+        .report-table th, .report-table td {
+            padding: 8px 10px;
+            white-space: nowrap;
+        }
+        .report-table .date-header {
+            writing-mode: vertical-lr;
+            transform: rotate(180deg);
+            padding-bottom: 8px;
+            padding-top: 8px;
+            font-size: 0.75rem;
+        }
+        .report-table .status-cell {
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* Style to hide date columns when body has .dates-hidden class */
+        .dates-hidden .date-col {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900 font-sans leading-normal tracking-normal">
+
+    <div class="container mx-auto mt-10 p-6 bg-white rounded-lg shadow-xl max-w-7xl">
+
+        <h1 class="text-3xl font-bold mb-6 text-center text-blue-700">RollTrack</h1>
+        
+        <div class="mb-6 p-4 bg-gray-50 rounded-md border border-gray-200">
+            <label class="block text-sm font-medium text-gray-700 mb-2" for="departmentNameInput">Department Name (for PDF):</label>
+            <input type="text" id="departmentNameInput" value="Department of Physics" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        
+        <p id="courseNameDisplay" class="text-xl font-semibold text-center text-gray-700 mb-4 hidden"></p>
+
+        <div class="mb-4 p-4 bg-blue-50 rounded-md border border-blue-200">
+            <label class="block text-sm font-medium text-blue-800 mb-2" for="attendanceFile">Upload your Attendance file (CSV, XLS, or XLSX):</label>
+            <!-- Robust File Input Implementation -->
+            <input type="file" id="attendanceFile" accept=".csv, .xls, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" class="hidden">
+            <label for="attendanceFile" class="inline-block bg-gray-200 text-gray-700 font-semibold text-sm py-2 px-4 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-300 transition-colors">
+                Select Attendance File
+            </label>
+            <p id="fileNameDisplay" class="text-xs text-gray-500 mt-1">No file chosen</p>
+        </div>
+
+        <div id="weekdayFilterContainer" class="hidden mb-6 p-4 bg-gray-50 rounded-md border border-gray-200">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Weekday:</label>
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-2">
+                <label class="inline-flex items-center"><input type="checkbox" class="weekday-checkbox form-checkbox h-5 w-5 text-blue-600" value="1" checked> <span class="ml-2 text-gray-700">Mon</span></label>
+                <label class="inline-flex items-center"><input type="checkbox" class="weekday-checkbox form-checkbox h-5 w-5 text-blue-600" value="2" checked> <span class="ml-2 text-gray-700">Tue</span></label>
+                <label class="inline-flex items-center"><input type="checkbox" class="weekday-checkbox form-checkbox h-5 w-5 text-blue-600" value="3" checked> <span class="ml-2 text-gray-700">Wed</span></label>
+                <label class="inline-flex items-center"><input type="checkbox" class="weekday-checkbox form-checkbox h-5 w-5 text-blue-600" value="4" checked> <span class="ml-2 text-gray-700">Thu</span></label>
+                <label class="inline-flex items-center"><input type="checkbox" class="weekday-checkbox form-checkbox h-5 w-5 text-blue-600" value="5" checked> <span class="ml-2 text-gray-700">Fri</span></label>
+            </div>
+        </div>
+        
+        <div id="monthFilterContainer" class="hidden mb-6 p-4 bg-gray-50 rounded-md border border-gray-200">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Month:</label>
+            <div id="monthFilterCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 pt-2">
+                <!-- Month checkboxes will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <div id="loading" class="hidden text-center text-blue-600 font-semibold mb-4">Processing...</div>
+        <div id="error" class="hidden text-center text-red-600 font-semibold mb-4"></div>
+        
+        <div id="dateToggleContainer" class="hidden mb-3">
+            <label for="toggleDatesCheckbox" class="flex items-center cursor-pointer">
+                <div class="relative">
+                    <input type="checkbox" id="toggleDatesCheckbox" class="sr-only peer">
+                    <div class="w-10 h-6 bg-gray-300 rounded-full peer-checked:bg-blue-600 transition-colors"></div>
+                    <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-4"></div>
+                </div>
+                <div class="ml-3 text-sm font-medium text-gray-700">
+                    Hide Date Columns
+                </div>
+            </label>
+        </div>
+
+
+        <div id="reportTableContainer" class="overflow-x-auto"></div>
+        
+        <div class="mt-6 text-center">
+            <button id="downloadPdfBtn" class="hidden bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                Download Report as PDF
+            </button>
+        </div>
+
+        <div class="mt-2 text-center">
+             <button id="togglePdfOptionsBtn" class="hidden text-sm text-blue-600 hover:text-blue-800 focus:outline-none">
+                Advanced PDF Options
+            </button>
+        </div>
+
+        <div id="pdfOptionsContainer" class="hidden mt-4 p-4 bg-gray-50 rounded-md border border-gray-200 max-w-lg mx-auto">
+            <h3 class="text-lg font-semibold text-gray-800 mb-3 text-center">Advanced PDF Options</h3>
+            <div class="space-y-4">
+                <!-- Analysis Toggle -->
+                <div id="analysisToggleContainer">
+                    <label for="toggleAnalysisCheckbox" class="flex items-center cursor-pointer">
+                        <div class="relative">
+                            <input type="checkbox" id="toggleAnalysisCheckbox" class="sr-only peer">
+                            <div class="w-10 h-6 bg-gray-300 rounded-full peer-checked:bg-blue-600 transition-colors"></div>
+                            <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-4"></div>
+                        </div>
+                        <div class="ml-3 text-sm font-medium text-gray-700">
+                            Include Analysis in PDF
+                        </div>
+                    </label>
+                </div>
+                <!-- Color Toggle -->
+                <div id="pdfColorToggleContainer">
+                     <label for="pdfColorToggle" class="flex items-center cursor-pointer">
+                        <div class="relative">
+                            <input type="checkbox" id="pdfColorToggle" class="sr-only peer">
+                            <div class="w-10 h-6 bg-gray-300 rounded-full peer-checked:bg-blue-600 transition-colors"></div>
+                            <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-4"></div>
+                        </div>
+                        <div class="ml-3 text-sm font-medium text-gray-700">
+                            Use colours in Pdf
+                        </div>
+                    </label>
+                </div>
+                <!-- Skip Dates Input -->
+                <div id="skipDatesContainer">
+                    <label for="skipDatesInput" class="block text-sm font-medium text-gray-700 mb-1">Skip Specific Dates:</label>
+                    <input type="text" id="skipDatesInput" placeholder="DD-MM-YYYY, DD-MM-YYYY, ..." class="block w-full text-sm text-gray-900 border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
+                    <p class="text-xs text-gray-500 mt-1">Enter dates to exclude from the report, separated by commas.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let processedReportData = null;
+        let rawGranularData = null; // Stores detailed, unprocessed data
+
+        function resetUI() {
+            document.getElementById('reportTableContainer').innerHTML = '';
+            document.getElementById('error').classList.add('hidden');
+            document.getElementById('error').textContent = '';
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('downloadPdfBtn').classList.add('hidden');
+            document.getElementById('togglePdfOptionsBtn').classList.add('hidden');
+            const courseNameDisplay = document.getElementById('courseNameDisplay');
+            courseNameDisplay.classList.add('hidden');
+            courseNameDisplay.textContent = '';
+            document.getElementById('fileNameDisplay').textContent = 'No file chosen';
+            document.getElementById('attendanceFile').value = '';
+            
+            const weekdayFilterContainer = document.getElementById('weekdayFilterContainer');
+            weekdayFilterContainer.classList.add('hidden');
+            weekdayFilterContainer.querySelectorAll('.weekday-checkbox').forEach(cb => cb.checked = true);
+            
+            const monthFilterContainer = document.getElementById('monthFilterContainer');
+            monthFilterContainer.classList.add('hidden');
+            document.getElementById('monthFilterCheckboxes').innerHTML = '';
+
+            const dateToggleContainer = document.getElementById('dateToggleContainer');
+            dateToggleContainer.classList.add('hidden');
+            document.getElementById('toggleDatesCheckbox').checked = false;
+            document.body.classList.remove('dates-hidden');
+
+            const pdfOptionsContainer = document.getElementById('pdfOptionsContainer');
+            pdfOptionsContainer.classList.add('hidden'); // Ensure it's hidden on reset
+            document.getElementById('toggleAnalysisCheckbox').checked = false; // Default to OFF
+            document.getElementById('pdfColorToggle').checked = false;
+            document.getElementById('skipDatesInput').value = '';
+
+
+            processedReportData = null;
+            rawGranularData = null;
+        }
+
+        document.getElementById('attendanceFile').addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            const loadingDiv = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+            const fileNameDisplay = document.getElementById('fileNameDisplay');
+            
+            resetUI(); 
+
+            if (!file) return;
+
+            fileNameDisplay.textContent = `Selected file: ${file.name}`; 
+            loadingDiv.classList.remove('hidden');
+
+            try {
+                const fileName = file.name.toLowerCase();
+                let granularData;
+                if (fileName.endsWith('.csv')) {
+                    const fileText = await readFileAsText(file);
+                    granularData = parseCSVToGranular(fileText, file.name);
+                } else if (fileName.endsWith('.xlsx')) {
+                    granularData = await handleXLSXFile(file);
+                } else if (fileName.endsWith('.xls')) {
+                    granularData = await parseAndProcessLegacyXLSToGranular(file);
+                } else {
+                    throw new Error('Unsupported file type. Please upload a CSV, XLS, or XLSX file.');
+                }
+                
+                rawGranularData = granularData;
+
+                document.getElementById('weekdayFilterContainer').classList.remove('hidden');
+                const uniqueMonths = [...new Set(rawGranularData.records
+                    .map(rec => rec.date ? rec.date.substring(0, 7) : null)
+                    .filter(month => month !== null)
+                )].sort();
+        
+                if (uniqueMonths.length > 0) {
+                    populateMonthFilter(uniqueMonths);
+                    document.getElementById('monthFilterContainer').classList.remove('hidden');
+                }
+
+                aggregateAndRender();
+            } catch (err) {
+                errorDiv.textContent = 'Error processing file: ' + err.message;
+                errorDiv.classList.remove('hidden');
+                console.error(err);
+                processedReportData = null; 
+                rawGranularData = null;
+            } finally {
+                loadingDiv.classList.add('hidden');
+            }
+        });
+        
+        document.getElementById('weekdayFilterContainer').addEventListener('change', () => {
+            if (rawGranularData) {
+                aggregateAndRender();
+            }
+        });
+        
+        document.getElementById('monthFilterContainer').addEventListener('change', () => {
+            if (rawGranularData) {
+                aggregateAndRender();
+            }
+        });
+
+        document.getElementById('skipDatesInput').addEventListener('change', () => {
+             if (rawGranularData) {
+                aggregateAndRender();
+            }
+        });
+        
+        document.getElementById('toggleDatesCheckbox').addEventListener('change', function() {
+            document.body.classList.toggle('dates-hidden', this.checked);
+        });
+        
+        document.getElementById('togglePdfOptionsBtn').addEventListener('click', function() {
+            document.getElementById('pdfOptionsContainer').classList.toggle('hidden');
+        });
+
+
+        function populateMonthFilter(months) {
+            const container = document.getElementById('monthFilterCheckboxes');
+            container.innerHTML = ''; 
+            
+            months.forEach(monthStr => { 
+                const [year, month] = monthStr.split('-');
+                const date = new Date(year, month - 1, 1);
+                const monthName = date.toLocaleString('default', { month: 'long' });
+                const labelText = `${monthName} ${year}`;
+                
+                const label = document.createElement('label');
+                label.className = 'inline-flex items-center';
+                label.innerHTML = `
+                    <input type="checkbox" class="month-checkbox form-checkbox h-5 w-5 text-blue-600" value="${monthStr}" checked>
+                    <span class="ml-2 text-gray-700">${labelText}</span>`;
+                container.appendChild(label);
+            });
+        }
+
+        function aggregateAndRender() {
+            if (!rawGranularData) return;
+
+            const selectedWeekdays = Array.from(document.querySelectorAll('.weekday-checkbox:checked'))
+                                          .map(cb => parseInt(cb.value, 10));
+            const selectedMonths = Array.from(document.querySelectorAll('.month-checkbox:checked'))
+                                        .map(cb => cb.value);
+            
+            processedReportData = processDetailedData(rawGranularData, selectedWeekdays, selectedMonths);
+
+            renderDetailedReport(
+                processedReportData, 
+                document.getElementById('reportTableContainer'), 
+                document.getElementById('downloadPdfBtn'), 
+                document.getElementById('courseNameDisplay')
+            );
+        }
+        
+        function convertUserDateToYYYYMMDD(dateStr) {
+            dateStr = String(dateStr || '').trim();
+            // Matches DD-MM-YYYY or DD/MM/YYYY
+            const parts = dateStr.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+            if (!parts) return null; // Return null for invalid formats
+            
+            const day = ('0' + parts[1]).slice(-2);
+            const month = ('0' + parts[2]).slice(-2);
+            const year = parts[3];
+            
+            return `${year}-${month}-${day}`;
+        }
+
+        function processDetailedData(granularData, selectedWeekdays, selectedMonths) {
+            const students = {};
+            const uniqueDates = new Set();
+            const dateDayCache = {};
+
+            const skipDatesValue = document.getElementById('skipDatesInput').value.trim();
+            const skippedDates = skipDatesValue 
+                ? new Set(skipDatesValue.split(',')
+                    .map(d => convertUserDateToYYYYMMDD(d)) // Convert user format to YYYY-MM-DD
+                    .filter(d => d !== null))             // Filter out any invalid date formats
+                : new Set();
+
+            granularData.records.forEach(record => {
+                if (!record.date) return;
+
+                if (skippedDates.has(record.date)) {
+                    return;
+                }
+
+                const recordMonth = record.date.substring(0, 7);
+                if (!selectedMonths.includes(recordMonth)) {
+                    return; 
+                }
+                
+                let dayOfWeek;
+                if (dateDayCache.hasOwnProperty(record.date)) {
+                    dayOfWeek = dateDayCache[record.date];
+                } else {
+                    const [year, month, day] = record.date.split('-').map(Number);
+                    const dateObj = new Date(Date.UTC(year, month - 1, day));
+                    dayOfWeek = dateObj.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+                    dateDayCache[record.date] = dayOfWeek;
+                }
+
+                if (dayOfWeek !== null && selectedWeekdays.includes(dayOfWeek)) {
+                    uniqueDates.add(record.date);
+                    const { enrollment, name, status } = record;
+                    const upperStatus = (status || '').toUpperCase();
+
+                    if (!students[enrollment]) {
+                        students[enrollment] = { name, attendance: {} };
+                    }
+                    
+                    let finalStatus; 
+                    if (upperStatus === 'PRESENT' || upperStatus === 'P') finalStatus = 'P';
+                    else if (upperStatus === 'ABSENT' || upperStatus === 'A') finalStatus = 'A';
+                    else if (upperStatus === 'LEAVE' || upperStatus === 'L') finalStatus = 'L';
+                    
+                    if(finalStatus !== undefined) {
+                        students[enrollment].attendance[record.date] = finalStatus;
+                    }
+                }
+            });
+
+            const sortedDates = Array.from(uniqueDates).sort();
+
+            Object.keys(students).forEach(enrollment => {
+                let present = 0;
+                let absent = 0;
+                
+                sortedDates.forEach(date => {
+                    const status = students[enrollment].attendance[date];
+                    if (status === 'P') {
+                        present++;
+                    } else if (status === 'A') {
+                        absent++;
+                    }
+                });
+
+                students[enrollment].present = present;
+                students[enrollment].absent = absent;
+                students[enrollment].total = present + absent;
+            });
+
+            return {
+                students,
+                dates: sortedDates,
+                courseName: granularData.courseName
+            };
+        }
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = e => reject(new Error("Error reading file: " + e.target.error.name));
+                reader.readAsText(file);
+            });
+        }
+        
+        async function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(new Error("Error reading file as ArrayBuffer: " + e.target.error.name));
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+
+        document.getElementById('downloadPdfBtn').addEventListener('click', function() {
+             if (!processedReportData) {
+                 console.error("No report data available to download.");
+                 alert("No report data to download. Please process a file first.");
+                 return;
+             }
+             generateDetailedPdfReport(processedReportData);
+         });
+        
+        function parseTabularToGranular(dataRows, colIndex, defaultCourseName = "Unknown Course") {
+            const records = [];
+            let foundCourseName = '';
+
+            dataRows.forEach(row => {
+                if (!Array.isArray(row)) return;
+
+                const enrollment = colIndex["Enrolment Number"] !== undefined && row[colIndex["Enrolment Number"]] !== null ? String(row[colIndex["Enrolment Number"]]).trim() : '';
+                const status = colIndex["Status"] !== undefined && row[colIndex["Status"]] !== null ? String(row[colIndex["Status"]]).trim() : '';
+                const name = colIndex["Student Name"] !== undefined && row[colIndex["Student Name"]] !== null ? String(row[colIndex["Student Name"]]).trim() : '';
+                const courseCell = colIndex["Course"] !== undefined && row[colIndex["Course"]] !== null ? String(row[colIndex["Course"]]).trim() : "";
+
+                if (!enrollment || !name) return; 
+
+                if (foundCourseName === '' && courseCell !== '') {
+                    foundCourseName = courseCell;
+                }
+
+                const dateSlotValue = colIndex["Attendance Date/Slot"] !== undefined ? row[colIndex["Attendance Date/Slot"]] : null;
+                let formattedDate = null;
+
+                if (dateSlotValue !== null && dateSlotValue !== undefined) {
+                    if (dateSlotValue instanceof Date && !isNaN(dateSlotValue.getTime())) {
+                        const y = dateSlotValue.getFullYear();
+                        const m = ('0' + (dateSlotValue.getMonth() + 1)).slice(-2);
+                        const d = ('0' + dateSlotValue.getDate()).slice(-2);
+                        formattedDate = `${y}-${m}-${d}`;
+                    } else if (typeof dateSlotValue === 'string' && dateSlotValue.trim() !== "") {
+                        const dateMatch = dateSlotValue.match(/(\d{4}-\d{2}-\d{2})/); 
+                        if (dateMatch && dateMatch[1]) {
+                            formattedDate = dateMatch[1];
+                        } else {
+                            formattedDate = parseGenericDateString(dateSlotValue);
+                        }
+                    } else if (typeof dateSlotValue === 'number') { 
+                        try {
+                            const jsDate = XLSX.SSF.parse_date_code(dateSlotValue);
+                            if (jsDate && jsDate.y && jsDate.m && jsDate.d) {
+                                formattedDate = `${jsDate.y}-${('0'+jsDate.m).slice(-2)}-${('0'+jsDate.d).slice(-2)}`;
+                            }
+                        } catch (e) { console.warn("Could not parse number as Excel date:", dateSlotValue, e); }
+                    }
+                }
+                
+                if (formattedDate) {
+                    records.push({ enrollment, name, date: formattedDate, status });
+                }
+            });
+            return {
+                records: records,
+                courseName: foundCourseName || defaultCourseName
+            };
+        }
+
+        function parseGenericDateString(dateStr) {
+            let parsed;
+            dateStr = String(dateStr || '').trim();
+            if (!dateStr) return null;
+
+            let parts = dateStr.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+            if (parts) parsed = new Date(Date.UTC(parseInt(parts[1]), parseInt(parts[2]) - 1, parseInt(parts[3])));
+            else {
+                parts = dateStr.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+                if (parts) parsed = new Date(Date.UTC(parseInt(parts[3]), parseInt(parts[2]) - 1, parseInt(parts[1])));
+                else {
+                    parts = dateStr.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2}|\d{4})$/);
+                    if(parts) {
+                        const year = parseInt(parts[3]);
+                        const fullYear = year < 100 ? (year >= 70 ? 1900+year : 2000+year) : year; 
+                        parsed = new Date(Date.UTC(fullYear, parseInt(parts[1]) - 1, parseInt(parts[2])));
+                    }
+                }
+            }
+            if (parsed && !isNaN(parsed.getTime())) {
+                 const y = parsed.getUTCFullYear();
+                 const m = ('0' + (parsed.getUTCMonth() + 1)).slice(-2);
+                 const d = ('0' + parsed.getUTCDate()).slice(-2);
+                 return `${y}-${m}-${d}`;
+            }
+            return null;
+        }
+
+        function internalParseCSV(text) {
+            if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); 
+            const lines = text.split(/\r\n|\r|\n/).filter(line => line.trim() !== '');
+            if (lines.length < 2) throw new Error("CSV must contain at least a header row and one data row.");
+            
+            const cleanField = (field) => {
+                let cleaned = (field === null || field === undefined) ? "" : String(field).trim();
+                if (cleaned.startsWith('"') && cleaned.endsWith('"')) cleaned = cleaned.slice(1, -1);
+                return cleaned.replace(/""/g, '"');
+            };
+
+            const actualHeaders = lines[0].split(',').map(cleanField);
+            const requiredColNames = ["#", "Attendance Date/Slot", "Student Name", "Enrolment Number", "Course", "Remarks", "Status"];
+            const colIndex = {};
+            const foundHeaders = [];
+
+            requiredColNames.forEach(rh => {
+                 const index = actualHeaders.findIndex(h => h.toLowerCase() === rh.toLowerCase());
+                 if (index !== -1) {
+                    colIndex[rh] = index;
+                    foundHeaders.push(rh);
+                 }
+            });
+            
+            const essentialForProcessing = ["Student Name", "Enrolment Number", "Status", "Attendance Date/Slot"];
+            const missingEssential = essentialForProcessing.filter(eh => !foundHeaders.includes(eh));
+            if (missingEssential.length > 0) {
+                throw new Error(`Missing essential CSV headers: ${missingEssential.join(', ')}. Found: ${actualHeaders.join(', ')}`);
+            }
+
+            const dataRows = lines.slice(1).map((line, index) => {
+                const rowValues = line.split(',').map(cleanField);
+                const studentName = colIndex["Student Name"] !== undefined ? rowValues[colIndex["Student Name"]] : null;
+                const enrolmentNumber = colIndex["Enrolment Number"] !== undefined ? rowValues[colIndex["Enrolment Number"]] : null;
+
+                if (!studentName || !enrolmentNumber) {
+                    console.warn(`Skipping CSV row ${index + 2} due to missing Name or Enrolment Number.`);
+                    return null;
+                }
+                return rowValues;
+             }).filter(row => row !== null); 
+            if (dataRows.length === 0) throw new Error("No valid data rows found in CSV after filtering.");
+            return { headers: actualHeaders, data: dataRows, colIndex };
+        }
+        
+        function parseCSVToGranular(fileText, fileName) {
+            const parsedCsv = internalParseCSV(fileText);
+            const defaultCourseName = fileName ? fileName.replace(/\.[^/.]+$/, "") : "CSV_Import";
+            return parseTabularToGranular(parsedCsv.data, parsedCsv.colIndex, defaultCourseName);
+        }
+
+        async function parseAndProcessLegacyXLSToGranular(file) {
+            const fileBuffer = await readFileAsArrayBuffer(file);
+            const workbook = XLSX.read(fileBuffer, { type: 'array', cellDates: true });
+
+            if (!workbook.SheetNames || workbook.SheetNames.length === 0) throw new Error("XLS file contains no sheets.");
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const aoa = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null, raw: false }); 
+
+            if (aoa.length < 2) throw new Error("XLS sheet is too short (needs header and data).");
+
+            const actualHeaders = aoa[0].map(h => String(h || '').trim());
+            let dataRows = aoa.slice(1); 
+            
+            const requiredColNames = ["#", "Attendance Date/Slot", "Student Name", "Enrolment Number", "Course", "Remarks", "Status"];
+            const colIndex = {};
+            requiredColNames.forEach(rh => {
+                const index = actualHeaders.findIndex(h => h.toLowerCase() === rh.toLowerCase());
+                if (index !== -1) colIndex[rh] = index;
+            });
+
+            const essentialForProcessing = ["Student Name", "Enrolment Number", "Status", "Attendance Date/Slot"];
+            const missingEssential = essentialForProcessing.filter(eh => !colIndex.hasOwnProperty(eh));
+            if (missingEssential.length > 0) throw new Error(`Missing essential headers in XLS file: ${missingEssential.join(', ')}. Found: ${actualHeaders.join(', ')}`);
+            
+            dataRows = dataRows.filter((row, rowIndex) => {
+                if (!Array.isArray(row)) return false;
+                const sName = colIndex["Student Name"] !== undefined && row[colIndex["Student Name"]] !== null ? String(row[colIndex["Student Name"]]).trim() : "";
+                const eNum = colIndex["Enrolment Number"] !== undefined && row[colIndex["Enrolment Number"]] !== null ? String(row[colIndex["Enrolment Number"]]).trim() : "";
+                if (!sName || !eNum) {
+                    console.warn(`Skipping XLS row ${rowIndex + 2} due to missing Name or Enrolment Number.`);
+                    return false;
+                }
+                return true;
+            });
+
+            if (dataRows.length === 0) throw new Error("No valid data rows found in XLS after filtering.");
+            
+            return parseTabularToGranular(dataRows, colIndex, firstSheetName);
+        }
+
+        function parseXLSXDateAndCheckWeekday(dateInput) { 
+            let dateObj;
+            if (dateInput instanceof Date && !isNaN(dateInput.getTime())) {
+                dateObj = dateInput;
+            } else if (typeof dateInput === 'number') {
+                try {
+                    const d = XLSX.SSF.parse_date_code(dateInput);
+                    if (d && d.y && d.m && d.d) dateObj = new Date(Date.UTC(d.y, d.m-1, d.d, d.H||0, d.M||0, d.S||0));
+                    else return null;
+                } catch (e) { return null; }
+            } else if (typeof dateInput === 'string' && dateInput.trim() !== "") {
+                const parsed = parseGenericDateString(dateInput); 
+                if (parsed) { 
+                    const parts = parsed.split('-');
+                    dateObj = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
+                } else return null;
+            } else {
+                return null;
+            }
+
+            if (!dateObj || isNaN(dateObj.getTime())) return null;
+
+            const y = dateObj.getUTCFullYear();
+            const m = ('0' + (dateObj.getUTCMonth() + 1)).slice(-2);
+            const d = ('0' + dateObj.getUTCDate()).slice(-2);
+            return { formattedDate: `${y}-${m}-${d}` };
+        }
+        
+        function checkXLSX_isCSVLike(aoa) {
+            if (!aoa || aoa.length < 1) return false;
+            const headers = aoa[0].map(h => String(h || '').trim().toLowerCase());
+            const hasStudentName = headers.includes("student name");
+            const hasEnrollment = headers.includes("enrolment number") || headers.includes("enrollment number");
+            const hasStatus = headers.includes("status");
+            const hasDateSlot = headers.includes("attendance date/slot");
+            return hasStudentName && hasEnrollment && hasStatus && hasDateSlot;
+        }
+
+        function checkXLSX_isGradioLike(aoa) {
+            if (!aoa || aoa.length < 2) return false; 
+            const dateRow = aoa[1]; 
+            const potentialCourseNameCell = (aoa[1] && aoa[1][0] !== null && aoa[1][0] !== undefined && String(aoa[1][0]).trim() !== "");
+            
+            if (!dateRow || !Array.isArray(dateRow) || dateRow.length < 3) return false; 
+
+            let validDateCountInHeader = 0;
+            for (let c = 2; c < dateRow.length; c++) { 
+                if (dateRow[c] !== null && dateRow[c] !== undefined && String(dateRow[c]).trim() !== "") {
+                    if (parseXLSXDateAndCheckWeekday(dateRow[c])) {
+                        validDateCountInHeader++;
+                    }
+                }
+            }
+            return potentialCourseNameCell && validDateCountInHeader > 0; 
+        }
+
+        async function handleXLSXFile(file) {
+            const fileBuffer = await readFileAsArrayBuffer(file);
+            const workbook = XLSX.read(fileBuffer, { type: 'array', cellDates: true });
+
+            if (!workbook.SheetNames || workbook.SheetNames.length === 0) throw new Error("XLSX file contains no sheets.");
+            
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const aoa = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null }); 
+
+            if (checkXLSX_isGradioLike(aoa)) {
+                return parseXLSX_as_GradioLikeToGranular(aoa, firstSheetName);
+            } else if (checkXLSX_isCSVLike(aoa)) {
+                return parseXLSX_as_CSVLikeToGranular(aoa, firstSheetName);
+            } else {
+                throw new Error("Could not determine XLSX file structure...");
+            }
+        }
+
+        function parseXLSX_as_CSVLikeToGranular(aoa, sheetName) {
+            if (aoa.length < 2) throw new Error("XLSX (CSV-like) sheet is too short.");
+
+            const actualHeaders = aoa[0].map(h => String(h || '').trim());
+            let dataRows = aoa.slice(1);
+
+            const colIndex = {};
+            ["#", "Attendance Date/Slot", "Student Name", "Enrolment Number", "Course", "Remarks", "Status"].forEach(rh => {
+                const index = actualHeaders.findIndex(h => h.toLowerCase() === rh.toLowerCase());
+                if (index !== -1) colIndex[rh] = index;
+            });
+            
+            const missingEssential = ["Student Name", "Enrolment Number", "Status", "Attendance Date/Slot"].filter(eh => !colIndex.hasOwnProperty(eh));
+            if (missingEssential.length > 0) throw new Error(`Missing essential headers in XLSX (CSV-like) file: ${missingEssential.join(', ')}`);
+
+            dataRows = dataRows.filter(row => {
+                if (!Array.isArray(row)) return false;
+                const sName = colIndex["Student Name"] !== undefined && row[colIndex["Student Name"]] !== null ? String(row[colIndex["Student Name"]]).trim() : "";
+                const eNum = colIndex["Enrolment Number"] !== undefined && row[colIndex["Enrolment Number"]] !== null ? String(row[colIndex["Enrolment Number"]]).trim() : "";
+                return sName && eNum;
+            });
+
+            if (dataRows.length === 0) throw new Error("No valid data rows found in XLSX (CSV-like) after filtering.");
+            
+            return parseTabularToGranular(dataRows, colIndex, sheetName);
+        }
+        
+        function parseXLSX_as_GradioLikeToGranular(aoa, sheetName) {
+            if (aoa.length < 2) throw new Error("XLSX (Gradio-like) sheet is too short.");
+            
+            const records = [];
+            const courseName = (aoa[1] && aoa[1][0]) ? String(aoa[1][0]).trim() : sheetName;
+            const dateRow = aoa[1];
+            if (!dateRow || !Array.isArray(dateRow)) throw new Error("Date row (Row 2) not found in XLSX.");
+
+            const headerDateMap = {}; 
+            for (let col = 2; col < dateRow.length; col++) { 
+                const dateVal = dateRow[col];
+                if (dateVal === null || dateVal === undefined) continue;
+
+                const dateInfo = parseXLSXDateAndCheckWeekday(dateVal); 
+                if (dateInfo) {
+                    let hasAttendanceData = false;
+                    for (let r = 2; r < aoa.length; r++) {
+                        const row = aoa[r];
+                        if (row && col < row.length && row[col] !== null && row[col] !== undefined) {
+                            const status = String(row[col]).trim().toUpperCase();
+                            if (status === 'P' || status === 'A' || status === 'L') {
+                                hasAttendanceData = true;
+                                break; 
+                            }
+                        }
+                    }
+
+                    if (hasAttendanceData) {
+                        headerDateMap[col] = dateInfo.formattedDate;
+                    }
+                }
+            }
+
+            for (let r = 2; r < aoa.length; r++) { 
+                const row = aoa[r];
+                if (!row || !Array.isArray(row) || row[0] === null || String(row[0]).trim() === "") continue;
+
+                const name = String(row[0]).trim();
+                const enrollment = (row.length > 1 && row[1]) ? String(row[1]).trim() : null;
+                if (!enrollment || name.toLowerCase() === "name") continue;
+
+                Object.keys(headerDateMap).forEach(colIdx => {
+                    const date = headerDateMap[colIdx];
+                    const statusVal = (colIdx < row.length && row[colIdx] !== null) ? String(row[colIdx]).trim() : "";
+                     records.push({ enrollment, name, date, status: statusVal });
+                });
+            }
+            
+            return { records, courseName };
+        }
+
+        function renderDetailedReport(reportData, container, downloadBtn, courseNameDisplayElement) { 
+            const { students, dates, courseName } = reportData;
+            const studentEnrollments = Object.keys(students).sort((a, b) => {
+                const numA = parseInt(a);
+                const numB = parseInt(b);
+                if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                return a.localeCompare(b);
+            });
+
+            const dateToggleContainer = document.getElementById('dateToggleContainer');
+            const togglePdfOptionsBtn = document.getElementById('togglePdfOptionsBtn');
+
+            if (courseName) {
+                courseNameDisplayElement.textContent = `Course: ${courseName}`;
+                courseNameDisplayElement.classList.remove('hidden');
+            }
+
+            let tableHtml = '';
+            if (studentEnrollments.length > 0 && dates.length > 0) {
+                const dateHeaders = dates.map(date => {
+                    const [y, m, d] = date.split('-');
+                    return `<th scope="col" class="date-header date-col px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" title="${date}">${d}/${m}</th>`;
+                }).join('');
+
+                tableHtml = `<table class="report-table min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">Student Name</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Enrolment Number</th>
+                            ${dateHeaders}
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Present</th>
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Absent</th>
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Att. %</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">`;
+
+                studentEnrollments.forEach((enrollment, index) => {
+                    const student = students[enrollment];
+                    const attPerc = student.total > 0 ? ((student.present / student.total) * 100).toFixed(2) : '0.00';
+                    
+                    let nameHighlightClass = 'text-gray-900'; 
+                    if (parseFloat(attPerc) < 75) {
+                        nameHighlightClass = 'text-red-600 font-semibold';
+                    }
+
+                    const dateCells = dates.map(date => {
+                        const status = student.attendance[date] || '';
+                        let colorClass = '';
+                        if (status === 'P') colorClass = 'text-green-600';
+                        else if (status === 'A') colorClass = 'text-red-600';
+                        else if (status === 'L') colorClass = 'text-gray-500';
+                        return `<td class="status-cell date-col px-2 py-2 ${colorClass}">${status}</td>`;
+                    }).join('');
+
+                    tableHtml += `<tr class="${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100">
+                        <td class="px-4 py-2 whitespace-nowrap text-sm font-medium ${nameHighlightClass} sticky left-0 ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} z-10">${student.name}</td>
+                        <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700">${enrollment}</td>
+                        ${dateCells}
+                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-700 text-center">${student.total}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-sm text-green-600 text-center">${student.present}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-sm text-red-600 text-center">${student.absent}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-700 text-center">${attPerc}%</td>
+                    </tr>`;
+                });
+                tableHtml += `</tbody></table>`;
+                downloadBtn.classList.remove('hidden');
+                togglePdfOptionsBtn.classList.remove('hidden');
+                dateToggleContainer.classList.remove('hidden'); 
+            } else {
+                tableHtml = `<p class="text-center text-gray-600">No valid student attendance data found to display for the selected filters.</p>`;
+                downloadBtn.classList.add('hidden');
+                togglePdfOptionsBtn.classList.add('hidden');
+                dateToggleContainer.classList.add('hidden'); 
+                document.getElementById('pdfOptionsContainer').classList.add('hidden');
+            }
+            container.innerHTML = tableHtml;
+        }
+
+        function addPdfHeaderLine(doc, text, yPos, fontSize, yIncrement, isBold = true) {
+            doc.setFontSize(fontSize);
+            doc.setFont(undefined, isBold ? 'bold' : 'normal');
+            doc.setTextColor(0,0,0); 
+            doc.text(text, doc.internal.pageSize.getWidth() / 2, yPos, { align: 'center' });
+            return yPos + yIncrement;
+        }
+
+        function generateDetailedPdfReport(reportData) {
+            const { students, dates, courseName } = reportData;
+            const areDatesHidden = document.getElementById('toggleDatesCheckbox').checked;
+            const isAnalysisIncluded = document.getElementById('toggleAnalysisCheckbox').checked;
+            const useColorsInPdf = document.getElementById('pdfColorToggle').checked;
+
+            const studentEnrollments = Object.keys(students).sort((a,b) => {
+                const numA = parseInt(a);
+                const numB = parseInt(b);
+                if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                return a.localeCompare(b);
+            });
+
+            const orientation = areDatesHidden ? 'p' : 'l';
+            const doc = new window.jspdf.jsPDF(orientation, 'mm', 'a4'); 
+            
+            const margin = 10;
+            let yPos = 15;
+            const pageWidth = doc.internal.pageSize.getWidth();
+
+            const UNIVERSITY_NAME = "DEENBANDHU CHHOTU RAM UNIVERSITY OF SCIENCE & TECHNOLOGY, MURTHAL (SONEPAT)";
+            let userDepartmentName = document.getElementById('departmentNameInput').value.trim();
+            const REPORT_DEPARTMENT_NAME = userDepartmentName || "Department of Physics";
+
+            yPos = addPdfHeaderLine(doc, UNIVERSITY_NAME, yPos, 10, 5);
+            yPos = addPdfHeaderLine(doc, REPORT_DEPARTMENT_NAME, yPos, 11, 6);
+            if (courseName) {
+                yPos = addPdfHeaderLine(doc, `Course: ${courseName}`, yPos, 11, 5, false);
+            }
+            doc.setLineWidth(0.3);
+            doc.line(margin, yPos, pageWidth - margin, yPos);
+            yPos += 8;
+
+            let pdfHeaders = ['Sr.', 'Roll No.', 'Name'];
+            if (!areDatesHidden) {
+                const dateHeaders = dates.map(d => `${d.split('-')[2]}-${d.split('-')[1]}`);
+                pdfHeaders.push(...dateHeaders);
+            }
+            if (isAnalysisIncluded) {
+                pdfHeaders.push('Total', 'Present', 'Absent', 'Att. %');
+            }
+            
+            const pdfBody = studentEnrollments.map((enrollment, index) => {
+                const student = students[enrollment];
+                let rowData = [index + 1, enrollment, student.name];
+
+                if (!areDatesHidden) {
+                    const dateStatuses = dates.map(date => student.attendance[date] || '');
+                    rowData.push(...dateStatuses);
+                }
+                
+                if (isAnalysisIncluded) {
+                    const attPerc = student.total > 0 ? ((student.present / student.total) * 100).toFixed(2) : '0.00';
+                    rowData.push(student.total, student.present, student.absent, `${attPerc}%`);
+                }
+                
+                return rowData;
+            });
+
+            doc.autoTable({
+                startY: yPos,
+                head: [pdfHeaders],
+                body: pdfBody,
+                theme: 'grid',
+                styles: { textColor: [0, 0, 0], fontSize: areDatesHidden ? 9 : 7, cellPadding: 1, overflow: 'linebreak' },
+                headStyles: { halign: 'center', valign: 'middle', fillColor: [230, 230, 230], textColor: 0, fontStyle: 'bold', fontSize: areDatesHidden ? 9 : 7 },
+                columnStyles: {
+                    0: { cellWidth: areDatesHidden ? 10 : 8, halign: 'center' }, 
+                    1: { cellWidth: areDatesHidden ? 40 : 20, halign: 'left' },
+                    2: { cellWidth: areDatesHidden ? 'auto' : 35, halign: 'left' },
+                },
+                margin: { left: margin, right: margin },
+                willDrawCell: function (data) {
+                    if (!areDatesHidden && data.section === 'body') {
+                        const status = data.cell.text[0];
+                        
+                        if (useColorsInPdf) {
+                            if (status === 'P') doc.setTextColor(0, 100, 0);       // Dark Green
+                            else if (status === 'A') doc.setTextColor(139, 0, 0);  // Maroon
+                            else if (status === 'L') doc.setTextColor(150, 150, 150); // Gray
+                        } else {
+                            if (status === 'P' || status === 'A') {
+                                doc.setTextColor(0, 0, 0); // Solid Black
+                            } else if (status === 'L') {
+                                doc.setTextColor(150, 150, 150); // Gray
+                            }
+                        }
+                        
+                        if (data.column.index >= 3 && data.column.index < (3 + dates.length)) {
+                            data.cell.styles.halign = 'center';
+                        }
+                    }
+                },
+                didDrawPage: function(data) {
+                    doc.setFontSize(8);
+                    doc.setTextColor(0, 0, 0);
+                    doc.text("Page " + data.pageNumber, pageWidth / 2, doc.internal.pageSize.getHeight() - 5, { align: 'center' });
+                }
+            });
+            
+            const reportType = areDatesHidden ? 'Summary' : 'Detailed';
+            const sanitizedCourseName = courseName ? courseName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase() : "ATTENDANCE";
+            doc.save(`${sanitizedCourseName}_${reportType}_Attendance_Report.pdf`);
+        }
+    </script>
+    <p>Page Views: <strong id="view-count">...</strong></p>   
+    <script type="module" src="script.js"></script>
+</body>
+</html>
