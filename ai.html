@@ -21,7 +21,7 @@
 <body>
 
     <h1>Merge Audio with Video</h1>
-    <h2>(Using @gradio/client)</h2>
+    <h2>(Using Modern @gradio/client)</h2>
 
     <div class="form-group">
         <label for="apiUrl">Your Hugging Face Space URL:</label>
@@ -48,39 +48,24 @@
         <video id="videoResult" controls></video>
     </div>
 
-    <!-- SCRIPT 1: The "Sentry" Script -->
-    <!-- This script checks if the main module script fails to load. -->
+    <!-- SCRIPT 1: The "Sentry" Script to detect loading failures -->
     <script>
-        // Create a global flag. The module script will set this to true if it loads.
         window.gradioClientLoaded = false;
-
-        // After 2 seconds, check the flag.
         setTimeout(() => {
             if (!window.gradioClientLoaded) {
                 const statusDiv = document.getElementById('status');
-                // If the flag is still false, it means the module was blocked by the browser.
-                statusDiv.innerHTML = `
-                    <strong style="color: red;">Initialization Error: Failed to load Gradio Client library.</strong>
-                    <br><br>
-                    This is expected when you open an HTML file directly.
-                    <br><br>
-                    <strong>To fix this, please run the file using a local web server.</strong>
-                    <br>
-                    (For example, with the "Live Server" extension in VS Code, or by running 'python -m http.server' in this folder).
-                `;
+                statusDiv.innerHTML = `<strong style="color: red;">Initialization Error: Failed to load Gradio Client library.</strong><br><br>This is expected when you open an HTML file directly.<br><br><strong>To fix this, please run the file using a local web server.</strong>`;
                 document.getElementById('mergeButton').disabled = true;
             }
-        }, 2000); // 2-second delay
+        }, 2000);
     </script>
 
-    <!-- SCRIPT 2: The Main Application Logic -->
-    <!-- This is a module, so it will be blocked when run from file:/// -->
+    <!-- SCRIPT 2: The Main Application Logic (UPDATED) -->
     <script type="module">
-        // If this line runs, it means the import was successful.
-        // We update the flag to prevent the sentry script from showing an error.
-        window.gradioClientLoaded = true;
+        window.gradioClientLoaded = true; // Sentry flag
 
-        import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client@0.14.0/dist/index.min.js";
+        // *** FIX: Import the new 'client' function ***
+        import { client } from "https://cdn.jsdelivr.net/npm/@gradio/client@latest/dist/index.min.js";
 
         const videoFileInput = document.getElementById('videoFile');
         const audioFileInput = document.getElementById('audioFile');
@@ -91,40 +76,37 @@
         const videoResult = document.getElementById('videoResult');
 
         mergeButton.addEventListener('click', async () => {
-            console.log("Merge button clicked.");
             statusDiv.textContent = 'Process started...'; 
             
             const videoFile = videoFileInput.files[0];
             const audioFile = audioFileInput.files[0];
             const spaceUrl = spaceUrlInput.value.trim();
 
-            if (!videoFile || !audioFile) {
-                statusDiv.textContent = 'Error: Please select both a video and an audio file.';
-                return;
-            }
-            if (!spaceUrl) {
-                statusDiv.textContent = 'Error: Please provide the Gradio Space URL.';
+            if (!videoFile || !audioFile || !spaceUrl) {
+                statusDiv.textContent = 'Error: Please provide the Space URL, a video, and an audio file.';
                 return;
             }
 
             mergeButton.disabled = true;
             videoContainer.style.display = 'none';
-            statusDiv.textContent = 'Step 1/3: Connecting to Gradio client...';
+            statusDiv.textContent = 'Step 1/3: Connecting to Gradio Space...';
 
             try {
-                console.log(`Connecting to: ${spaceUrl}`);
-                const client = await Client.connect(spaceUrl);
-                console.log("Connection successful.");
+                // *** FIX: Use the new 'client' function which returns an 'app' object ***
+                const app = await client(spaceUrl);
+                console.log("Connection successful. App details:", app);
                 statusDiv.textContent = 'Step 2/3: Uploading files and processing... This can take some time.';
 
-                const result = await client.predict("/add_audio", [
-                    videoFile,
-                    audioFile,
-                ]);
+                // *** FIX: Use app.predict() and pass parameters by API name ***
+                const result = await app.predict("/add_audio", {
+                    video_input: new Blob([videoFile], { type: videoFile.type }),
+                    audio_input: new Blob([audioFile], { type: audioFile.type }),
+                });
 
                 console.log("Received API result:", result);
                 statusDiv.textContent = 'Step 3/3: Handling response...';
 
+                // In the new client, the result is in result.data
                 const outputVideoData = result.data[0];
                 const statusMessage = result.data[1];
 
@@ -133,20 +115,21 @@
                     videoContainer.style.display = 'block';
                     statusDiv.textContent = `Success! ${statusMessage}`;
                 } else {
-                    throw new Error(statusMessage || "The server returned a null result without an error message.");
+                    throw new Error(statusMessage || "The server returned a null result.");
                 }
 
             } catch (error) {
                 console.error('A critical error occurred:', error);
                 
                 let errorMessage = error.message;
-                if (errorMessage.includes("Could not connect")) {
-                    errorMessage = "Could not connect to the Gradio Space. Please check the URL and ensure the Space is running.";
+                if (errorMessage.includes("failed to load")) {
+                    errorMessage = "Failed to load application. This is likely a version mismatch between the client and server Gradio libraries. Please check your requirements.txt file on Hugging Face.";
+                } else if (errorMessage.includes("Could not connect")) {
+                     errorMessage = "Could not connect to the Gradio Space. Please check the URL and ensure the Space is running.";
                 }
                 statusDiv.textContent = `Error: ${errorMessage}`;
             } finally {
                 mergeButton.disabled = false;
-                console.log("Process finished.");
             }
         });
     </script>
