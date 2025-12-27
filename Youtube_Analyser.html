@@ -3,83 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Channel Analytics Super App v11.0 (Full)</title>
+    <title>Channel Analytics Super App v20.0 (Stats Edition)</title>
     
-    <!-- Tailwind CSS for modern styling -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Chart.js for Graphs -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- PapaParse for reading CSV files -->
+    <!-- PapaParse -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #0f172a; 
-            color: #e2e8f0; 
-        }
-        
-        /* Card Styling */
-        .card { 
-            background-color: #1e293b; 
-            border: 1px solid #334155; 
-            border-radius: 0.75rem; 
-            transition: transform 0.2s, border-color 0.2s; 
-        }
-        .card:hover { 
-            border-color: #6366f1; 
-        }
-        
-        /* Gradient Text Effect */
-        .gradient-text { 
-            background: linear-gradient(to right, #818cf8, #c084fc); 
-            -webkit-background-clip: text; 
-            -webkit-text-fill-color: transparent; 
-        }
-        
-        /* Toggle Buttons */
-        .filter-btn { 
-            padding: 0.5rem 1.5rem; 
-            border-radius: 9999px; 
-            font-weight: 600; 
-            transition: all 0.2s; 
-            border: 1px solid transparent; 
-            cursor: pointer;
-        }
-        .filter-btn.active { 
-            background-color: #6366f1; 
-            color: white; 
-            border-color: #6366f1; 
-            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4); 
-        }
-        .filter-btn.inactive { 
-            background-color: #1e293b; 
-            color: #94a3b8; 
-            border-color: #334155; 
-        }
-        .filter-btn.inactive:hover { 
-            background-color: #334155; 
-            color: white; 
-        }
-
-        /* File Input Styling */
-        input[type="file"]::file-selector-button {
-            background-color: #4f46e5; 
-            border: none; 
-            padding: 0.5rem 1rem; 
-            color: white; 
-            border-radius: 0.375rem; 
-            cursor: pointer; 
-            transition: background 0.2s;
-        }
-        input[type="file"]::file-selector-button:hover { 
-            background-color: #4338ca; 
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 0.75rem; transition: transform 0.2s, border-color 0.2s; }
+        .card:hover { border-color: #6366f1; }
+        .gradient-text { background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .filter-btn { padding: 0.5rem 1.5rem; border-radius: 9999px; font-weight: 600; transition: all 0.2s; border: 1px solid transparent; cursor: pointer; }
+        .filter-btn.active { background-color: #6366f1; color: white; border-color: #6366f1; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4); }
+        .filter-btn.inactive { background-color: #1e293b; color: #94a3b8; border-color: #334155; }
+        .filter-btn.inactive:hover { background-color: #334155; color: white; }
+        input[type="file"]::file-selector-button { background-color: #4f46e5; border: none; padding: 0.5rem 1rem; color: white; border-radius: 0.375rem; cursor: pointer; transition: background 0.2s; }
+        input[type="file"]::file-selector-button:hover { background-color: #4338ca; }
     </style>
 </head>
 <body class="p-6">
@@ -87,7 +35,7 @@
     <!-- HEADER -->
     <div class="max-w-7xl mx-auto mb-8 text-center">
         <h1 class="text-4xl font-bold mb-2"><span class="gradient-text">Channel Analytics</span> Super App</h1>
-        <p class="text-slate-400">Upload your exported CSV files to unlock AI-driven insights.</p>
+        <p class="text-slate-400">Upload CSV files to unlock Retention, Subscribers & Statistical Risk.</p>
     </div>
 
     <!-- UPLOAD SECTION -->
@@ -96,12 +44,10 @@
             <div>
                 <label class="block mb-2 font-semibold text-indigo-400">1. Upload "Chart data.csv"</label>
                 <input type="file" id="chartFile" accept=".csv" class="block w-full text-sm text-slate-500"/>
-                <p class="text-xs text-slate-500 mt-1">Contains daily view history</p>
             </div>
             <div>
                 <label class="block mb-2 font-semibold text-purple-400">2. Upload "Table data.csv"</label>
                 <input type="file" id="tableFile" accept=".csv" class="block w-full text-sm text-slate-500"/>
-                <p class="text-xs text-slate-500 mt-1">Contains aggregate stats & click-through rates</p>
             </div>
         </div>
         <button onclick="processFiles()" class="mt-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all">
@@ -110,10 +56,10 @@
         <p id="error-msg" class="text-red-500 mt-4 hidden">Please upload both files correctly.</p>
     </div>
 
-    <!-- DASHBOARD (Hidden initially) -->
+    <!-- DASHBOARD -->
     <div id="dashboard" class="max-w-7xl mx-auto hidden">
         
-        <!-- DATE RANGE DISPLAY -->
+        <!-- DATE RANGE -->
         <div class="text-center mb-6">
             <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800 border border-slate-700 text-sm text-slate-300">
                 <i data-lucide="clock" class="w-4 h-4 text-indigo-400"></i>
@@ -121,14 +67,10 @@
             </span>
         </div>
 
-        <!-- TOGGLE CONTROLS -->
+        <!-- TOGGLES -->
         <div class="flex justify-center gap-4 mb-8">
-            <button onclick="setMode('shorts')" id="btn-shorts" class="filter-btn active">
-                📱 Shorts
-            </button>
-            <button onclick="setMode('long')" id="btn-long" class="filter-btn inactive">
-                📺 Long Videos
-            </button>
+            <button onclick="setMode('shorts')" id="btn-shorts" class="filter-btn active">📱 Shorts</button>
+            <button onclick="setMode('long')" id="btn-long" class="filter-btn inactive">📺 Long Videos</button>
         </div>
 
         <!-- KPI CARDS -->
@@ -138,69 +80,97 @@
                 <h2 id="kpi-views" class="text-3xl font-bold text-white mt-1">-</h2>
             </div>
             <div class="card p-4">
-                <p class="text-slate-400 text-sm uppercase font-bold tracking-wider">Avg CTR</p>
-                <h2 id="kpi-ctr" class="text-3xl font-bold text-emerald-400 mt-1">-</h2>
+                <p class="text-slate-400 text-sm uppercase font-bold tracking-wider">Avg Retention</p>
+                <h2 id="kpi-retention" class="text-3xl font-bold text-pink-400 mt-1">-</h2>
             </div>
             <div class="card p-4">
                 <p class="text-slate-400 text-sm uppercase font-bold tracking-wider">Best Day</p>
                 <h2 id="kpi-day" class="text-3xl font-bold text-indigo-400 mt-1">-</h2>
             </div>
             <div class="card p-4">
-                <p class="text-slate-400 text-sm uppercase font-bold tracking-wider">Best Tag Combo</p>
+                <p class="text-slate-400 text-sm uppercase font-bold tracking-wider">Best Consistent Tag</p>
                 <div id="kpi-tag" class="text-xl font-bold text-purple-400 mt-1">-</div>
             </div>
         </div>
 
-        <!-- MAIN GRID LAYOUT -->
+        <!-- MAIN LAYOUT -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             <!-- LEFT COLUMN (2/3 Width) -->
             <div class="lg:col-span-2 space-y-6">
                 
-                <!-- CHART: Performance by Day -->
+                <!-- 1. DAY CHART -->
                 <div class="card p-6">
                     <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
                         <i data-lucide="calendar"></i> Performance by Day
                     </h3>
-                    <div class="h-64">
-                        <canvas id="daysChart"></canvas>
-                    </div>
-                    <p class="text-xs text-slate-400 mt-4 text-center">
-                        <span class="inline-block w-3 h-3 bg-[#6366f1] rounded-sm mr-1"></span> Typical Views (Median)
-                        <span class="inline-block w-3 h-3 bg-[#34d399] rounded-full ml-4 mr-1"></span> Consistency % (Win Rate)
-                    </p>
+                    <div class="h-64"><canvas id="daysChart"></canvas></div>
                 </div>
 
-                <!-- TABLE: Winning Hashtags -->
-                <div class="card p-6">
-                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-                        <i data-lucide="hash"></i> Winning Hashtags & Combos
+                <!-- 2. RETENTION CHART -->
+                 <div class="card p-6 border-pink-900/50">
+                    <h3 class="text-xl font-bold mb-2 flex items-center gap-2 text-pink-400">
+                        <i data-lucide="magnet"></i> Audience Stickiness
                     </h3>
+                    <p class="text-sm text-slate-400 mb-4">Did they stay? (Average % Viewed vs. Duration)</p>
+                    <div class="h-64"><canvas id="retentionChart"></canvas></div>
+                </div>
+
+                <!-- 3. TITLE KEYWORDS (WITH SD) -->
+                <div class="card p-6 border-blue-900/50 bg-slate-900/30">
+                    <h3 class="text-xl font-bold mb-2 flex items-center gap-2 text-blue-400">
+                        <i data-lucide="type"></i> Winning Title Keywords
+                    </h3>
+                    <p class="text-xs text-slate-400 mb-4"><strong>± SD:</strong> Shows stability. Lower SD = More reliable.</p>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-slate-800 text-slate-200">
                                 <tr>
-                                    <th class="p-3 rounded-tl-lg">Tag / Combo</th>
-                                    <th class="p-3">Avg Views</th>
-                                    <th class="p-3 rounded-tr-lg">Frequency</th>
+                                    <th class="p-3">Word</th>
+                                    <th class="p-3">Avg ± SD</th>
+                                    <th class="p-3">Frequency</th>
                                 </tr>
                             </thead>
-                            <tbody id="hashtag-table-body" class="divide-y divide-slate-700">
-                                <!-- JS Injects Rows Here -->
-                            </tbody>
+                            <tbody id="title-words-body" class="divide-y divide-slate-700"></tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- LIST: Evergreen Content -->
-                <div class="card p-6 border-emerald-900 bg-slate-900/50">
-                    <h3 class="text-xl font-bold mb-2 flex items-center gap-2 text-emerald-400">
-                        <i data-lucide="sprout"></i> "Evergreen" Candidates
+                <!-- 4. SINGLE TAGS TABLE (RESTORED COUNT + SD) -->
+                <div class="card p-6">
+                    <h3 class="text-xl font-bold mb-2 flex items-center gap-2">
+                        <i data-lucide="hash"></i> Best Single Tags
                     </h3>
-                    <p class="text-sm text-slate-400 mb-4">Videos older than 7 days that are still generating views.</p>
-                    <ul id="evergreen-list" class="space-y-3">
-                        <!-- JS Injects List Here -->
-                    </ul>
+                    <p class="text-xs text-slate-400 mb-4">
+                        Consistent performers (>2 videos).
+                    </p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-800 text-slate-200">
+                                <tr>
+                                    <th class="p-3">Tag (Count)</th>
+                                    <th class="p-3">Avg ± SD</th>
+                                    <th class="p-3">Risk Level</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hashtag-table-body" class="divide-y divide-slate-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 5. COMBO TAGS TABLE (WITH SD) -->
+                <div class="card p-6 border-purple-900/50 bg-slate-900/30">
+                    <h3 class="text-xl font-bold mb-2 flex items-center gap-2 text-purple-400">
+                        <i data-lucide="link"></i> Best Tag Combos
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-800 text-slate-200">
+                                <tr><th class="p-3">Combo</th><th class="p-3">Avg ± SD</th><th class="p-3">Consistency</th></tr>
+                            </thead>
+                            <tbody id="combo-table-body" class="divide-y divide-slate-700"></tbody>
+                        </table>
+                    </div>
                 </div>
 
             </div>
@@ -208,398 +178,337 @@
             <!-- RIGHT COLUMN (1/3 Width) -->
             <div class="lg:col-span-1 space-y-6">
                 
-                <!-- LIST: Top Videos -->
+                <!-- TOP VIDEOS -->
                 <div class="card p-6">
-                    <h3 class="text-lg font-bold mb-4 text-indigo-300">🏆 Top 5 Videos</h3>
-                    <ul id="top-videos-list" class="space-y-4">
-                        <!-- JS Injects List Here -->
-                    </ul>
-                </div>
-                
-                 <!-- LIST: Worst Tags -->
-                 <div class="card p-6 border-red-900/30 bg-slate-900/50">
-                    <h3 class="text-lg font-bold mb-2 text-red-400 flex items-center gap-2">
-                        <i data-lucide="alert-triangle" class="w-5 h-5"></i> Low Performing Tags
-                    </h3>
-                    <p class="text-xs text-slate-400 mb-3">Tags used frequently (>1 time) with poor results.</p>
-                    <ul id="worst-tags-list" class="space-y-2 text-sm">
-                        <!-- JS Injects List Here -->
-                    </ul>
+                    <h3 class="text-lg font-bold mb-4 text-indigo-300">🏆 Top 5 Videos (Views)</h3>
+                    <ul id="top-videos-list" class="space-y-4"></ul>
                 </div>
 
-                <!-- BOX: AI Strategy -->
+                <!-- TOP CONVERTERS -->
+                <div class="card p-6 border border-emerald-500/30 bg-emerald-900/10">
+                    <h3 class="text-lg font-bold mb-4 text-emerald-400 flex items-center gap-2">
+                        <i data-lucide="user-plus"></i> Subscriber Magnets
+                    </h3>
+                    <ul id="top-subs-list" class="space-y-4"></ul>
+                </div>
+
+                <!-- AI STRATEGY -->
                 <div class="card p-6 bg-gradient-to-br from-indigo-900 to-slate-900 border-indigo-700">
                     <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-white">
                         <i data-lucide="brain-circuit"></i> AI Strategy
                     </h3>
-                    <div id="strategy-content" class="text-sm space-y-4 text-indigo-100">
-                        <!-- JS Injects Advice Here -->
-                    </div>
+                    <div id="strategy-content" class="text-sm space-y-4 text-indigo-100"></div>
+                </div>
+                
+                 <!-- WORST TAGS -->
+                 <div class="card p-6 border-red-900/30 bg-slate-900/50">
+                    <h3 class="text-lg font-bold mb-2 text-red-400 flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-5 h-5"></i> Low Performing Tags
+                    </h3>
+                    <ul id="worst-tags-list" class="space-y-2 text-sm"></ul>
                 </div>
 
-                <!-- LIST: High CTR -->
+                <!-- EVERGREEN -->
+                <div class="card p-6 border-emerald-900 bg-slate-900/50">
+                    <h3 class="text-lg font-bold mb-2 text-emerald-400 flex items-center gap-2">
+                        <i data-lucide="sprout"></i> Evergreen Content
+                    </h3>
+                    <ul id="evergreen-list" class="space-y-3"></ul>
+                </div>
+
+                <!-- CTR GEMS -->
                 <div class="card p-6">
                     <h3 class="text-lg font-bold mb-2 text-amber-400">💎 Search Gems (High CTR)</h3>
-                    <p class="text-xs text-slate-400 mb-3">Videos with low views but High Click-Through Rate.</p>
-                    <ul id="ctr-list" class="space-y-2 text-sm">
-                        <!-- JS Injects List Here -->
-                    </ul>
+                    <ul id="ctr-list" class="space-y-2 text-sm"></ul>
                 </div>
             </div>
-
         </div>
     </div>
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
-        // Initialize Icons
         lucide.createIcons();
+        let chartDataRaw = null; let tableDataRaw = null; let activeMode = 'shorts';
+        let chartInstance = null; let retentionChartInstance = null;
 
-        // Global Variables to hold data
-        let chartDataRaw = null;
-        let tableDataRaw = null;
-        let activeMode = 'shorts'; // Default mode
-        let chartInstance = null;
-
-        // --- 1. MODE SWITCHER ---
         function setMode(mode) {
             activeMode = mode;
-            const btnShorts = document.getElementById('btn-shorts');
-            const btnLong = document.getElementById('btn-long');
-            
-            if(mode === 'shorts') {
-                btnShorts.classList.add('active'); 
-                btnShorts.classList.remove('inactive');
-                btnLong.classList.add('inactive'); 
-                btnLong.classList.remove('active');
-            } else {
-                btnLong.classList.add('active'); 
-                btnLong.classList.remove('inactive');
-                btnShorts.classList.add('inactive'); 
-                btnShorts.classList.remove('active');
-            }
-
-            // If data is already loaded, re-run analysis
-            if(chartDataRaw && tableDataRaw) {
-                runAnalysis();
-            }
+            document.getElementById('btn-shorts').className = mode === 'shorts' ? 'filter-btn active' : 'filter-btn inactive';
+            document.getElementById('btn-long').className = mode === 'long' ? 'filter-btn active' : 'filter-btn inactive';
+            if(chartDataRaw && tableDataRaw) runAnalysis();
         }
 
-        // --- 2. FILE PROCESSING ---
         function processFiles() {
             const chartFile = document.getElementById('chartFile').files[0];
             const tableFile = document.getElementById('tableFile').files[0];
-
-            if (!chartFile || !tableFile) {
-                document.getElementById('error-msg').classList.remove('hidden');
-                return;
-            }
-            document.getElementById('error-msg').classList.add('hidden');
-
-            // Parse Chart Data
-            Papa.parse(chartFile, {
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    chartDataRaw = results.data;
-                    checkBothFiles();
-                }
-            });
-
-            // Parse Table Data
-            Papa.parse(tableFile, {
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    tableDataRaw = results.data;
-                    checkBothFiles();
-                }
-            });
+            if (!chartFile || !tableFile) return document.getElementById('error-msg').classList.remove('hidden');
+            
+            Papa.parse(chartFile, { header: true, skipEmptyLines: true, complete: r => { chartDataRaw = r.data; checkBothFiles(); }});
+            Papa.parse(tableFile, { header: true, skipEmptyLines: true, complete: r => { tableDataRaw = r.data; checkBothFiles(); }});
         }
 
         function checkBothFiles() {
             if (chartDataRaw && tableDataRaw) {
-                runAnalysis();
                 document.getElementById('upload-section').classList.add('hidden');
                 document.getElementById('dashboard').classList.remove('hidden');
+                runAnalysis();
             }
         }
 
-        // --- 3. MAIN ANALYSIS ENGINE ---
+        // Helper for Standard Deviation
+        function getStandardDeviation(array) {
+            if(!array || array.length === 0) return 0;
+            const n = array.length;
+            const mean = array.reduce((a, b) => a + b) / n;
+            return Math.sqrt(array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
+        }
+
         function runAnalysis() {
-            
-            // --- A. DETERMINE DATE RANGE ---
-            let minDate = new Date(8640000000000000); 
-            let maxDate = new Date(-8640000000000000);
+            // A. DATA PREP
+            let minDate = new Date(8640000000000000), maxDate = new Date(-8640000000000000);
+            chartDataRaw.forEach(r => { if(r.Date) { const d = new Date(r.Date); if(d<minDate) minDate=d; if(d>maxDate) maxDate=d; }});
+            document.getElementById('date-range-display').innerText = `${minDate.toLocaleDateString()} — ${maxDate.toLocaleDateString()}`;
 
-            chartDataRaw.forEach(row => {
-                if(!row.Date) return;
-                const parts = row.Date.split("-");
-                if(parts.length < 3) return;
-                const d = new Date(parts[0], parts[1]-1, parts[2]);
-                
-                if(d < minDate) minDate = d;
-                if(d > maxDate) maxDate = d;
-            });
-            
-            const dateOpts = { year: 'numeric', month: 'short', day: 'numeric' };
-            const dateStr = (minDate.getFullYear() < 3000) 
-                ? `${minDate.toLocaleDateString('en-US', dateOpts)} — ${maxDate.toLocaleDateString('en-US', dateOpts)}`
-                : "Date range unavailable";
-            
-            document.getElementById('date-range-display').innerText = dateStr;
-
-            // --- B. PREPARE VIDEO DATA ---
             const allVideos = tableDataRaw.filter(r => r["Video title"] && r["Content"] !== "Total").map(v => {
                 const duration = parseInt(v.Duration) || 0;
+                const views = parseInt(v.Views?.replace(/,/g, '')) || 0;
+                const watchTimeHours = parseFloat(v["Watch time (hours)"]) || 0;
+                const avgViewDuration = views > 0 ? (watchTimeHours * 3600) / views : 0;
+                
                 return {
                     id: v.Content,
                     title: v["Video title"],
-                    views: parseInt(v.Views?.replace(/,/g, '')) || 0,
+                    views: views,
                     ctr: parseFloat(v["Impressions click-through rate (%)"]) || 0,
                     subs: parseInt(v.Subscribers?.replace(/,/g, '')) || 0,
                     duration: duration,
+                    retention: duration > 0 ? (avgViewDuration / duration) * 100 : 0,
                     isShort: duration <= 61,
                     publishDate: new Date(v["Video publish time"]),
                     dayOfWeek: new Date(v["Video publish time"]).toLocaleDateString('en-US', { weekday: 'long' })
                 };
             });
 
-            // Filter by Mode
-            const filteredVideos = allVideos.filter(v => activeMode === 'shorts' ? v.isShort : !v.isShort);
+            const filtered = allVideos.filter(v => activeMode === 'shorts' ? v.isShort : !v.isShort);
 
-            // --- C. CALCULATE KPIS ---
-            const totalViews = filteredVideos.reduce((sum, v) => sum + v.views, 0);
-            const avgCtr = filteredVideos.length ? (filteredVideos.reduce((sum, v) => sum + v.ctr, 0) / filteredVideos.length).toFixed(2) : 0;
-            
+            // B. KPIS
+            const totalViews = filtered.reduce((s, v) => s + v.views, 0);
+            const avgRetention = filtered.length ? (filtered.reduce((s, v) => s + v.retention, 0) / filtered.length).toFixed(1) : 0;
             document.getElementById('kpi-views').innerText = totalViews.toLocaleString();
-            document.getElementById('kpi-ctr').innerText = avgCtr + "%";
+            document.getElementById('kpi-retention').innerHTML = `${avgRetention}%`;
 
-            // --- D. DAY ANALYSIS (MEDIAN + CONSISTENCY) ---
-            const dayStats = { 
-                "Monday": {views:[],wins:0}, "Tuesday": {views:[],wins:0}, 
-                "Wednesday": {views:[],wins:0}, "Thursday": {views:[],wins:0}, 
-                "Friday": {views:[],wins:0}, "Saturday": {views:[],wins:0}, 
-                "Sunday": {views:[],wins:0} 
-            };
-
-            // Calculate Channel Median
-            const allViews = filteredVideos.map(v => v.views).sort((a,b) => a - b);
-            const mid = Math.floor(allViews.length / 2);
-            const channelMedian = allViews.length === 0 ? 0 : (allViews.length % 2 !== 0 ? allViews[mid] : (allViews[mid - 1] + allViews[mid]) / 2);
-
-            filteredVideos.forEach(v => {
-                if(dayStats[v.dayOfWeek]) {
-                    dayStats[v.dayOfWeek].views.push(v.views);
-                    if(v.views >= channelMedian) dayStats[v.dayOfWeek].wins++; 
-                }
+            // C. CHARTS
+            const dayStats = {}; const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+            days.forEach(d => dayStats[d] = []);
+            filtered.forEach(v => dayStats[v.dayOfWeek]?.push(v.views));
+            const medians = days.map(d => {
+                const arr = dayStats[d].sort((a,b)=>a-b);
+                if(!arr.length) return 0;
+                const mid = Math.floor(arr.length/2);
+                return arr.length%2!==0 ? arr[mid] : (arr[mid-1]+arr[mid])/2;
             });
+            let bestDay = "-", maxM = 0;
+            medians.forEach((m, i) => { if(m > maxM) { maxM = m; bestDay = days[i]; } });
+            document.getElementById('kpi-day').innerText = bestDay;
 
-            const dayLabels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-            
-            const dayMedians = dayLabels.map(day => {
-                const viewsArr = dayStats[day].views.sort((a,b) => a - b);
-                if (viewsArr.length === 0) return 0;
-                const mid = Math.floor(viewsArr.length / 2);
-                return viewsArr.length % 2 !== 0 ? viewsArr[mid] : (viewsArr[mid - 1] + viewsArr[mid]) / 2;
-            });
-
-            const dayReliability = dayLabels.map(day => {
-                const total = dayStats[day].views.length;
-                return total === 0 ? 0 : Math.round((dayStats[day].wins / total) * 100);
-            });
-
-            // Find Best Day
-            let maxMedian = 0, bestDay = "-", bestReliability = 0;
-            dayLabels.forEach((day, index) => {
-                if(dayMedians[index] > maxMedian) { 
-                    maxMedian = dayMedians[index]; 
-                    bestDay = day; 
-                    bestReliability = dayReliability[index]; 
-                }
-            });
-            document.getElementById('kpi-day').innerHTML = `${bestDay} <span class="block text-xs text-slate-400 font-normal mt-1">${bestReliability}% Consistency</span>`;
-
-            // Draw Chart
-            const ctx = document.getElementById('daysChart').getContext('2d');
+            const ctxD = document.getElementById('daysChart').getContext('2d');
             if(chartInstance) chartInstance.destroy();
-            chartInstance = new Chart(ctx, {
+            chartInstance = new Chart(ctxD, {
                 type: 'bar',
-                data: {
-                    labels: dayLabels,
-                    datasets: [
-                        { label: 'Median Views', data: dayMedians, backgroundColor: dayLabels.map(d => d === bestDay ? '#6366f1' : '#334155'), borderRadius: 4, order: 2 },
-                        { label: 'Consistency %', data: dayReliability, type: 'line', borderColor: '#34d399', borderWidth: 2, pointBackgroundColor: '#34d399', yAxisID: 'y1', order: 1 }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { display: false } },
-                    scales: { 
-                        y: { grid: { color: '#334155' }, title: { display: true, text: 'Median Views', color: '#64748b' } },
-                        y1: { type: 'linear', display: true, position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false }, ticks: { callback: v => v + "%", color: '#34d399' } },
-                        x: { grid: { display: false } } 
-                    }
+                data: { labels: days, datasets: [{ label: 'Median Views', data: medians, backgroundColor: days.map(d => d === bestDay ? '#6366f1' : '#334155'), borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#334155' } }, x: { grid: { display: false } } } }
+            });
+
+            const scatterData = filtered.map(v => ({
+                x: v.duration, y: v.retention, r: Math.max(5, Math.min(15, v.views / (totalViews/filtered.length || 1) * 5)), title: v.title
+            }));
+            const ctxR = document.getElementById('retentionChart').getContext('2d');
+            if(retentionChartInstance) retentionChartInstance.destroy();
+            retentionChartInstance = new Chart(ctxR, {
+                type: 'bubble',
+                data: { datasets: [{ data: scatterData, backgroundColor: c => c.raw?.y >= 80 ? 'rgba(236, 72, 153, 0.8)' : 'rgba(99, 102, 241, 0.6)' }] },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, 
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.raw.title.substring(0,20)}... | ${Math.round(c.raw.y)}%` } } },
+                    scales: { x: { title: { display: true, text: 'Seconds', color: '#64748b' }, grid: { color: '#334155' } }, y: { title: { display: true, text: '% Viewed', color: '#64748b' }, min: 0, max: 110, grid: { color: '#334155' } } }
                 }
             });
 
-            // --- E. HASHTAG ANALYSIS ---
-            const tagStats = {};
-            filteredVideos.forEach(v => {
-                const rawTags = v.title.match(/#[a-z0-9_]+/gi) || [];
-                const uniqueTags = [...new Set(rawTags.map(t => t.toLowerCase()))].sort();
+            // D. KEYWORD ANALYSIS (WITH SD)
+            const wordStats = {};
+            filtered.forEach(v => {
+                const cleanTitle = v.title.replace(/#[a-z0-9_]+/gi, '');
+                const words = cleanTitle.match(/\b\w+\b/g) || [];
+                const uniqueWords = [...new Set(words.map(w => w.toLowerCase()))];
                 
-                // Singles
-                uniqueTags.forEach(tag => {
-                    if(!tagStats[tag]) tagStats[tag] = { views: 0, count: 0, isPair: false };
-                    tagStats[tag].views += v.views; tagStats[tag].count++;
+                uniqueWords.forEach(w => {
+                    if(w.length < 2) return; 
+                    if(!wordStats[w]) wordStats[w] = { viewsArr: [], count: 0 };
+                    wordStats[w].viewsArr.push(v.views);
+                    wordStats[w].count++;
                 });
-                
-                // Pairs
-                for (let i = 0; i < uniqueTags.length; i++) {
-                    for (let j = i + 1; j < uniqueTags.length; j++) {
-                        const pair = `${uniqueTags[i]} + ${uniqueTags[j]}`;
-                        if(!tagStats[pair]) tagStats[pair] = { views: 0, count: 0, isPair: true };
-                        tagStats[pair].views += v.views; tagStats[pair].count++;
+            });
+            const wordsArr = Object.keys(wordStats).map(k => {
+                 const arr = wordStats[k].viewsArr;
+                 const avg = Math.round(arr.reduce((a,b)=>a+b,0)/arr.length);
+                 const sd = Math.round(getStandardDeviation(arr));
+                 return { word: k, avg: avg, sd: sd, count: wordStats[k].count };
+            }).sort((a,b) => b.avg - a.avg);
+
+            const validWords = wordsArr.filter(w => w.count >= 2);
+            
+            const kwTable = document.getElementById('title-words-body'); kwTable.innerHTML = "";
+            if(validWords.length === 0) kwTable.innerHTML = `<tr><td colspan="3" class="p-3 text-slate-500 italic">No recurring keywords found.</td></tr>`;
+            else validWords.slice(0,6).forEach(w => {
+                kwTable.innerHTML += `
+                <tr class="border-b border-slate-700/50">
+                    <td class="p-3 text-blue-300 font-bold">${w.word}</td>
+                    <td class="p-3 text-white">${w.avg.toLocaleString()} <span class="text-xs text-slate-500">±${w.sd}</span></td>
+                    <td class="p-3 text-slate-400 text-xs">${w.count} titles</td>
+                </tr>`;
+            });
+
+            // E. TAGS & COMBOS (WITH SD & COUNTS)
+            const singleStats = {}; const comboStats = {};
+            filtered.forEach(v => {
+                const tags = [...new Set((v.title.match(/#[a-z0-9_]+/gi) || []).map(t => t.toLowerCase()))].sort();
+                tags.forEach(t => { 
+                    if(!singleStats[t]) singleStats[t]={viewsArr:[], count:0}; 
+                    singleStats[t].viewsArr.push(v.views);
+                    singleStats[t].count++; 
+                });
+                for(let i=0; i<tags.length; i++){
+                    for(let j=i+1; j<tags.length; j++){
+                        const combo = `${tags[i]} + ${tags[j]}`;
+                        if(!comboStats[combo]) comboStats[combo]={viewsArr:[],count:0}; 
+                        comboStats[combo].viewsArr.push(v.views);
+                        comboStats[combo].count++;
                     }
                 }
             });
 
-            const tagArray = Object.keys(tagStats).map(key => ({
-                tag: key, avg: Math.round(tagStats[key].views / tagStats[key].count), count: tagStats[key].count, isPair: tagStats[key].isPair
-            })).filter(item => (item.isPair ? item.count >= 2 : true)).sort((a, b) => b.avg - a.avg);
+            const singlesArr = Object.keys(singleStats).map(k=>{
+                const arr = singleStats[k].viewsArr;
+                const avg = Math.round(arr.reduce((a,b)=>a+b,0)/arr.length);
+                const sd = Math.round(getStandardDeviation(arr));
+                return {tag:k, avg:avg, sd:sd, count:singleStats[k].count};
+            }).sort((a,b)=>b.avg-a.avg);
 
-            // 1. Best Tag KPI
-            const winningTags = [...tagArray];
-            const bestItem = winningTags[0];
-            const bestTagText = bestItem ? bestItem.tag : "-";
-            if (bestItem && bestItem.isPair) document.getElementById('kpi-tag').innerHTML = `<div class="text-sm leading-tight text-white">${bestTagText.split(' + ')[0]}</div><div class="text-sm leading-tight text-purple-300">+ ${bestTagText.split(' + ')[1]}</div>`;
-            else document.getElementById('kpi-tag').innerText = bestTagText;
+            const validSingles = singlesArr.filter(t => t.count >= 2);
+            document.getElementById('kpi-tag').innerText = validSingles.length ? validSingles[0].tag : "-";
 
-            // 2. Hashtag Table
-            const tagTable = document.getElementById('hashtag-table-body');
-            tagTable.innerHTML = ""; 
-            winningTags.slice(0, 6).forEach(t => {
-                const rowClass = t.isPair ? "bg-indigo-900/20" : "";
-                const tagDisplay = t.isPair ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-500 text-white mr-2">COMBO</span> <span class="text-indigo-200 text-xs">${t.tag}</span>` : `<span class="text-indigo-300 font-mono">${t.tag}</span>`;
-                tagTable.innerHTML += `<tr class="${rowClass} border-b border-slate-700/50 last:border-0"><td class="p-3">${tagDisplay}</td><td class="p-3 font-bold text-slate-200">${t.avg.toLocaleString()}</td><td class="p-3 text-slate-400 text-xs">${t.count} vids</td></tr>`;
-            });
-
-            // 3. Worst Tags List
-            const worstList = document.getElementById('worst-tags-list');
-            worstList.innerHTML = "";
-            const worstTags = tagArray.filter(t => t.count >= 2).sort((a, b) => a.avg - b.avg).slice(0, 5);
-            if(worstTags.length === 0) worstList.innerHTML = "<div class='text-slate-500 text-xs'>Not enough data to determine worst tags yet.</div>";
-            else worstTags.forEach(t => {
-                const tagDisplay = t.isPair ? `<span class="text-[10px] bg-slate-700 px-1 rounded mr-1">Combo</span> ${t.tag}` : t.tag;
-                worstList.innerHTML += `<div class="flex justify-between items-center bg-slate-800 p-2 rounded border-l-2 border-red-500"><div class="truncate w-3/4 pr-2 text-slate-300 text-xs">${tagDisplay}</div><div class="text-red-400 font-bold text-sm">${t.avg}</div></div>`;
-            });
-
-            // --- F. TOP VIDEOS ---
-            const sortedByViews = [...filteredVideos].sort((a, b) => b.views - a.views);
-            const topList = document.getElementById('top-videos-list');
-            topList.innerHTML = "";
-            sortedByViews.slice(0, 5).forEach((v, i) => {
-                topList.innerHTML += `<div class="flex items-start gap-3 p-3 bg-slate-800 rounded hover:bg-slate-700 transition"><div class="text-xl font-bold text-slate-500">#${i+1}</div><div><p class="font-semibold text-sm line-clamp-2 text-slate-200">${v.title}</p><div class="flex gap-3 mt-1 text-xs text-slate-400"><span>👁️ ${v.views}</span><span>📅 ${v.dayOfWeek}</span><span class="${v.subs > 0 ? 'text-green-400 font-bold' : ''}">${v.subs > 0 ? '➕' + v.subs : '0'} Subs</span></div></div></div>`;
-            });
-
-            // --- G. EVERGREEN ANALYSIS ---
-            const dailyViewsMap = {}; 
-            let globalLastDate = maxDate; 
-            
-            chartDataRaw.forEach(row => {
-                const vidId = row.Content; if (!vidId) return;
-                const dateParts = row.Date.split("-"); if(dateParts.length < 3) return;
-                const rowDate = new Date(dateParts[0], dateParts[1]-1, dateParts[2]);
-                if (!dailyViewsMap[vidId]) dailyViewsMap[vidId] = [];
-                dailyViewsMap[vidId].push({ date: rowDate, views: parseInt(row.Views) });
-            });
-            Object.keys(dailyViewsMap).forEach(k => dailyViewsMap[k].sort((a,b) => a.date - b.date));
-            
-            const evergreenList = document.getElementById('evergreen-list'); 
-            evergreenList.innerHTML = "";
-            const candidates = [];
-
-            Object.keys(dailyViewsMap).forEach(vidId => {
-                const dataPoints = dailyViewsMap[vidId]; const vidMeta = filteredVideos.find(v => v.id === vidId); if (!vidMeta) return; 
+            const sTable = document.getElementById('hashtag-table-body'); sTable.innerHTML = "";
+            if(!validSingles.length) sTable.innerHTML = `<tr><td colspan="3" class="p-3 text-slate-500 italic">No tags appear in 2+ videos.</td></tr>`;
+            else validSingles.slice(0,6).forEach(t => {
+                const cv = t.sd / t.avg;
+                let risk = "<span class='text-emerald-400 text-xs'>Stable 🟢</span>";
+                if(cv > 1.0) risk = "<span class='text-red-400 text-xs'>Volatile 🔴</span>";
+                else if(cv > 0.5) risk = "<span class='text-yellow-400 text-xs'>Variable 🟡</span>";
                 
-                // Age Check (must be > 7 days old)
-                const msPerDay = 1000 * 60 * 60 * 24; 
-                const ageInDays = Math.floor((globalLastDate - vidMeta.publishDate) / msPerDay);
-                if (ageInDays < 7) return;
-
-                // Recent Activity Check (Last 5 days)
-                const recentData = dataPoints.filter(dp => Math.floor((globalLastDate - dp.date) / msPerDay) <= 5);
-                if (recentData.length === 0) return;
-
-                const recentTotalViews = recentData.reduce((sum, d) => sum + d.views, 0); 
-                const avgDailyViews = recentTotalViews / recentData.length;
-
-                // Min threshold for relevance
-                if (avgDailyViews >= 0.5) {
-                    const last2 = recentData.slice(-2).reduce((s, d) => s + d.views, 0); 
-                    const prev2 = recentData.slice(0, -2).reduce((s, d) => s + d.views, 0);
-                    let icon = "→", color = "text-slate-400"; 
-                    if (last2 > prev2) { icon = "↗"; color = "text-green-400"; } 
-                    if (last2 < prev2) { icon = "↘"; color = "text-red-400"; }
-                    candidates.push({ title: vidMeta.title, avg: avgDailyViews.toFixed(1), age: ageInDays, icon: icon, iconColor: color, views: recentTotalViews });
-                }
-            });
-            candidates.sort((a, b) => b.views - a.views);
-
-            if(candidates.length === 0) evergreenList.innerHTML = `<li class="p-3 text-center text-sm text-slate-500 bg-slate-800/50 rounded border border-dashed border-slate-700">No videos older than 7 days are active.</li>`;
-            else candidates.slice(0, 5).forEach(c => {
-                evergreenList.innerHTML += `<li class="flex justify-between items-center text-sm bg-slate-800/50 p-2 rounded mb-2 border border-slate-700"><div class="truncate w-2/3"><div class="text-slate-200 font-medium truncate" title="${c.title}">${c.title}</div><div class="text-[10px] text-slate-500">Age: ${c.age} days</div></div><div class="text-right"><div class="font-bold text-white flex items-center justify-end gap-1">${c.avg}/d <span class="${c.iconColor} font-bold text-lg leading-none">${c.icon}</span></div></div></li>`;
+                sTable.innerHTML += `
+                <tr class="border-b border-slate-700/50">
+                    <td class="p-3 text-indigo-300 font-mono flex items-center gap-2">
+                        ${t.tag} 
+                        <span class="bg-indigo-900 text-indigo-300 px-1.5 py-0.5 rounded text-[9px] font-bold">${t.count}</span>
+                    </td>
+                    <td class="p-3 font-bold text-white">${t.avg.toLocaleString()} <span class="text-xs text-slate-500 font-normal">±${t.sd}</span></td>
+                    <td class="p-3">${risk}</td>
+                </tr>`;
             });
 
-            // --- H. CTR GEMS ---
+            const comboArr = Object.keys(comboStats).map(k=>{
+                 const arr = comboStats[k].viewsArr;
+                 const avg = Math.round(arr.reduce((a,b)=>a+b,0)/arr.length);
+                 const sd = Math.round(getStandardDeviation(arr));
+                 return {tag:k, avg:avg, sd:sd, count:comboStats[k].count};
+            }).sort((a,b)=>b.avg-a.avg);
+
+            const validCombos = comboArr.filter(t => t.count >= 2);
+            const cTable = document.getElementById('combo-table-body'); cTable.innerHTML = "";
+            if(!validCombos.length) cTable.innerHTML = `<tr><td colspan="3" class="p-3 text-slate-500 italic">No combos appear in 2+ videos.</td></tr>`;
+            else validCombos.slice(0,6).forEach(t => {
+                const parts = t.tag.split(' + ');
+                cTable.innerHTML += `
+                <tr class="border-b border-slate-700/50">
+                    <td class="p-3 font-mono text-xs">
+                        <span class="text-purple-300">${parts[0]}</span> + <span class="text-purple-300">${parts[1]}</span>
+                    </td>
+                    <td class="p-3 font-bold text-white">${t.avg.toLocaleString()} <span class="text-xs text-slate-500 font-normal">±${t.sd}</span></td>
+                    <td class="p-3"><span class="bg-purple-900 text-purple-300 px-2 py-0.5 rounded text-[10px] font-bold">${t.count} vids</span></td>
+                </tr>`;
+            });
+
+            // F. LISTS
+            const wList = document.getElementById('worst-tags-list'); wList.innerHTML = "";
+            const worst = singlesArr.filter(t => t.count >= 2).sort((a,b)=>a.avg-b.avg).slice(0,5);
+            if(!worst.length) wList.innerHTML = "<div class='text-slate-500 text-xs'>No consistent tags found.</div>";
+            else worst.forEach(t => wList.innerHTML += `<div class="flex justify-between items-center bg-slate-800 p-2 rounded border-l-2 border-red-500"><div class="truncate w-3/4 pr-2 text-slate-300 text-xs">${t.tag} <span class="text-slate-500 ml-1">(${t.count})</span></div><div class="text-red-400 font-bold text-sm">${t.avg}</div></div>`);
+
+            const tList = document.getElementById('top-videos-list'); tList.innerHTML = "";
+            [...filtered].sort((a,b)=>b.views-a.views).slice(0,5).forEach((v, i) => {
+                 tList.innerHTML += `<li class="flex items-center gap-3 bg-slate-800 p-3 rounded"><span class="text-xl font-bold text-slate-500">#${i+1}</span><div class="truncate w-full"><div class="text-sm font-semibold truncate text-white" title="${v.title}">${v.title}</div><div class="flex justify-between mt-1 text-xs text-slate-400"><span>👁️ ${v.views}</span><span>⏱️ ${Math.round(v.retention)}%</span><span class="${v.subs > 0 ? 'text-emerald-400 font-bold' : ''}">${v.subs > 0 ? '➕'+v.subs : '0'} Subs</span></div></div></li>`;
+            });
+
+            const sList = document.getElementById('top-subs-list'); sList.innerHTML = "";
+            const sortedBySubs = [...filtered].sort((a,b)=>b.subs-a.subs).filter(v=>v.subs>0);
+            if(!sortedBySubs.length) sList.innerHTML = "<div class='text-slate-500 text-xs'>No subscribers gained.</div>";
+            else sortedBySubs.slice(0,5).forEach((v,i) => {
+                const ratio = Math.round(v.views/v.subs);
+                sList.innerHTML += `<li class="flex items-center gap-3 bg-slate-800 p-3 rounded border-l-4 border-emerald-500"><div class="truncate w-full"><div class="text-sm font-semibold truncate text-white" title="${v.title}">${v.title}</div><div class="flex justify-between mt-1 text-xs text-slate-400"><span class="text-emerald-400 font-bold">➕${v.subs} Subs</span><span>1 Sub / ${ratio} views</span></div></div></li>`;
+            });
+
+            const evList = document.getElementById('evergreen-list'); evList.innerHTML = "";
+            const dailyMap = {};
+            chartDataRaw.forEach(r => { if(r.Content) { if(!dailyMap[r.Content]) dailyMap[r.Content]=[]; dailyMap[r.Content].push({d:new Date(r.Date), v:parseInt(r.Views)}); }});
+            const candidates = [];
+            Object.keys(dailyMap).forEach(id => {
+                const vid = filtered.find(v => v.id === id); if(!vid) return;
+                const age = (maxDate-vid.publishDate)/(1000*3600*24);
+                if(age<7) return;
+                const recent = dailyMap[id].filter(p=>(maxDate-p.d)/(1000*3600*24)<=7);
+                const avg = recent.reduce((s,x)=>s+x.v,0)/recent.length || 0;
+                if(avg>0.5) candidates.push({title:vid.title, avg:avg.toFixed(1), age:Math.floor(age)});
+            });
+            candidates.sort((a,b)=>b.avg-a.avg).slice(0,5).forEach(c => evList.innerHTML += `<li class="flex justify-between items-center text-sm bg-slate-800/50 p-2 rounded mb-2 border border-slate-700"><div class="truncate w-2/3"><div class="text-slate-200 truncate">${c.title}</div><div class="text-[10px] text-slate-500">Age: ${c.age} days</div></div><div class="text-emerald-400 font-bold">${c.avg}/d</div></li>`);
+            if(!candidates.length) evList.innerHTML = `<li class="p-2 text-xs text-slate-500 italic text-center">No active old videos.</li>`;
+
             const ctrList = document.getElementById('ctr-list'); ctrList.innerHTML = "";
-            const hiddenGems = filteredVideos.filter(v => v.views < 1000 && v.ctr > (activeMode === 'shorts' ? 5 : 4)).sort((a, b) => b.ctr - a.ctr);
-            hiddenGems.slice(0, 4).forEach(v => {
-                ctrList.innerHTML += `<div class="flex justify-between items-center bg-slate-800 p-2 rounded border-l-2 border-amber-500"><div class="truncate w-3/4 pr-2 text-slate-300 text-xs">${v.title}</div><div class="text-amber-400 font-bold text-sm">${v.ctr}%</div></div>`;
-            });
+            const gems = filtered.filter(v => v.views < 1000 && v.ctr > (activeMode==='shorts'?5:4)).sort((a,b)=>b.ctr-a.ctr).slice(0,4);
+            gems.forEach(v => ctrList.innerHTML += `<div class="flex justify-between items-center bg-slate-800 p-2 rounded border-l-2 border-amber-500"><div class="truncate w-3/4 pr-2 text-slate-300 text-xs">${v.title}</div><div class="text-amber-400 font-bold text-sm">${v.ctr}%</div></div>`);
 
-            // --- I. AI STRATEGY ---
-            const strategyDiv = document.getElementById('strategy-content');
+            // G. STRATEGY
+            const strat = document.getElementById('strategy-content');
             let advice = `<p>📅 <strong>Schedule:</strong> Post on <strong>${bestDay}s</strong>.</p>`;
+            if(sortedBySubs.length) advice += `<p>🤝 <strong>Sub Magnet:</strong> Replicate <em>"${sortedBySubs[0].title.substring(0,15)}..."</em> (+${sortedBySubs[0].subs} subs).</p>`;
+
+            const threshold = activeMode === 'shorts' ? 30 : 300;
+            const labelS = activeMode === 'shorts' ? '<30s' : '<5m';
+            const labelL = activeMode === 'shorts' ? '>30s' : '>5m';
+            const groupS = filtered.filter(v => v.duration < threshold);
+            const groupL = filtered.filter(v => v.duration >= threshold);
+            const avgS = groupS.length ? groupS.reduce((s,v)=>s+v.views,0)/groupS.length : 0;
+            const avgL = groupL.length ? groupL.reduce((s,v)=>s+v.views,0)/groupL.length : 0;
+            const totalAvg = avgS + avgL || 1;
+            const pctS = Math.round((avgS/totalAvg)*100);
+            const pctL = 100 - pctS;
+
+            advice += `
+            <div class="mt-4 mb-4 p-3 bg-slate-800 rounded border border-slate-700">
+                <h4 class="text-xs font-bold text-slate-300 mb-2 uppercase tracking-wide">Duration Performance</h4>
+                <div class="flex h-6 w-full rounded-full overflow-hidden bg-slate-900 mb-2">
+                    <div class="bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white" style="width: ${pctS}%">${pctS > 15 ? labelS : ''}</div>
+                    <div class="bg-purple-500 flex items-center justify-center text-[10px] font-bold text-white" style="width: ${pctL}%">${pctL > 15 ? labelL : ''}</div>
+                </div>
+                <div class="flex justify-between text-[10px] text-slate-400"><span>Avg: ${Math.round(avgS).toLocaleString()}</span><span>Avg: ${Math.round(avgL).toLocaleString()}</span></div>
+            </div>`;
+
+            if(Math.abs(avgS - avgL) < 200) advice += `<p>⏱️ <strong>Length:</strong> Balanced.</p>`;
+            else if(avgS > avgL) advice += `<p>⏱️ <strong>Length:</strong> <strong>${labelS}</strong> better.</p>`;
+            else advice += `<p>⏱️ <strong>Length:</strong> <strong>${labelL}</strong> better.</p>`;
+
+            if(validWords.length > 0) advice += `<p>🔤 <strong>Keyword:</strong> Use "<strong>${validWords[0].word}</strong>" in titles.</p>`;
             
-            const highSubVid = [...filteredVideos].filter(v => v.subs > 0).sort((a,b) => b.subs - a.subs)[0];
-            if(highSubVid) advice += `<p>🤝 <strong>Subs:</strong> Replicate <em>"${highSubVid.title.substring(0, 15)}..."</em> (+${highSubVid.subs} subs).</p>`;
-
-            if(activeMode === 'shorts') {
-                 // DURATION SPLIT VISUALIZER
-                 const shortsVid = filteredVideos.filter(v => v.duration < 30);
-                 const longVid = filteredVideos.filter(v => v.duration >= 30);
-                 
-                 const avgShort = shortsVid.length ? shortsVid.reduce((s,v) => s+v.views, 0) / shortsVid.length : 0;
-                 const avgLong = longVid.length ? longVid.reduce((s,v) => s+v.views, 0) / longVid.length : 0;
-                 
-                 const totalAvg = avgShort + avgLong || 1;
-                 const shortPct = Math.round((avgShort / totalAvg) * 100);
-                 const longPct = 100 - shortPct;
-                 
-                 advice += `
-                    <div class="mt-2 mb-2">
-                        <p class="mb-1 text-xs text-slate-400">Duration Performance Strategy:</p>
-                        <div class="flex h-4 w-full rounded-full overflow-hidden bg-slate-700">
-                            <div class="bg-blue-500 flex items-center justify-center text-[9px] font-bold text-white" style="width: ${shortPct}%">${shortPct > 15 ? 'SHORT (<30s)' : ''}</div>
-                            <div class="bg-purple-500 flex items-center justify-center text-[9px] font-bold text-white" style="width: ${longPct}%">${longPct > 15 ? 'LONG (>30s)' : ''}</div>
-                        </div>
-                    </div>
-                 `;
-
-                 if (Math.abs(avgShort - avgLong) < 200) {
-                     advice += `<p>⏱️ <strong>Length:</strong> <strong>Hybrid Strategy.</strong> Both short loops and long explanations perform equally well.</p>`;
-                 } else if (avgShort > avgLong) {
-                     advice += `<p>⏱️ <strong>Length:</strong> Short videos (<30s) are currently averaging <strong>${Math.round(avgShort - avgLong)} more views</strong> than long ones.</p>`;
-                 } else {
-                     advice += `<p>⏱️ <strong>Length:</strong> Long videos (>30s) are currently averaging <strong>${Math.round(avgLong - avgShort)} more views</strong> than short ones.</p>`;
-                 }
-
-            } else {
-                advice += `<p>🔍 <strong>SEO:</strong> Use the "Search Gems" list to find high-potential topics.</p>`;
-            }
-            strategyDiv.innerHTML = advice;
+            strat.innerHTML = advice;
         }
     </script>
 </body>
