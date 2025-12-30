@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shorts Pro: Final Analytics Suite</title>
+    <title>Shorts Pro: Ultimate Analyzer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <!-- Plugin for Red Trendline -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-trendline"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         .card { background: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
@@ -26,8 +28,8 @@
         <div class="card bg-slate-900 text-white border-none">
             <div class="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div>
-                    <h1 class="text-3xl font-bold">📈 Shorts Growth Pro</h1>
-                    <p class="text-slate-400 mt-1">Full 2025 Analytics: Hook, Pacing, and Tag-Level Performance with STD.</p>
+                    <h1 class="text-3xl font-bold">📈 Shorts Growth Analyzer</h1>
+                    <p class="text-slate-400 mt-1">Full Suite: Trendline, Keywords, Hashtags, & 2025 Metrics.</p>
                 </div>
                 <div class="w-full md:w-auto">
                     <label class="block mb-2 text-sm font-medium text-slate-300">Upload YouTube CSV</label>
@@ -58,10 +60,11 @@
                 </div>
             </div>
 
-            <!-- TREND CHART -->
+            <!-- TRENDLINE CHART (FIXED) -->
             <div class="card">
-                <h2 class="text-xl font-bold text-gray-800 mb-2">Hook Trend (Stayed to Watch %)</h2>
-                <div class="h-64 w-full">
+                <h2 class="text-xl font-bold text-gray-800 mb-1">Are You Improving?</h2>
+                <p class="text-sm text-gray-500 mb-4">Blue dots = Videos. <strong class="text-red-500">Blue Dotted Line</strong> = Your Improvement Trend.</p>
+                <div class="h-80 w-full">
                     <canvas id="trendChart"></canvas>
                 </div>
             </div>
@@ -119,12 +122,12 @@
                 </div>
             </div>
 
-            <!-- Correlation -->
+            <!-- Correlation Matrix -->
             <div class="card overflow-hidden">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">🔥 Relationship Matrix</h2>
                 <div class="overflow-x-auto">
                     <table class="w-full text-xs text-center border-collapse">
-                        <thead id="matrixHead"></thead>
+                        <thead id="matrixHead" class="text-gray-400 font-medium"></thead>
                         <tbody id="matrixBody"></tbody>
                     </table>
                 </div>
@@ -140,6 +143,7 @@
                                 <th>Date</th>
                                 <th>Video Title</th>
                                 <th class="text-right">Views</th>
+                                <th class="text-right">Engaged</th>
                                 <th class="text-right">Stayed%</th>
                                 <th class="text-right">Pacing Logic</th>
                             </tr>
@@ -194,7 +198,6 @@
             return parseFloat(str.replace(/%/g, '').replace(/,/g, '')) || 0;
         }
 
-        // --- NEW: Standard Deviation Helper ---
         function calculateStdDev(array) {
             if (array.length < 2) return 0;
             const n = array.length;
@@ -247,7 +250,6 @@
             updateDashboard();
         }
 
-        // --- MODIFIED: Text analysis to include STD ---
         function analyzeText(data) {
             const words = {}, tags = {};
             data.forEach(d => {
@@ -273,8 +275,8 @@
                     const values = map[k].values;
                     const count = values.length;
                     const avg = values.reduce((a, b) => a + b, 0) / count;
-                    const stdDev = calculateStdDev(values); // Calculate STD
-                    return { label: k, avg, stdDev, count }; // Return object with stdDev
+                    const stdDev = calculateStdDev(values);
+                    return { label: k, avg, stdDev, count };
                 })
                 .filter(i => i.count >= 2);
 
@@ -295,7 +297,7 @@
             document.getElementById('statStayed').innerText = (globalData.reduce((a,b)=>a+b.stayedToWatch,0)/globalData.length).toFixed(1) + '%';
             document.getElementById('statRetention').innerText = (globalData.reduce((a,b)=>a+b.percentageViewed,0)/globalData.length).toFixed(1) + '%';
 
-            // --- MODIFIED: Render STD in tag tables ---
+            // Tag Logic with STD
             const { keywords, bestTags, worstTags } = analyzeText(globalData);
             const renderTagTable = (id, list, colorClass) => {
                 document.getElementById(id).innerHTML = list.map(i => `
@@ -310,21 +312,13 @@
             renderTagTable('hashtagBestTable', bestTags, 'text-green-600');
             renderTagTable('hashtagWorstTable', worstTags, 'text-red-600');
 
-            // Autopsy Lists (Converted to Tables)
+            // Autopsy Tables
             const sortedHooks = [...globalData].sort((a,b) => b.stayedToWatch - a.stayedToWatch);
+            document.getElementById('topHookTable').innerHTML = sortedHooks.slice(0, 10).map(v => `<tr class="border-b hover:bg-green-50"><td class="py-1 pr-2 truncate max-w-[120px]" title="${v.title}">${v.title}</td><td class="text-right font-bold text-green-600">${v.stayedToWatch}%</td></tr>`).join('');
+            document.getElementById('worstHookTable').innerHTML = [...sortedHooks].reverse().slice(0, 10).map(v => `<tr class="border-b hover:bg-red-50"><td class="py-1 pr-2 truncate max-w-[120px]" title="${v.title}">${v.title}</td><td class="text-right font-bold text-red-600">${v.stayedToWatch}%</td></tr>`).join('');
             
-            document.getElementById('topHookTable').innerHTML = sortedHooks.slice(0, 10).map(v => `
-                <tr class="border-b hover:bg-green-50"><td class="py-1 pr-2 truncate max-w-[120px]">${v.title}</td><td class="text-right font-bold text-green-600">${v.stayedToWatch}%</td></tr>
-            `).join('');
-
-            document.getElementById('worstHookTable').innerHTML = [...sortedHooks].reverse().slice(0, 10).map(v => `
-                <tr class="border-b hover:bg-red-50"><td class="py-1 pr-2 truncate max-w-[120px]">${v.title}</td><td class="text-right font-bold text-red-600">${v.stayedToWatch}%</td></tr>
-            `).join('');
-
             const sortedPacing = [...globalData].sort((a,b) => b.pacingScore - a.pacingScore);
-            document.getElementById('worstPacingTable').innerHTML = sortedPacing.slice(0, 10).map(v => `
-                <tr class="border-b hover:bg-yellow-50"><td class="py-1 pr-2 truncate max-w-[120px]">${v.title}</td><td class="text-right font-bold text-yellow-700">${v.pacingScore > 0 ? '-' : '+'}${Math.abs(v.pacingScore).toFixed(1)}</td></tr>
-            `).join('');
+            document.getElementById('worstPacingTable').innerHTML = sortedPacing.slice(0, 10).map(v => `<tr class="border-b hover:bg-yellow-50"><td class="py-1 pr-2 truncate max-w-[120px]" title="${v.title}">${v.title}</td><td class="text-right font-bold text-yellow-700">${v.pacingScore > 0 ? '-' : '+'}${Math.abs(v.pacingScore).toFixed(1)}</td></tr>`).join('');
 
             updateTrendChart();
             buildMatrix();
@@ -335,28 +329,60 @@
                     <td class="p-2 whitespace-nowrap text-gray-400">${d.dateStr}</td>
                     <td class="p-2 truncate max-w-xs font-medium">${d.title}</td>
                     <td class="p-2 text-right">${d.views.toLocaleString()}</td>
+                    <td class="p-2 text-right font-bold">${d.engagedViews.toLocaleString()}</td>
                     <td class="p-2 text-right font-bold text-purple-600">${d.stayedToWatch}%</td>
                     <td class="p-2 text-right ${d.pacingScore > 0 ? 'text-red-500' : 'text-green-500'}">${d.pacingScore > 0 ? 'Drop: -' : 'Loop: +'}${Math.abs(d.pacingScore).toFixed(1)}</td>
                 </tr>
             `).join('');
         }
 
+        // --- FIXED: SCATTER CHART WITH RED TRENDLINE ---
         function updateTrendChart() {
             const ctx = document.getElementById('trendChart').getContext('2d');
-            const sorted = [...globalData].filter(d => d.date != null);
-            const raw = sorted.map(d => d.stayedToWatch);
-            const mAvg = raw.map((v, i, a) => i < 2 ? null : (a[i] + a[i-1] + a[i-2]) / 3);
+            const sorted = [...globalData].filter(d => d.date != null).sort((a,b) => a.date - b.date);
+
             if (trendChartInstance) trendChartInstance.destroy();
+
             trendChartInstance = new Chart(ctx, {
-                type: 'line',
+                type: 'scatter',
                 data: {
-                    labels: sorted.map(d => d.date),
                     datasets: [
-                        { label: 'Stayed%', data: raw, borderColor: '#cbd5e1', borderWidth: 1, pointRadius: 1, fill: false },
-                        { label: '3-Video Avg', data: mAvg, borderColor: '#3b82f6', borderWidth: 3, pointRadius: 0, tension: 0.3, fill: false }
+                        {
+                            label: 'Video Hook Performance',
+                            data: sorted.map(d => ({ x: d.date, y: d.stayedToWatch })),
+                            backgroundColor: 'rgba(59, 130, 246, 0.6)', // Blue dots
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            // Trendline configuration
+                            trendlineLinear: {
+                                colorV: 'rgba(239, 68, 68, 0.8)', // Red line
+                                style: "dotted",
+                                lineStyle: "dotted",
+                                width: 3,
+                            }
+                        }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'time' }, y: { min: 0, max: 100 } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { type: 'time', time: { unit: 'day', tooltipFormat: 'MMM dd' }, title: { display: true, text: 'Upload Date' } },
+                        y: { title: { display: true, text: 'Stayed to Watch %' }, min: 0, max: 100 }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const point = context.raw;
+                                    const video = sorted.find(d => d.date.getTime() === point.x);
+                                    return `${video ? video.title.substring(0,30) + '...' : ''}: ${point.y}%`;
+                                }
+                            }
+                        }
+                    }
+                }
             });
         }
 
