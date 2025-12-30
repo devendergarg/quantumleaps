@@ -3,512 +3,386 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Channel Analytics Super App v20.0 (Stats Edition)</title>
-    
-    <!-- Tailwind CSS -->
+    <title>Shorts Pro: Final Analytics Suite</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- PapaParse -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
-        .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 0.75rem; transition: transform 0.2s, border-color 0.2s; }
-        .card:hover { border-color: #6366f1; }
-        .gradient-text { background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .filter-btn { padding: 0.5rem 1.5rem; border-radius: 9999px; font-weight: 600; transition: all 0.2s; border: 1px solid transparent; cursor: pointer; }
-        .filter-btn.active { background-color: #6366f1; color: white; border-color: #6366f1; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4); }
-        .filter-btn.inactive { background-color: #1e293b; color: #94a3b8; border-color: #334155; }
-        .filter-btn.inactive:hover { background-color: #334155; color: white; }
-        input[type="file"]::file-selector-button { background-color: #4f46e5; border: none; padding: 0.5rem 1rem; color: white; border-radius: 0.375rem; cursor: pointer; transition: background 0.2s; }
-        input[type="file"]::file-selector-button:hover { background-color: #4338ca; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .card { background: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
+        .heatmap-cell { transition: all 0.2s; cursor: pointer; }
+        .heatmap-cell:hover { transform: scale(1.05); border: 2px solid #333; z-index: 10; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        th { font-size: 0.7rem; text-transform: uppercase; color: #64748b; letter-spacing: 0.025em; padding: 0.5rem; }
     </style>
 </head>
-<body class="p-6">
+<body class="p-4 md:p-8">
 
-    <!-- HEADER -->
-    <div class="max-w-7xl mx-auto mb-8 text-center">
-        <h1 class="text-4xl font-bold mb-2"><span class="gradient-text">Channel Analytics</span> Super App</h1>
-        <p class="text-slate-400">Upload CSV files to unlock Retention, Subscribers & Statistical Risk.</p>
-    </div>
-
-    <!-- UPLOAD SECTION -->
-    <div id="upload-section" class="max-w-3xl mx-auto card p-8 mb-8 text-center">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label class="block mb-2 font-semibold text-indigo-400">1. Upload "Chart data.csv"</label>
-                <input type="file" id="chartFile" accept=".csv" class="block w-full text-sm text-slate-500"/>
-            </div>
-            <div>
-                <label class="block mb-2 font-semibold text-purple-400">2. Upload "Table data.csv"</label>
-                <input type="file" id="tableFile" accept=".csv" class="block w-full text-sm text-slate-500"/>
-            </div>
-        </div>
-        <button onclick="processFiles()" class="mt-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all">
-            Analyze Channel Data 🚀
-        </button>
-        <p id="error-msg" class="text-red-500 mt-4 hidden">Please upload both files correctly.</p>
-    </div>
-
-    <!-- DASHBOARD -->
-    <div id="dashboard" class="max-w-7xl mx-auto hidden">
+    <div class="max-w-7xl mx-auto space-y-8">
         
-        <!-- DATE RANGE -->
-        <div class="text-center mb-6">
-            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800 border border-slate-700 text-sm text-slate-300">
-                <i data-lucide="clock" class="w-4 h-4 text-indigo-400"></i>
-                Analysis Period: <span id="date-range-display" class="font-bold text-white">Loading...</span>
-            </span>
-        </div>
-
-        <!-- TOGGLES -->
-        <div class="flex justify-center gap-4 mb-8">
-            <button onclick="setMode('shorts')" id="btn-shorts" class="filter-btn active">📱 Shorts</button>
-            <button onclick="setMode('long')" id="btn-long" class="filter-btn inactive">📺 Long Videos</button>
-        </div>
-
-        <!-- KPI CARDS -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div class="card p-4">
-                <p class="text-slate-400 text-sm uppercase font-bold tracking-wider">Total Views</p>
-                <h2 id="kpi-views" class="text-3xl font-bold text-white mt-1">-</h2>
-            </div>
-            <div class="card p-4">
-                <p class="text-slate-400 text-sm uppercase font-bold tracking-wider">Avg Retention</p>
-                <h2 id="kpi-retention" class="text-3xl font-bold text-pink-400 mt-1">-</h2>
-            </div>
-            <div class="card p-4">
-                <p class="text-slate-400 text-sm uppercase font-bold tracking-wider">Best Day</p>
-                <h2 id="kpi-day" class="text-3xl font-bold text-indigo-400 mt-1">-</h2>
-            </div>
-            <div class="card p-4">
-                <p class="text-slate-400 text-sm uppercase font-bold tracking-wider">Best Consistent Tag</p>
-                <div id="kpi-tag" class="text-xl font-bold text-purple-400 mt-1">-</div>
+        <!-- Header -->
+        <div class="card bg-slate-900 text-white border-none">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold">📈 Shorts Growth Pro</h1>
+                    <p class="text-slate-400 mt-1">Full 2025 Analytics: Hook, Pacing, and Tag-Level Performance with STD.</p>
+                </div>
+                <div class="w-full md:w-auto">
+                    <label class="block mb-2 text-sm font-medium text-slate-300">Upload YouTube CSV</label>
+                    <input type="file" id="csvInput" accept=".csv" class="block w-full text-sm text-slate-900 border border-gray-300 rounded-lg cursor-pointer bg-white focus:outline-none p-2">
+                </div>
             </div>
         </div>
 
-        <!-- MAIN LAYOUT -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <!-- LEFT COLUMN (2/3 Width) -->
-            <div class="lg:col-span-2 space-y-6">
-                
-                <!-- 1. DAY CHART -->
-                <div class="card p-6">
-                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-                        <i data-lucide="calendar"></i> Performance by Day
-                    </h3>
-                    <div class="h-64"><canvas id="daysChart"></canvas></div>
-                </div>
+        <div id="dashboard" class="hidden space-y-8">
 
-                <!-- 2. RETENTION CHART -->
-                 <div class="card p-6 border-pink-900/50">
-                    <h3 class="text-xl font-bold mb-2 flex items-center gap-2 text-pink-400">
-                        <i data-lucide="magnet"></i> Audience Stickiness
-                    </h3>
-                    <p class="text-sm text-slate-400 mb-4">Did they stay? (Average % Viewed vs. Duration)</p>
-                    <div class="h-64"><canvas id="retentionChart"></canvas></div>
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="card text-center border-l-4 border-slate-400">
+                    <p class="text-xs text-gray-500 uppercase font-bold">Total Views</p>
+                    <p class="text-2xl font-bold text-slate-700" id="statViews">0</p>
                 </div>
-
-                <!-- 3. TITLE KEYWORDS (WITH SD) -->
-                <div class="card p-6 border-blue-900/50 bg-slate-900/30">
-                    <h3 class="text-xl font-bold mb-2 flex items-center gap-2 text-blue-400">
-                        <i data-lucide="type"></i> Winning Title Keywords
-                    </h3>
-                    <p class="text-xs text-slate-400 mb-4"><strong>± SD:</strong> Shows stability. Lower SD = More reliable.</p>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-slate-800 text-slate-200">
-                                <tr>
-                                    <th class="p-3">Word</th>
-                                    <th class="p-3">Avg ± SD</th>
-                                    <th class="p-3">Frequency</th>
-                                </tr>
-                            </thead>
-                            <tbody id="title-words-body" class="divide-y divide-slate-700"></tbody>
-                        </table>
-                    </div>
+                <div class="card text-center border-l-4 border-green-500">
+                    <p class="text-xs text-gray-500 uppercase font-bold">Engaged Views</p>
+                    <p class="text-2xl font-bold text-green-600" id="statEngaged">0</p>
                 </div>
-
-                <!-- 4. SINGLE TAGS TABLE (RESTORED COUNT + SD) -->
-                <div class="card p-6">
-                    <h3 class="text-xl font-bold mb-2 flex items-center gap-2">
-                        <i data-lucide="hash"></i> Best Single Tags
-                    </h3>
-                    <p class="text-xs text-slate-400 mb-4">
-                        Consistent performers (>2 videos).
-                    </p>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-slate-800 text-slate-200">
-                                <tr>
-                                    <th class="p-3">Tag (Count)</th>
-                                    <th class="p-3">Avg ± SD</th>
-                                    <th class="p-3">Risk Level</th>
-                                </tr>
-                            </thead>
-                            <tbody id="hashtag-table-body" class="divide-y divide-slate-700"></tbody>
-                        </table>
-                    </div>
+                <div class="card text-center border-l-4 border-purple-500">
+                    <p class="text-xs text-gray-500 uppercase font-bold">Avg Stayed %</p>
+                    <p class="text-2xl font-bold text-purple-600" id="statStayed">0%</p>
                 </div>
-
-                <!-- 5. COMBO TAGS TABLE (WITH SD) -->
-                <div class="card p-6 border-purple-900/50 bg-slate-900/30">
-                    <h3 class="text-xl font-bold mb-2 flex items-center gap-2 text-purple-400">
-                        <i data-lucide="link"></i> Best Tag Combos
-                    </h3>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-slate-800 text-slate-200">
-                                <tr><th class="p-3">Combo</th><th class="p-3">Avg ± SD</th><th class="p-3">Consistency</th></tr>
-                            </thead>
-                            <tbody id="combo-table-body" class="divide-y divide-slate-700"></tbody>
-                        </table>
-                    </div>
+                <div class="card text-center border-l-4 border-orange-500">
+                    <p class="text-xs text-gray-500 uppercase font-bold">Avg Retention</p>
+                    <p class="text-2xl font-bold text-orange-600" id="statRetention">0%</p>
                 </div>
-
             </div>
 
-            <!-- RIGHT COLUMN (1/3 Width) -->
-            <div class="lg:col-span-1 space-y-6">
-                
-                <!-- TOP VIDEOS -->
-                <div class="card p-6">
-                    <h3 class="text-lg font-bold mb-4 text-indigo-300">🏆 Top 5 Videos (Views)</h3>
-                    <ul id="top-videos-list" class="space-y-4"></ul>
+            <!-- TREND CHART -->
+            <div class="card">
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Hook Trend (Stayed to Watch %)</h2>
+                <div class="h-64 w-full">
+                    <canvas id="trendChart"></canvas>
                 </div>
+            </div>
 
-                <!-- TOP CONVERTERS -->
-                <div class="card p-6 border border-emerald-500/30 bg-emerald-900/10">
-                    <h3 class="text-lg font-bold mb-4 text-emerald-400 flex items-center gap-2">
-                        <i data-lucide="user-plus"></i> Subscriber Magnets
-                    </h3>
-                    <ul id="top-subs-list" class="space-y-4"></ul>
+            <!-- TAG ANALYSIS GRID -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Top Keywords -->
+                <div class="card border-l-4 border-blue-500">
+                    <h2 class="text-lg font-bold text-blue-700 mb-4">🔑 Top Keywords</h2>
+                    <table class="min-w-full text-xs text-left">
+                        <thead><tr class="border-b"><th>Keyword</th><th class="text-right">Avg Stayed ± STD</th><th class="text-right">Uses</th></tr></thead>
+                        <tbody id="keywordTable"></tbody>
+                    </table>
                 </div>
+                <!-- Top Hashtags -->
+                <div class="card border-l-4 border-green-500">
+                    <h2 class="text-lg font-bold text-green-700 mb-4">✅ Best Hashtags</h2>
+                    <table class="min-w-full text-xs text-left">
+                        <thead><tr class="border-b"><th>Hashtag</th><th class="text-right">Avg Stayed ± STD</th><th class="text-right">Uses</th></tr></thead>
+                        <tbody id="hashtagBestTable"></tbody>
+                    </table>
+                </div>
+                <!-- Worst Hashtags -->
+                <div class="card border-l-4 border-red-500">
+                    <h2 class="text-lg font-bold text-red-700 mb-4">❌ Worst Hashtags</h2>
+                    <table class="min-w-full text-xs text-left">
+                        <thead><tr class="border-b"><th>Hashtag</th><th class="text-right">Avg Stayed ± STD</th><th class="text-right">Uses</th></tr></thead>
+                        <tbody id="hashtagWorstTable"></tbody>
+                    </table>
+                </div>
+            </div>
 
-                <!-- AI STRATEGY -->
-                <div class="card p-6 bg-gradient-to-br from-indigo-900 to-slate-900 border-indigo-700">
-                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-white">
-                        <i data-lucide="brain-circuit"></i> AI Strategy
-                    </h3>
-                    <div id="strategy-content" class="text-sm space-y-4 text-indigo-100"></div>
+            <!-- PERFORMANCE AUTOPSY -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="card border-t-4 border-green-500">
+                    <h2 class="font-bold text-green-700 mb-4 text-center">💎 Elite Hooks</h2>
+                    <table class="min-w-full text-[10px] text-left">
+                        <thead><tr class="border-b"><th>Video Title</th><th class="text-right">Stayed%</th></tr></thead>
+                        <tbody id="topHookTable"></tbody>
+                    </table>
                 </div>
-                
-                 <!-- WORST TAGS -->
-                 <div class="card p-6 border-red-900/30 bg-slate-900/50">
-                    <h3 class="text-lg font-bold mb-2 text-red-400 flex items-center gap-2">
-                        <i data-lucide="alert-triangle" class="w-5 h-5"></i> Low Performing Tags
-                    </h3>
-                    <ul id="worst-tags-list" class="space-y-2 text-sm"></ul>
+                <div class="card border-t-4 border-red-500">
+                    <h2 class="font-bold text-red-700 mb-4 text-center">🛑 Worst Hooks</h2>
+                    <table class="min-w-full text-[10px] text-left">
+                        <thead><tr class="border-b"><th>Video Title</th><th class="text-right">Stayed%</th></tr></thead>
+                        <tbody id="worstHookTable"></tbody>
+                    </table>
                 </div>
+                <div class="card border-t-4 border-yellow-500">
+                    <h2 class="font-bold text-yellow-700 mb-4 text-center">📉 Pacing Fails</h2>
+                    <table class="min-w-full text-[10px] text-left">
+                        <thead><tr class="border-b"><th>Video Title</th><th class="text-right">Pacing</th></tr></thead>
+                        <tbody id="worstPacingTable"></tbody>
+                    </table>
+                </div>
+            </div>
 
-                <!-- EVERGREEN -->
-                <div class="card p-6 border-emerald-900 bg-slate-900/50">
-                    <h3 class="text-lg font-bold mb-2 text-emerald-400 flex items-center gap-2">
-                        <i data-lucide="sprout"></i> Evergreen Content
-                    </h3>
-                    <ul id="evergreen-list" class="space-y-3"></ul>
+            <!-- Correlation -->
+            <div class="card overflow-hidden">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">🔥 Relationship Matrix</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-center border-collapse">
+                        <thead id="matrixHead"></thead>
+                        <tbody id="matrixBody"></tbody>
+                    </table>
                 </div>
+            </div>
 
-                <!-- CTR GEMS -->
-                <div class="card p-6">
-                    <h3 class="text-lg font-bold mb-2 text-amber-400">💎 Search Gems (High CTR)</h3>
-                    <ul id="ctr-list" class="space-y-2 text-sm"></ul>
+            <!-- Main Data Table -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">Video Detail Table</h2>
+                <div class="overflow-x-auto max-h-96">
+                    <table class="min-w-full text-sm text-left">
+                        <thead class="bg-gray-100 sticky top-0">
+                            <tr>
+                                <th>Date</th>
+                                <th>Video Title</th>
+                                <th class="text-right">Views</th>
+                                <th class="text-right">Stayed%</th>
+                                <th class="text-right">Pacing Logic</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- JAVASCRIPT LOGIC -->
     <script>
-        lucide.createIcons();
-        let chartDataRaw = null; let tableDataRaw = null; let activeMode = 'shorts';
-        let chartInstance = null; let retentionChartInstance = null;
+        let globalData = [];
+        let trendChartInstance = null;
 
-        function setMode(mode) {
-            activeMode = mode;
-            document.getElementById('btn-shorts').className = mode === 'shorts' ? 'filter-btn active' : 'filter-btn inactive';
-            document.getElementById('btn-long').className = mode === 'long' ? 'filter-btn active' : 'filter-btn inactive';
-            if(chartDataRaw && tableDataRaw) runAnalysis();
-        }
+        const metricsList = [
+            { id: 'duration', label: 'Duration' },
+            { id: 'views', label: 'Views' },
+            { id: 'engagedViews', label: 'Engaged' },
+            { id: 'stayedToWatch', label: 'Stayed%' },
+            { id: 'percentageViewed', label: 'Retention%' },
+            { id: 'subscribers', label: 'Subs' },
+            { id: 'impressions', label: 'Impr.' },
+            { id: 'ctr', label: 'CTR%' }
+        ];
 
-        function processFiles() {
-            const chartFile = document.getElementById('chartFile').files[0];
-            const tableFile = document.getElementById('tableFile').files[0];
-            if (!chartFile || !tableFile) return document.getElementById('error-msg').classList.remove('hidden');
-            
-            Papa.parse(chartFile, { header: true, skipEmptyLines: true, complete: r => { chartDataRaw = r.data; checkBothFiles(); }});
-            Papa.parse(tableFile, { header: true, skipEmptyLines: true, complete: r => { tableDataRaw = r.data; checkBothFiles(); }});
-        }
-
-        function checkBothFiles() {
-            if (chartDataRaw && tableDataRaw) {
-                document.getElementById('upload-section').classList.add('hidden');
+        document.getElementById('csvInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                processCSV(event.target.result);
                 document.getElementById('dashboard').classList.remove('hidden');
-                runAnalysis();
+            };
+            reader.readAsText(file);
+        });
+
+        function parseCSVLine(text) {
+            const result = [];
+            let cell = '', inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (char === '"') inQuotes = !inQuotes;
+                else if (char === ',' && !inQuotes) { result.push(cell); cell = ''; }
+                else cell += char;
             }
+            result.push(cell);
+            return result;
         }
 
-        // Helper for Standard Deviation
-        function getStandardDeviation(array) {
-            if(!array || array.length === 0) return 0;
+        function cleanNumber(str) {
+            if (!str) return 0;
+            return parseFloat(str.replace(/%/g, '').replace(/,/g, '')) || 0;
+        }
+
+        // --- NEW: Standard Deviation Helper ---
+        function calculateStdDev(array) {
+            if (array.length < 2) return 0;
             const n = array.length;
             const mean = array.reduce((a, b) => a + b) / n;
-            return Math.sqrt(array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
+            const variance = array.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
+            return Math.sqrt(variance);
         }
 
-        function runAnalysis() {
-            // A. DATA PREP
-            let minDate = new Date(8640000000000000), maxDate = new Date(-8640000000000000);
-            chartDataRaw.forEach(r => { if(r.Date) { const d = new Date(r.Date); if(d<minDate) minDate=d; if(d>maxDate) maxDate=d; }});
-            document.getElementById('date-range-display').innerText = `${minDate.toLocaleDateString()} — ${maxDate.toLocaleDateString()}`;
+        function processCSV(csvText) {
+            const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 0);
+            const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
+            const findIdx = (keywords) => headers.findIndex(h => keywords.some(k => h.includes(k)));
 
-            const allVideos = tableDataRaw.filter(r => r["Video title"] && r["Content"] !== "Total").map(v => {
-                const duration = parseInt(v.Duration) || 0;
-                const views = parseInt(v.Views?.replace(/,/g, '')) || 0;
-                const watchTimeHours = parseFloat(v["Watch time (hours)"]) || 0;
-                const avgViewDuration = views > 0 ? (watchTimeHours * 3600) / views : 0;
+            const idx = {
+                title: headers.findIndex(h => h.includes('title') && !h.includes('content')),
+                date: findIdx(['publish time', 'date']),
+                duration: findIdx(['duration']),
+                views: headers.indexOf('views') === -1 ? findIdx(['views']) : headers.indexOf('views'),
+                engaged: findIdx(['engaged views']),
+                stayed: findIdx(['stayed to watch']),
+                avgPct: findIdx(['average percentage viewed', 'avg %']),
+                subs: findIdx(['subscribers']),
+                impressions: findIdx(['impressions']),
+                ctr: findIdx(['click-through rate', 'ctr'])
+            };
+
+            const parsedData = [];
+            for (let i = 1; i < lines.length; i++) {
+                const row = parseCSVLine(lines[i]);
+                if (row.length < 5 || row[idx.title] === "Total") continue;
+
+                const views = cleanNumber(row[idx.views]);
+                const duration = cleanNumber(row[idx.duration]);
                 
-                return {
-                    id: v.Content,
-                    title: v["Video title"],
-                    views: views,
-                    ctr: parseFloat(v["Impressions click-through rate (%)"]) || 0,
-                    subs: parseInt(v.Subscribers?.replace(/,/g, '')) || 0,
-                    duration: duration,
-                    retention: duration > 0 ? (avgViewDuration / duration) * 100 : 0,
-                    isShort: duration <= 61,
-                    publishDate: new Date(v["Video publish time"]),
-                    dayOfWeek: new Date(v["Video publish time"]).toLocaleDateString('en-US', { weekday: 'long' })
-                };
-            });
-
-            const filtered = allVideos.filter(v => activeMode === 'shorts' ? v.isShort : !v.isShort);
-
-            // B. KPIS
-            const totalViews = filtered.reduce((s, v) => s + v.views, 0);
-            const avgRetention = filtered.length ? (filtered.reduce((s, v) => s + v.retention, 0) / filtered.length).toFixed(1) : 0;
-            document.getElementById('kpi-views').innerText = totalViews.toLocaleString();
-            document.getElementById('kpi-retention').innerHTML = `${avgRetention}%`;
-
-            // C. CHARTS
-            const dayStats = {}; const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-            days.forEach(d => dayStats[d] = []);
-            filtered.forEach(v => dayStats[v.dayOfWeek]?.push(v.views));
-            const medians = days.map(d => {
-                const arr = dayStats[d].sort((a,b)=>a-b);
-                if(!arr.length) return 0;
-                const mid = Math.floor(arr.length/2);
-                return arr.length%2!==0 ? arr[mid] : (arr[mid-1]+arr[mid])/2;
-            });
-            let bestDay = "-", maxM = 0;
-            medians.forEach((m, i) => { if(m > maxM) { maxM = m; bestDay = days[i]; } });
-            document.getElementById('kpi-day').innerText = bestDay;
-
-            const ctxD = document.getElementById('daysChart').getContext('2d');
-            if(chartInstance) chartInstance.destroy();
-            chartInstance = new Chart(ctxD, {
-                type: 'bar',
-                data: { labels: days, datasets: [{ label: 'Median Views', data: medians, backgroundColor: days.map(d => d === bestDay ? '#6366f1' : '#334155'), borderRadius: 4 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#334155' } }, x: { grid: { display: false } } } }
-            });
-
-            const scatterData = filtered.map(v => ({
-                x: v.duration, y: v.retention, r: Math.max(5, Math.min(15, v.views / (totalViews/filtered.length || 1) * 5)), title: v.title
-            }));
-            const ctxR = document.getElementById('retentionChart').getContext('2d');
-            if(retentionChartInstance) retentionChartInstance.destroy();
-            retentionChartInstance = new Chart(ctxR, {
-                type: 'bubble',
-                data: { datasets: [{ data: scatterData, backgroundColor: c => c.raw?.y >= 80 ? 'rgba(236, 72, 153, 0.8)' : 'rgba(99, 102, 241, 0.6)' }] },
-                options: { 
-                    responsive: true, maintainAspectRatio: false, 
-                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.raw.title.substring(0,20)}... | ${Math.round(c.raw.y)}%` } } },
-                    scales: { x: { title: { display: true, text: 'Seconds', color: '#64748b' }, grid: { color: '#334155' } }, y: { title: { display: true, text: '% Viewed', color: '#64748b' }, min: 0, max: 110, grid: { color: '#334155' } } }
+                if (duration > 0 && duration <= 61 && views >= 10) {
+                    const stayed = cleanNumber(row[idx.stayed]);
+                    const retention = cleanNumber(row[idx.avgPct]);
+                    parsedData.push({
+                        title: row[idx.title].replace(/^"|"$/g, ''),
+                        date: new Date(row[idx.date] ? row[idx.date].replace(/^"|"$/g, '') : ""),
+                        dateStr: row[idx.date] ? row[idx.date].replace(/^"|"$/g, '') : "N/A",
+                        duration, views, engagedViews: cleanNumber(row[idx.engaged]),
+                        stayedToWatch: stayed, percentageViewed: retention,
+                        pacingScore: stayed - retention, subscribers: cleanNumber(row[idx.subs]),
+                        impressions: cleanNumber(row[idx.impressions]), ctr: cleanNumber(row[idx.ctr])
+                    });
                 }
-            });
+            }
+            globalData = parsedData.sort((a,b) => a.date - b.date);
+            updateDashboard();
+        }
 
-            // D. KEYWORD ANALYSIS (WITH SD)
-            const wordStats = {};
-            filtered.forEach(v => {
-                const cleanTitle = v.title.replace(/#[a-z0-9_]+/gi, '');
-                const words = cleanTitle.match(/\b\w+\b/g) || [];
-                const uniqueWords = [...new Set(words.map(w => w.toLowerCase()))];
-                
-                uniqueWords.forEach(w => {
-                    if(w.length < 2) return; 
-                    if(!wordStats[w]) wordStats[w] = { viewsArr: [], count: 0 };
-                    wordStats[w].viewsArr.push(v.views);
-                    wordStats[w].count++;
-                });
-            });
-            const wordsArr = Object.keys(wordStats).map(k => {
-                 const arr = wordStats[k].viewsArr;
-                 const avg = Math.round(arr.reduce((a,b)=>a+b,0)/arr.length);
-                 const sd = Math.round(getStandardDeviation(arr));
-                 return { word: k, avg: avg, sd: sd, count: wordStats[k].count };
-            }).sort((a,b) => b.avg - a.avg);
+        // --- MODIFIED: Text analysis to include STD ---
+        function analyzeText(data) {
+            const words = {}, tags = {};
+            data.forEach(d => {
+                const titleParts = d.title.toLowerCase().split(/\s+/);
+                const uniqueParts = [...new Set(titleParts)];
 
-            const validWords = wordsArr.filter(w => w.count >= 2);
-            
-            const kwTable = document.getElementById('title-words-body'); kwTable.innerHTML = "";
-            if(validWords.length === 0) kwTable.innerHTML = `<tr><td colspan="3" class="p-3 text-slate-500 italic">No recurring keywords found.</td></tr>`;
-            else validWords.slice(0,6).forEach(w => {
-                kwTable.innerHTML += `
-                <tr class="border-b border-slate-700/50">
-                    <td class="p-3 text-blue-300 font-bold">${w.word}</td>
-                    <td class="p-3 text-white">${w.avg.toLocaleString()} <span class="text-xs text-slate-500">±${w.sd}</span></td>
-                    <td class="p-3 text-slate-400 text-xs">${w.count} titles</td>
-                </tr>`;
-            });
+                uniqueParts.forEach(part => {
+                    let clean = part.replace(/[.,\/!$%\^&\*;:{}=\-_`~()]/g, "");
+                    if (clean.length < 2) return;
 
-            // E. TAGS & COMBOS (WITH SD & COUNTS)
-            const singleStats = {}; const comboStats = {};
-            filtered.forEach(v => {
-                const tags = [...new Set((v.title.match(/#[a-z0-9_]+/gi) || []).map(t => t.toLowerCase()))].sort();
-                tags.forEach(t => { 
-                    if(!singleStats[t]) singleStats[t]={viewsArr:[], count:0}; 
-                    singleStats[t].viewsArr.push(v.views);
-                    singleStats[t].count++; 
-                });
-                for(let i=0; i<tags.length; i++){
-                    for(let j=i+1; j<tags.length; j++){
-                        const combo = `${tags[i]} + ${tags[j]}`;
-                        if(!comboStats[combo]) comboStats[combo]={viewsArr:[],count:0}; 
-                        comboStats[combo].viewsArr.push(v.views);
-                        comboStats[combo].count++;
+                    if (part.startsWith('#')) {
+                        if (!tags[part]) tags[part] = { values: [] };
+                        tags[part].values.push(d.stayedToWatch);
+                    } else {
+                        if (!words[clean]) words[clean] = { values: [] };
+                        words[clean].values.push(d.stayedToWatch);
                     }
-                }
+                });
             });
 
-            const singlesArr = Object.keys(singleStats).map(k=>{
-                const arr = singleStats[k].viewsArr;
-                const avg = Math.round(arr.reduce((a,b)=>a+b,0)/arr.length);
-                const sd = Math.round(getStandardDeviation(arr));
-                return {tag:k, avg:avg, sd:sd, count:singleStats[k].count};
-            }).sort((a,b)=>b.avg-a.avg);
+            const mapper = (map) => Object.keys(map)
+                .map(k => {
+                    const values = map[k].values;
+                    const count = values.length;
+                    const avg = values.reduce((a, b) => a + b, 0) / count;
+                    const stdDev = calculateStdDev(values); // Calculate STD
+                    return { label: k, avg, stdDev, count }; // Return object with stdDev
+                })
+                .filter(i => i.count >= 2);
 
-            const validSingles = singlesArr.filter(t => t.count >= 2);
-            document.getElementById('kpi-tag').innerText = validSingles.length ? validSingles[0].tag : "-";
-
-            const sTable = document.getElementById('hashtag-table-body'); sTable.innerHTML = "";
-            if(!validSingles.length) sTable.innerHTML = `<tr><td colspan="3" class="p-3 text-slate-500 italic">No tags appear in 2+ videos.</td></tr>`;
-            else validSingles.slice(0,6).forEach(t => {
-                const cv = t.sd / t.avg;
-                let risk = "<span class='text-emerald-400 text-xs'>Stable 🟢</span>";
-                if(cv > 1.0) risk = "<span class='text-red-400 text-xs'>Volatile 🔴</span>";
-                else if(cv > 0.5) risk = "<span class='text-yellow-400 text-xs'>Variable 🟡</span>";
-                
-                sTable.innerHTML += `
-                <tr class="border-b border-slate-700/50">
-                    <td class="p-3 text-indigo-300 font-mono flex items-center gap-2">
-                        ${t.tag} 
-                        <span class="bg-indigo-900 text-indigo-300 px-1.5 py-0.5 rounded text-[9px] font-bold">${t.count}</span>
-                    </td>
-                    <td class="p-3 font-bold text-white">${t.avg.toLocaleString()} <span class="text-xs text-slate-500 font-normal">±${t.sd}</span></td>
-                    <td class="p-3">${risk}</td>
-                </tr>`;
-            });
-
-            const comboArr = Object.keys(comboStats).map(k=>{
-                 const arr = comboStats[k].viewsArr;
-                 const avg = Math.round(arr.reduce((a,b)=>a+b,0)/arr.length);
-                 const sd = Math.round(getStandardDeviation(arr));
-                 return {tag:k, avg:avg, sd:sd, count:comboStats[k].count};
-            }).sort((a,b)=>b.avg-a.avg);
-
-            const validCombos = comboArr.filter(t => t.count >= 2);
-            const cTable = document.getElementById('combo-table-body'); cTable.innerHTML = "";
-            if(!validCombos.length) cTable.innerHTML = `<tr><td colspan="3" class="p-3 text-slate-500 italic">No combos appear in 2+ videos.</td></tr>`;
-            else validCombos.slice(0,6).forEach(t => {
-                const parts = t.tag.split(' + ');
-                cTable.innerHTML += `
-                <tr class="border-b border-slate-700/50">
-                    <td class="p-3 font-mono text-xs">
-                        <span class="text-purple-300">${parts[0]}</span> + <span class="text-purple-300">${parts[1]}</span>
-                    </td>
-                    <td class="p-3 font-bold text-white">${t.avg.toLocaleString()} <span class="text-xs text-slate-500 font-normal">±${t.sd}</span></td>
-                    <td class="p-3"><span class="bg-purple-900 text-purple-300 px-2 py-0.5 rounded text-[10px] font-bold">${t.count} vids</span></td>
-                </tr>`;
-            });
-
-            // F. LISTS
-            const wList = document.getElementById('worst-tags-list'); wList.innerHTML = "";
-            const worst = singlesArr.filter(t => t.count >= 2).sort((a,b)=>a.avg-b.avg).slice(0,5);
-            if(!worst.length) wList.innerHTML = "<div class='text-slate-500 text-xs'>No consistent tags found.</div>";
-            else worst.forEach(t => wList.innerHTML += `<div class="flex justify-between items-center bg-slate-800 p-2 rounded border-l-2 border-red-500"><div class="truncate w-3/4 pr-2 text-slate-300 text-xs">${t.tag} <span class="text-slate-500 ml-1">(${t.count})</span></div><div class="text-red-400 font-bold text-sm">${t.avg}</div></div>`);
-
-            const tList = document.getElementById('top-videos-list'); tList.innerHTML = "";
-            [...filtered].sort((a,b)=>b.views-a.views).slice(0,5).forEach((v, i) => {
-                 tList.innerHTML += `<li class="flex items-center gap-3 bg-slate-800 p-3 rounded"><span class="text-xl font-bold text-slate-500">#${i+1}</span><div class="truncate w-full"><div class="text-sm font-semibold truncate text-white" title="${v.title}">${v.title}</div><div class="flex justify-between mt-1 text-xs text-slate-400"><span>👁️ ${v.views}</span><span>⏱️ ${Math.round(v.retention)}%</span><span class="${v.subs > 0 ? 'text-emerald-400 font-bold' : ''}">${v.subs > 0 ? '➕'+v.subs : '0'} Subs</span></div></div></li>`;
-            });
-
-            const sList = document.getElementById('top-subs-list'); sList.innerHTML = "";
-            const sortedBySubs = [...filtered].sort((a,b)=>b.subs-a.subs).filter(v=>v.subs>0);
-            if(!sortedBySubs.length) sList.innerHTML = "<div class='text-slate-500 text-xs'>No subscribers gained.</div>";
-            else sortedBySubs.slice(0,5).forEach((v,i) => {
-                const ratio = Math.round(v.views/v.subs);
-                sList.innerHTML += `<li class="flex items-center gap-3 bg-slate-800 p-3 rounded border-l-4 border-emerald-500"><div class="truncate w-full"><div class="text-sm font-semibold truncate text-white" title="${v.title}">${v.title}</div><div class="flex justify-between mt-1 text-xs text-slate-400"><span class="text-emerald-400 font-bold">➕${v.subs} Subs</span><span>1 Sub / ${ratio} views</span></div></div></li>`;
-            });
-
-            const evList = document.getElementById('evergreen-list'); evList.innerHTML = "";
-            const dailyMap = {};
-            chartDataRaw.forEach(r => { if(r.Content) { if(!dailyMap[r.Content]) dailyMap[r.Content]=[]; dailyMap[r.Content].push({d:new Date(r.Date), v:parseInt(r.Views)}); }});
-            const candidates = [];
-            Object.keys(dailyMap).forEach(id => {
-                const vid = filtered.find(v => v.id === id); if(!vid) return;
-                const age = (maxDate-vid.publishDate)/(1000*3600*24);
-                if(age<7) return;
-                const recent = dailyMap[id].filter(p=>(maxDate-p.d)/(1000*3600*24)<=7);
-                const avg = recent.reduce((s,x)=>s+x.v,0)/recent.length || 0;
-                if(avg>0.5) candidates.push({title:vid.title, avg:avg.toFixed(1), age:Math.floor(age)});
-            });
-            candidates.sort((a,b)=>b.avg-a.avg).slice(0,5).forEach(c => evList.innerHTML += `<li class="flex justify-between items-center text-sm bg-slate-800/50 p-2 rounded mb-2 border border-slate-700"><div class="truncate w-2/3"><div class="text-slate-200 truncate">${c.title}</div><div class="text-[10px] text-slate-500">Age: ${c.age} days</div></div><div class="text-emerald-400 font-bold">${c.avg}/d</div></li>`);
-            if(!candidates.length) evList.innerHTML = `<li class="p-2 text-xs text-slate-500 italic text-center">No active old videos.</li>`;
-
-            const ctrList = document.getElementById('ctr-list'); ctrList.innerHTML = "";
-            const gems = filtered.filter(v => v.views < 1000 && v.ctr > (activeMode==='shorts'?5:4)).sort((a,b)=>b.ctr-a.ctr).slice(0,4);
-            gems.forEach(v => ctrList.innerHTML += `<div class="flex justify-between items-center bg-slate-800 p-2 rounded border-l-2 border-amber-500"><div class="truncate w-3/4 pr-2 text-slate-300 text-xs">${v.title}</div><div class="text-amber-400 font-bold text-sm">${v.ctr}%</div></div>`);
-
-            // G. STRATEGY
-            const strat = document.getElementById('strategy-content');
-            let advice = `<p>📅 <strong>Schedule:</strong> Post on <strong>${bestDay}s</strong>.</p>`;
-            if(sortedBySubs.length) advice += `<p>🤝 <strong>Sub Magnet:</strong> Replicate <em>"${sortedBySubs[0].title.substring(0,15)}..."</em> (+${sortedBySubs[0].subs} subs).</p>`;
-
-            const threshold = activeMode === 'shorts' ? 30 : 300;
-            const labelS = activeMode === 'shorts' ? '<30s' : '<5m';
-            const labelL = activeMode === 'shorts' ? '>30s' : '>5m';
-            const groupS = filtered.filter(v => v.duration < threshold);
-            const groupL = filtered.filter(v => v.duration >= threshold);
-            const avgS = groupS.length ? groupS.reduce((s,v)=>s+v.views,0)/groupS.length : 0;
-            const avgL = groupL.length ? groupL.reduce((s,v)=>s+v.views,0)/groupL.length : 0;
-            const totalAvg = avgS + avgL || 1;
-            const pctS = Math.round((avgS/totalAvg)*100);
-            const pctL = 100 - pctS;
-
-            advice += `
-            <div class="mt-4 mb-4 p-3 bg-slate-800 rounded border border-slate-700">
-                <h4 class="text-xs font-bold text-slate-300 mb-2 uppercase tracking-wide">Duration Performance</h4>
-                <div class="flex h-6 w-full rounded-full overflow-hidden bg-slate-900 mb-2">
-                    <div class="bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white" style="width: ${pctS}%">${pctS > 15 ? labelS : ''}</div>
-                    <div class="bg-purple-500 flex items-center justify-center text-[10px] font-bold text-white" style="width: ${pctL}%">${pctL > 15 ? labelL : ''}</div>
-                </div>
-                <div class="flex justify-between text-[10px] text-slate-400"><span>Avg: ${Math.round(avgS).toLocaleString()}</span><span>Avg: ${Math.round(avgL).toLocaleString()}</span></div>
-            </div>`;
-
-            if(Math.abs(avgS - avgL) < 200) advice += `<p>⏱️ <strong>Length:</strong> Balanced.</p>`;
-            else if(avgS > avgL) advice += `<p>⏱️ <strong>Length:</strong> <strong>${labelS}</strong> better.</p>`;
-            else advice += `<p>⏱️ <strong>Length:</strong> <strong>${labelL}</strong> better.</p>`;
-
-            if(validWords.length > 0) advice += `<p>🔤 <strong>Keyword:</strong> Use "<strong>${validWords[0].word}</strong>" in titles.</p>`;
+            const keywords = mapper(words).sort((a,b) => b.avg - a.avg).slice(0, 10);
+            const sortedHashtags = mapper(tags).sort((a,b) => b.avg - a.avg);
             
-            strat.innerHTML = advice;
+            return { 
+                keywords, 
+                bestTags: sortedHashtags.slice(0, 10), 
+                worstTags: [...sortedHashtags].reverse().slice(0, 10) 
+            };
+        }
+
+        function updateDashboard() {
+            // Stats
+            document.getElementById('statViews').innerText = Math.round(globalData.reduce((a,b)=>a+b.views,0)).toLocaleString();
+            document.getElementById('statEngaged').innerText = Math.round(globalData.reduce((a,b)=>a+b.engagedViews,0)).toLocaleString();
+            document.getElementById('statStayed').innerText = (globalData.reduce((a,b)=>a+b.stayedToWatch,0)/globalData.length).toFixed(1) + '%';
+            document.getElementById('statRetention').innerText = (globalData.reduce((a,b)=>a+b.percentageViewed,0)/globalData.length).toFixed(1) + '%';
+
+            // --- MODIFIED: Render STD in tag tables ---
+            const { keywords, bestTags, worstTags } = analyzeText(globalData);
+            const renderTagTable = (id, list, colorClass) => {
+                document.getElementById(id).innerHTML = list.map(i => `
+                    <tr class="border-b">
+                        <td class="py-2 font-medium text-slate-700">${i.label}</td>
+                        <td class="text-right font-bold ${colorClass}">${i.avg.toFixed(1)}% <span class="text-slate-400 font-normal">±${i.stdDev.toFixed(1)}</span></td>
+                        <td class="text-right text-slate-400">${i.count}</td>
+                    </tr>
+                `).join('');
+            };
+            renderTagTable('keywordTable', keywords, 'text-blue-600');
+            renderTagTable('hashtagBestTable', bestTags, 'text-green-600');
+            renderTagTable('hashtagWorstTable', worstTags, 'text-red-600');
+
+            // Autopsy Lists (Converted to Tables)
+            const sortedHooks = [...globalData].sort((a,b) => b.stayedToWatch - a.stayedToWatch);
+            
+            document.getElementById('topHookTable').innerHTML = sortedHooks.slice(0, 10).map(v => `
+                <tr class="border-b hover:bg-green-50"><td class="py-1 pr-2 truncate max-w-[120px]">${v.title}</td><td class="text-right font-bold text-green-600">${v.stayedToWatch}%</td></tr>
+            `).join('');
+
+            document.getElementById('worstHookTable').innerHTML = [...sortedHooks].reverse().slice(0, 10).map(v => `
+                <tr class="border-b hover:bg-red-50"><td class="py-1 pr-2 truncate max-w-[120px]">${v.title}</td><td class="text-right font-bold text-red-600">${v.stayedToWatch}%</td></tr>
+            `).join('');
+
+            const sortedPacing = [...globalData].sort((a,b) => b.pacingScore - a.pacingScore);
+            document.getElementById('worstPacingTable').innerHTML = sortedPacing.slice(0, 10).map(v => `
+                <tr class="border-b hover:bg-yellow-50"><td class="py-1 pr-2 truncate max-w-[120px]">${v.title}</td><td class="text-right font-bold text-yellow-700">${v.pacingScore > 0 ? '-' : '+'}${Math.abs(v.pacingScore).toFixed(1)}</td></tr>
+            `).join('');
+
+            updateTrendChart();
+            buildMatrix();
+
+            // Detailed Data Table
+            document.getElementById('dataTableBody').innerHTML = [...globalData].sort((a,b) => b.date - a.date).map(d => `
+                <tr class="border-b text-xs hover:bg-gray-50">
+                    <td class="p-2 whitespace-nowrap text-gray-400">${d.dateStr}</td>
+                    <td class="p-2 truncate max-w-xs font-medium">${d.title}</td>
+                    <td class="p-2 text-right">${d.views.toLocaleString()}</td>
+                    <td class="p-2 text-right font-bold text-purple-600">${d.stayedToWatch}%</td>
+                    <td class="p-2 text-right ${d.pacingScore > 0 ? 'text-red-500' : 'text-green-500'}">${d.pacingScore > 0 ? 'Drop: -' : 'Loop: +'}${Math.abs(d.pacingScore).toFixed(1)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function updateTrendChart() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            const sorted = [...globalData].filter(d => d.date != null);
+            const raw = sorted.map(d => d.stayedToWatch);
+            const mAvg = raw.map((v, i, a) => i < 2 ? null : (a[i] + a[i-1] + a[i-2]) / 3);
+            if (trendChartInstance) trendChartInstance.destroy();
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sorted.map(d => d.date),
+                    datasets: [
+                        { label: 'Stayed%', data: raw, borderColor: '#cbd5e1', borderWidth: 1, pointRadius: 1, fill: false },
+                        { label: '3-Video Avg', data: mAvg, borderColor: '#3b82f6', borderWidth: 3, pointRadius: 0, tension: 0.3, fill: false }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'time' }, y: { min: 0, max: 100 } } }
+            });
+        }
+
+        function calculateCorrelation(xKey, yKey) {
+            const x = globalData.map(d => d[xKey]), y = globalData.map(d => d[yKey]), n = x.length;
+            const sumX = x.reduce((a, b) => a + b, 0), sumY = y.reduce((a, b) => a + b, 0);
+            const sumXY = x.reduce((s, v, i) => s + v * y[i], 0), sumX2 = x.reduce((s, v) => s + v * v, 0), sumY2 = y.reduce((s, v) => s + v * v, 0);
+            const num = (n * sumXY) - (sumX * sumY);
+            const den = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
+            return den === 0 ? 0 : num / den;
+        }
+
+        function buildMatrix() {
+            const head = document.getElementById('matrixHead'), body = document.getElementById('matrixBody');
+            head.innerHTML = '<tr><th class="p-2">Metric</th>' + metricsList.map(m => `<th class="p-2">${m.label}</th>`).join('') + '</tr>';
+            body.innerHTML = metricsList.map(rowM => `
+                <tr>
+                    <td class="p-2 bg-gray-50 text-left font-bold text-[10px]">${rowM.label}</td>
+                    ${metricsList.map(colM => {
+                        if (rowM.id === colM.id) return '<td class="p-2 text-gray-200">-</td>';
+                        const corr = calculateCorrelation(rowM.id, colM.id);
+                        const color = corr > 0 ? `rgba(34, 197, 94, ${Math.abs(corr)})` : `rgba(239, 68, 68, ${Math.abs(corr)})`;
+                        return `<td class="p-2 font-mono font-bold text-[10px]" style="background-color: ${color}">${corr.toFixed(2)}</td>`;
+                    }).join('')}
+                </tr>
+            `).join('');
         }
     </script>
 </body>
