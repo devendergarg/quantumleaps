@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Analyzer (Filtered)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            padding: 20px;
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 { color: #2c3e50; margin-top: 0; }
+        
+        .section-box {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            text-align: center;
+            border: 2px dashed #cbd5e0;
+            padding: 30px;
+            border-radius: 10px;
+            background: #fff;
+            margin-bottom: 30px;
+        }
+        input[type="file"] { padding: 10px; cursor: pointer; }
+
+        .filter-badge {
+            display: inline-block;
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin-top: 10px;
+            border: 1px solid #ffeeba;
+        }
+
+        .strategy-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .strategy-table th, .strategy-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .strategy-table th { background-color: #34495e; color: white; font-weight: 600; }
+        .rank-cell { font-size: 1.2em; font-weight: bold; color: #7f8c8d; }
+        .top-rank { color: #f1c40f; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+
+        .tag {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .tag-opp { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .tag-good { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .tag-bad { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .tag-mid { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        .matrix-table { width: 100%; border-collapse: collapse; }
+        .matrix-table th, .matrix-table td { padding: 10px; text-align: center; border: 1px solid #e2e8f0; }
+        .matrix-table th { background-color: #f7fafc; }
+        
+        .chart-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
+        .quadrant-container { height: 500px; }
+
+        @media (min-width: 900px) {
+            .grid-2 { grid-template-columns: 1fr 1fr; }
+            .chart-grid { grid-template-columns: 1fr 1fr 1fr; }
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <h1 style="text-align: center;">📊 YouTube Strategic Analyzer</h1>
+    <p style="text-align: center; color: #666;">
+        Filtered: Calculating only for videos with <strong>10+ Views</strong>.
+    </p>
+
+    <div class="upload-area">
+        <h3>1. Start Here: Upload "Table data.csv"</h3>
+        <input type="file" id="csvFile" accept=".csv">
+        <div id="filterStatus" style="display:none;"></div>
+    </div>
+
+    <!-- Section 1: Strategy Board -->
+    <div id="sectionStrategy" class="section-box hidden">
+        <h2>🚀 Strategic Day Ranking</h2>
+        <p>This table ranks days by <strong>Retention Quality</strong>. It identifies where your <em>Average Workload</em> is mismatched with audience interest.</p>
+        <table class="strategy-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Day</th>
+                    <th>Stayed to Watch %</th>
+                    <th>Avg Engaged Views</th>
+                    <th>Avg Uploads/Day</th>
+                    <th>Strategic Advice</th>
+                </tr>
+            </thead>
+            <tbody id="rankingBody"></tbody>
+        </table>
+    </div>
+
+    <!-- Section 2: Correlation Matrices -->
+    <div id="sectionMatrices" class="section-box hidden">
+        <h2>🔍 The Evidence: Correlation Analysis</h2>
+        <div class="grid-2">
+            <div>
+                <h3>1. Weekly Trends (Normalized)</h3>
+                <p style="font-size:0.85em; color:#666; margin-bottom:10px;">
+                    Correlates <strong>Avg Upload Intensity</strong> vs. Performance.<br>
+                    Negative score = You work harder on bad days.
+                </p>
+                <table class="matrix-table" id="matrixWeekly"></table>
+            </div>
+            <div>
+                <h3>2. Daily Granular (Specific Dates)</h3>
+                <p style="font-size:0.85em; color:#666; margin-bottom:10px;">
+                    Checks specific dates (e.g., Dec 21).<br>
+                    Low score = Volume itself doesn't hurt performance.
+                </p>
+                <table class="matrix-table" id="matrixDaily"></table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3: Visualizations -->
+    <div id="sectionCharts" class="section-box hidden">
+        <h2>📈 Visual Insights</h2>
+        <div style="margin-bottom: 40px;">
+            <h3>Effort vs. Quality Quadrant</h3>
+            <div class="quadrant-container"><canvas id="quadrantChart"></canvas></div>
+        </div>
+        <h3>Weekly Breakdown</h3>
+        <div class="chart-grid">
+            <div class="chart-container"><canvas id="barStayed"></canvas></div>
+            <div class="chart-container"><canvas id="barEngaged"></canvas></div>
+            <div class="chart-container"><canvas id="barUploads"></canvas></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) { processCSV(e.target.result); };
+            reader.readAsText(file);
+        });
+
+        function processCSV(csvText) {
+            const lines = csvText.split(/\r\n|\n/);
+            const headers = parseCSVLine(lines[0]);
+            
+            const idxDate = headers.indexOf("Video publish time");
+            const idxStayed = headers.indexOf("Stayed to watch (%)");
+            const idxEngaged = headers.indexOf("Engaged views");
+            const idxViews = headers.indexOf("Views"); // Find View Column
+
+            if (idxDate === -1 || idxViews === -1) { 
+                alert("Error: Columns 'Video publish time' or 'Views' not found."); return; 
+            }
+
+            // Buckets
+            const weekly = {};
+            for(let i=0; i<7; i++) {
+                weekly[i] = { 
+                    id: i, name: getDayName(i), 
+                    sumS: 0, cntS: 0, 
+                    sumE: 0, cntE: 0, 
+                    totalUploads: 0,
+                    uniqueDates: new Set() 
+                };
+            }
+            const daily = {};
+            let excludedCount = 0;
+            let processedCount = 0;
+
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                const row = parseCSVLine(lines[i]);
+                if (row[0] === "Total" || !row[idxDate]) continue;
+
+                // --- FILTER LOGIC ---
+                const rawViews = parseFloat(row[idxViews]);
+                if (isNaN(rawViews) || rawViews < 10) {
+                    excludedCount++;
+                    continue; // Skip this video
+                }
+                processedCount++;
+
+                const dateStr = row[idxDate];
+                const dateObj = new Date(dateStr);
+                if (isNaN(dateObj)) continue;
+
+                const dIdx = dateObj.getDay();
+
+                // Track Unique Dates for Normalization
+                weekly[dIdx].uniqueDates.add(dateStr);
+
+                // Init Daily
+                if (!daily[dateStr]) daily[dateStr] = { sumS: 0, cntS: 0, sumE: 0, cntE: 0, uploads: 0 };
+
+                // Counts
+                weekly[dIdx].totalUploads++;
+                daily[dateStr].uploads++;
+
+                // Metrics
+                const stayed = parseFloat(row[idxStayed]);
+                const engaged = parseFloat(row[idxEngaged]);
+
+                if (!isNaN(stayed)) {
+                    weekly[dIdx].sumS += stayed; weekly[dIdx].cntS++;
+                    daily[dateStr].sumS += stayed; daily[dateStr].cntS++;
+                }
+                if (!isNaN(engaged)) {
+                    weekly[dIdx].sumE += engaged; weekly[dIdx].cntE++;
+                    daily[dateStr].sumE += engaged; daily[dateStr].cntE++;
+                }
+            }
+
+            // UI Feedback
+            const statusDiv = document.getElementById('filterStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = `<span class="filter-badge">Processed ${processedCount} videos. Excluded ${excludedCount} videos (Views < 10).</span>`;
+
+            // --- COMPUTATIONS (Normalized) ---
+            const weeklyArray = Object.values(weekly).map(d => {
+                const occurrenceCount = d.uniqueDates.size || 1; 
+                return {
+                    ...d,
+                    avgStayed: d.cntS > 0 ? d.sumS / d.cntS : 0,
+                    avgEngaged: d.cntE > 0 ? d.sumE / d.cntE : 0,
+                    avgUploads: d.totalUploads / occurrenceCount
+                };
+            });
+
+            const dailyArray = Object.values(daily).filter(d => d.cntS > 0).map(d => ({
+                stayed: d.sumS / d.cntS,
+                engaged: d.sumE / d.cntE,
+                uploads: d.uploads
+            }));
+
+            // Strategy Threshold (Mean of Avg Uploads)
+            const activeWeekDays = weeklyArray.filter(d => d.totalUploads > 0);
+            const sumAvgs = activeWeekDays.reduce((acc, d) => acc + d.avgUploads, 0);
+            const threshold = sumAvgs / (activeWeekDays.length || 1);
+
+            revealSections();
+            renderStrategyTable(weeklyArray, threshold);
+            renderMatrices(weeklyArray, dailyArray);
+            renderVisuals(weeklyArray, threshold);
+        }
+
+        // --- RENDERERS ---
+
+        function renderStrategyTable(data, threshold) {
+            const tbody = document.getElementById('rankingBody');
+            tbody.innerHTML = '';
+            const sorted = [...data].sort((a, b) => b.avgStayed - a.avgStayed);
+
+            sorted.forEach((d, i) => {
+                if(d.avgStayed === 0) return;
+                
+                const isHighQuality = i < 3; 
+                const isHighVol = d.avgUploads > threshold;
+                let advice = '', tagClass = '';
+
+                if(isHighQuality && !isHighVol) {
+                    advice = "OPPORTUNITY: Post More"; tagClass = 'tag-opp';
+                } else if (isHighQuality && isHighVol) {
+                    advice = "Good Fit"; tagClass = 'tag-good';
+                } else if (!isHighQuality && isHighVol) {
+                    advice = "WASTED EFFORT: Reduce"; tagClass = 'tag-bad';
+                } else {
+                    advice = "Low Priority"; tagClass = 'tag-mid';
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="rank-cell ${i===0?'top-rank':''}">${i===0?'👑 ':''}#${i+1}</td>
+                        <td style="font-weight:600">${d.name}</td>
+                        <td>${d.avgStayed.toFixed(2)}%</td>
+                        <td>${d.avgEngaged.toFixed(0)}</td>
+                        <td>${d.avgUploads.toFixed(1)} / day</td>
+                        <td><span class="tag ${tagClass}">${advice}</span></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderMatrices(wData, dData) {
+            const wStayed = wData.map(d => d.avgStayed);
+            const wEngaged = wData.map(d => d.avgEngaged);
+            const wUploads = wData.map(d => d.avgUploads);
+            renderMatrixTable('matrixWeekly', wStayed, wEngaged, wUploads, "Avg Uploads");
+
+            const dStayed = dData.map(d => d.stayed);
+            const dEngaged = dData.map(d => d.engaged);
+            const dUploads = dData.map(d => d.uploads);
+            renderMatrixTable('matrixDaily', dStayed, dEngaged, dUploads, "Uploads");
+        }
+
+        function renderMatrixTable(elemId, stayed, engaged, uploads, uploadLabel) {
+            const table = document.getElementById(elemId);
+            const metrics = [
+                {name: "Stayed %", data: stayed},
+                {name: "Engaged", data: engaged},
+                {name: uploadLabel, data: uploads}
+            ];
+            let html = `<tr><th>Metric</th><th>Stayed %</th><th>Engaged</th><th>${uploadLabel}</th></tr>`;
+            metrics.forEach((row, rI) => {
+                html += `<tr><td style="font-weight:600; text-align:left;">${row.name}</td>`;
+                metrics.forEach((col, cI) => {
+                    if(rI === cI) html += `<td style="background:#f0f0f0; color:#ccc;">-</td>`;
+                    else {
+                        const val = getCorrelation(row.data, col.data);
+                        const bg = val > 0 ? `rgba(46, 204, 113, ${Math.abs(val)})` : `rgba(231, 76, 60, ${Math.abs(val)})`;
+                        const color = Math.abs(val) > 0.5 ? '#fff' : '#000';
+                        html += `<td style="background:${bg}; color:${color}; font-weight:bold;">${val.toFixed(2)}</td>`;
+                    }
+                });
+                html += `</tr>`;
+            });
+            table.innerHTML = html;
+        }
+
+        // --- CHARTS ---
+        let charts = {};
+
+        function renderVisuals(data, threshold) {
+            const order = [1,2,3,4,5,6,0]; 
+            const orderedData = order.map(i => data.find(d => d.id === i));
+            const labels = orderedData.map(d => d.name);
+            const sData = orderedData.map(d => d.avgStayed);
+            const eData = orderedData.map(d => d.avgEngaged);
+            const uData = orderedData.map(d => d.avgUploads);
+
+            const ctxQ = document.getElementById('quadrantChart').getContext('2d');
+            if(charts['quad']) charts['quad'].destroy();
+            
+            const points = data.filter(d => d.avgStayed > 0).map(d => ({
+                x: d.avgUploads, y: d.avgStayed, label: d.name
+            }));
+            const yMin = Math.min(...points.map(p=>p.y))*0.9;
+            const yMax = Math.max(...points.map(p=>p.y))*1.1;
+
+            charts['quad'] = new Chart(ctxQ, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Days', data: points,
+                        backgroundColor: (c) => {
+                            const v = c.raw; if(!v) return '#ccc';
+                            if(v.y > (yMin+yMax)/2 && v.x < threshold) return '#2ecc71';
+                            if(v.y < (yMin+yMax)/2 && v.x > threshold) return '#e74c3c';
+                            return '#95a5a6';
+                        },
+                        pointRadius: 12
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: {display:true, text:'Avg Uploads per Day (Intensity)'} },
+                        y: { title: {display:true, text:'Stayed to Watch %'} }
+                    },
+                    plugins: { tooltip: { callbacks: { label: (c) => `${c.raw.label}: ${c.raw.y.toFixed(1)}% / ${c.raw.x.toFixed(1)} avg vids` } } }
+                },
+                plugins: [{
+                    id: 'labels', afterDatasetsDraw(chart) {
+                        const {ctx} = chart; ctx.font = 'bold 11px Arial'; ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.textBaseline='middle';
+                        chart.data.datasets[0].data.forEach((p, i) => {
+                            const meta = chart.getDatasetMeta(0);
+                            ctx.fillText(p.label.substring(0,3), meta.data[i].x, meta.data[i].y);
+                        });
+                    }
+                }]
+            });
+
+            renderBar('barStayed', 'Stayed %', labels, sData, '#3498db');
+            renderBar('barEngaged', 'Engaged Views', labels, eData, '#9b59b6');
+            renderBar('barUploads', 'Avg Uploads/Day', labels, uData, '#e67e22');
+        }
+
+        function renderBar(id, label, labels, data, color) {
+            const ctx = document.getElementById(id).getContext('2d');
+            if(charts[id]) charts[id].destroy();
+            charts[id] = new Chart(ctx, {
+                type: 'bar',
+                data: { labels, datasets: [{ label, data, backgroundColor: color }] },
+                options: { maintainAspectRatio: false, plugins: { legend: {display:false}, title: {display:true, text:label} } }
+            });
+        }
+
+        // --- UTILS ---
+        function getCorrelation(x, y) {
+            const n = x.length;
+            let sumX=0, sumY=0, sumXY=0, sumX2=0, sumY2=0;
+            for(let i=0; i<n; i++) {
+                sumX += x[i]; sumY += y[i];
+                sumXY += x[i]*y[i];
+                sumX2 += x[i]*x[i]; sumY2 += y[i]*y[i];
+            }
+            const num = (n*sumXY) - (sumX*sumY);
+            const den = Math.sqrt((n*sumX2 - sumX*sumX) * (n*sumY2 - sumY*sumY));
+            return den === 0 ? 0 : num/den;
+        }
+
+        function parseCSVLine(text) {
+            const result = []; let current = ''; let inQuote = false;
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (char === '"') inQuote = !inQuote;
+                else if (char === ',' && !inQuote) { result.push(current); current = ''; }
+                else current += char;
+            }
+            result.push(current); return result.map(c => c.trim());
+        }
+
+        function getDayName(i) { return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][i]; }
+        function revealSections() {
+            document.getElementById('sectionStrategy').classList.remove('hidden');
+            document.getElementById('sectionMatrices').classList.remove('hidden');
+            document.getElementById('sectionCharts').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
