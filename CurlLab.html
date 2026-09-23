@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Curl vs Curvature — Physics Visualizer</title>
+<style>
+:root{
+  --bg:#0f172a; --panel:#1e293b; --panel2:#334155;
+  --text:#e2e8f0; --muted:#94a3b8;
+  --accent:#38bdf8; --ok:#22c55e; --bad:#f43f5e; --warn:#eab308;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+header{padding:.6rem 1rem;background:var(--panel);border-bottom:1px solid rgba(255,255,255,.08);z-index:10}
+h1{margin:0;font-size:1.1rem;display:flex;align-items:center;gap:.5rem}
+h1 span.dot{width:10px;height:10px;border-radius:50%;background:var(--accent);display:inline-block}
+.sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+
+.controls{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.6rem}
+.btn{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--text);padding:.35rem .8rem;border-radius:6px;cursor:pointer;font-size:.8rem;transition:all .15s;font-family:monospace}
+.btn:hover{background:rgba(255,255,255,.08)}
+.btn.active{background:var(--accent);border-color:var(--accent);color:#0f172a;font-weight:600}
+
+.custom-panel{display:none;margin-top:.5rem;background:var(--panel2);padding:.6rem;border-radius:8px;gap:.4rem;flex-wrap:wrap;align-items:center}
+.custom-panel.show{display:flex}
+.custom-panel label{font-size:.75rem;color:var(--muted);margin-right:.2rem}
+.custom-panel input{background:#0f172a;border:1px solid rgba(255,255,255,.15);color:var(--text);padding:.3rem .5rem;border-radius:4px;font-family:monospace;font-size:.8rem;width:180px}
+.custom-panel button{background:var(--accent);color:#0f172a;border:none;padding:.3rem .8rem;border-radius:4px;cursor:pointer;font-weight:600;font-size:.8rem}
+.custom-panel .hint{font-size:.7rem;color:var(--muted);width:100%;margin-top:.2rem}
+.err{color:var(--bad);font-size:.75rem;margin-left:.5rem}
+
+#canvas-wrap{flex:1;position:relative;overflow:hidden;cursor:grab}
+#canvas-wrap:active{cursor:grabbing}
+canvas{display:block;width:100%;height:100%}
+
+.hud{position:absolute;pointer-events:none;font-size:.85rem;line-height:1.5}
+.hud-tl{top:.6rem;left:.6rem;background:rgba(15,23,42,.85);padding:.6rem .8rem;border-radius:8px;border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(6px);max-width:380px}
+.hud-tr{top:.6rem;right:.6rem;background:rgba(15,23,42,.85);padding:.5rem .7rem;border-radius:8px;border:1px solid rgba(255,255,255,.08);font-size:.75rem;color:var(--muted)}
+.hud-br{bottom:.6rem;right:.6rem;background:rgba(15,23,42,.85);padding:.6rem .8rem;border-radius:8px;border:1px solid rgba(255,255,255,.08);font-family:monospace;font-size:.8rem}
+
+.math{font-family:'Courier New',monospace;color:var(--accent);font-weight:600}
+.tag{display:inline-block;padding:1px 8px;border-radius:4px;font-size:.75rem;font-weight:600}
+.tag.ok{background:rgba(34,197,94,.18);color:var(--ok)}
+.tag.bad{background:rgba(244,63,94,.18);color:var(--bad)}
+.tag.warn{background:rgba(234,179,8,.18);color:var(--warn)}
+
+.row{display:flex;justify-content:space-between;gap:1rem;margin-top:3px}
+.row span:first-child{color:var(--muted)}
+.desc{font-size:.78rem;color:var(--muted);margin-top:.4rem;border-top:1px dashed rgba(255,255,255,.1);padding-top:.4rem}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="dot"></span> Curl vs. Field-Line Curvature — Interactive Physics</h1>
+  <div class="sub">Drag the paddle wheel anywhere. Its spin rate ∝ local (∇×F)·ẑ. Green = irrotational, Red = rotational.</div>
+
+  <div class="controls" id="caseButtons">
+    <button class="btn active" data-id="1">1. F=(y, x)</button>
+    <button class="btn" data-id="2">2. F=(y, 0)</button>
+    <button class="btn" data-id="3">3. F=(−y, x)</button>
+    <button class="btn" data-id="4">4. F=(−y/r², x/r²)</button>
+    <button class="btn" data-id="5">5. F=(x, y)</button>
+    <button class="btn" data-id="6">6. F=(x, −y)</button>
+    <button class="btn" data-id="7">7. Custom…</button>
+  </div>
+
+  <div class="custom-panel" id="customPanel">
+    <label>Fx(x,y) =</label>
+    <input id="fxInput" value="y" placeholder="e.g. -y/(x*x+y*y)">
+    <label>Fy(x,y) =</label>
+    <input id="fyInput" value="-x" placeholder="e.g. x/(x*x+y*y)">
+    <button id="applyBtn">Apply</button>
+    <span class="err" id="customErr"></span>
+    <div class="hint">Allowed: +, −, *, /, **, sin, cos, tan, exp, log, sqrt, abs, PI. Avoid division by zero.</div>
+  </div>
+</header>
+
+<div id="canvas-wrap">
+  <canvas id="cv"></canvas>
+
+  <div class="hud hud-tl" id="hudTL">
+    <div class="math" id="fLabel">F(x,y) = ⟨y, x⟩</div>
+    <div>Field lines: <b id="lineShape">curved (hyperbolas)</b></div>
+    <div>Curl: <span id="curlTag" class="tag ok">∇×F = 0 (irrotational)</span></div>
+    <div class="desc" id="fDesc">Curved lines but no local spin. ∇×(−∇V)≡0 since mixed partials commute.</div>
+  </div>
+
+  <div class="hud hud-tr">🖱️ Drag to move wheel<br>Wheel spin ∝ (∇×F)·ẑ</div>
+
+  <div class="hud hud-br" id="hudBR">
+    <div class="row"><span>at (x,y):</span><span id="posVal">(0.00, 0.00)</span></div>
+    <div class="row"><span>F:</span><span id="fVal">(0.00, 0.00)</span></div>
+    <div class="row"><span>(∇×F)·ẑ :</span><span id="curlVal">0.000</span></div>
+    <div class="row"><span>∇·F :</span><span id="divVal">0.000</span></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   VECTOR FIELD CASES
+   Each case provides:
+     - fn(x,y): returns {vx, vy}
+     - analytical curl and divergence (for display & paddle torque)
+     - label, description, field-line shape
+   ============================================================ */
+
+const eps = 1e-6;
+const safe = v => (isFinite(v) ? v : 0);
+
+function curlNumerical(fn, x, y){
+  const h = 1e-3;
+  const a = fn(x+h, y), b = fn(x-h, y);
+  const c = fn(x, y+h), d = fn(x, y-h);
+  return safe((a.vy - b.vy)/(2*h) - (c.vx - d.vx)/(2*h));
+}
+function divNumerical(fn, x, y){
+  const h = 1e-3;
+  const a = fn(x+h, y), b = fn(x-h, y);
+  const c = fn(x, y+h), d = fn(x, y-h);
+  return safe((a.vx - b.vx)/(2*h) + (c.vy - d.vy)/(2*h));
+}
+
+const CASES = {
+  1: {
+    label: "F(x,y) = ⟨y, x⟩",
+    shape: "curved (rectangular hyperbolas)",
+    fn: (x,y) => ({vx: y, vy: x}),
+    curlA: "0",
+    divA: "0",
+    tag: "ok", tagText: "∇×F = 0 (irrotational)",
+    desc: "Curved lines, but ∇×F = ∂x/∂x − ∂y/∂y = 1−1 = 0. Conservative: F = ∇(xy). Wheel does NOT spin."
+  },
+  2: {
+    label: "F(x,y) = ⟨y, 0⟩",
+    shape: "straight horizontal",
+    fn: (x,y) => ({vx: y, vy: 0}),
+    curlA: "−1",
+    divA: "0",
+    tag: "bad", tagText: "∇×F = −1 (rotational)",
+    desc: "Straight horizontal lines, yet curl = ∂(0)/∂x − ∂y/∂y = 0−1 = −1. Shear flow produces clockwise torque. Wheel spins CW."
+  },
+  3: {
+    label: "F(x,y) = ⟨−y, x⟩",
+    shape: "concentric circles",
+    fn: (x,y) => ({vx: -y, vy: x}),
+    curlA: "+2",
+    divA: "0",
+    tag: "bad", tagText: "∇×F = +2 (rigid rotation)",
+    desc: "Classic rigid-body rotation. Curl = ∂x/∂x − ∂(−y)/∂y = 1−(−1) = 2. Wheel spins CCW. Also what appears inside Ampère/rotating fluids."
+  },
+  4: {
+    label: "F(x,y) = ⟨−y/r², x/r²⟩",
+    shape: "concentric circles",
+    fn: (x,y) => {
+      const r2 = x*x + y*y;
+      if (r2 < 1e-4) return {vx:0, vy:0};
+      return {vx: -y/r2, vy: x/r2};
+    },
+    curlA: "0  (r≠0)",
+    divA: "0  (r≠0)",
+    tag: "warn", tagText: "∇×F = 0 everywhere except origin (δ-like)",
+    desc: "Irrotational vortex: circular lines, but curl = 0 for r≠0. Wheel does NOT spin off-origin. This is the 2D analogue of B around a wire (outside source). Singularity at origin carries circulation 2π."
+  },
+  5: {
+    label: "F(x,y) = ⟨x, y⟩",
+    shape: "straight radial (source)",
+    fn: (x,y) => ({vx: x, vy: y}),
+    curlA: "0",
+    divA: "+2",
+    tag: "ok", tagText: "∇×F = 0  (but ∇·F = 2)",
+    desc: "Pure source: E-like field of a positive charge (∝ r̂). Straight lines, zero curl. Nonzero divergence: flux is created at origin. Wheel does NOT spin."
+  },
+  6: {
+    label: "F(x,y) = ⟨x, −y⟩",
+    shape: "curved (hyperbolas, saddle)",
+    fn: (x,y) => ({vx: x, vy: -y}),
+    curlA: "0",
+    divA: "0",
+    tag: "ok", tagText: "∇×F = 0 (saddle, Laplace-like)",
+    desc: "Saddle point: potential V ∝ xy has ∇²V = 0. Curved lines but curl = 0. Resembles quadrupole / stagnation-point flow. Wheel does NOT spin."
+  }
+};
+
+/* ============================================================
+   CUSTOM FUNCTION BUILDER
+   ============================================================ */
+function buildCustomFn(fxStr, fyStr){
+  // whitelist transform
+  const transform = s => {
+    const fns = ['sin','cos','tan','asin','acos','atan','atan2','exp','log','log2','log10','sqrt','abs','pow','floor','ceil','sign','min','max'];
+    let out = s;
+    fns.forEach(f => { out = out.replace(new RegExp('\\b'+f+'\\b','g'), 'Math.'+f); });
+    out = out.replace(/\bPI\b/g,'Math.PI').replace(/\bE\b/g,'Math.E');
+    out = out.replace(/\^/g,'**');
+    return out;
+  };
+  const fxCode = transform(fxStr);
+  const fyCode = transform(fyStr);
+  // test
+  const fx = new Function('x','y','return ('+fxCode+');');
+  const fy = new Function('x','y','return ('+fyCode+');');
+  // sanity test
+  const tvx = fx(1,1), tvy = fy(1,1);
+  if (typeof tvx !== 'number' || typeof tvy !== 'number') throw new Error('Must return numbers');
+  return (x,y) => {
+    try {
+      const vx = fx(x,y), vy = fy(x,y);
+      return {vx: isFinite(vx)?vx:0, vy: isFinite(vy)?vy:0};
+    } catch { return {vx:0,vy:0}; }
+  };
+}
+
+/* ============================================================
+   RENDERING + INTERACTION
+   ============================================================ */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W, H;
+let mx = 0, my = 0, dragging = false;
+let wheelAng = 0, wheelVel = 0;
+let currentId = 1;
+let customFn = null;
+
+function resize(){
+  const r = cv.getBoundingClientRect();
+  const dpr = devicePixelRatio || 1;
+  W = r.width; H = r.height;
+  cv.width = W*dpr; cv.height = H*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  if (!mx) { mx = W/2; my = H/2; }
+}
+addEventListener('resize', resize);
+
+function getCur(){
+  if (currentId === 7) {
+    return customFn || CASES[1].fn;
+  }
+  return CASES[currentId].fn;
+}
+
+/* world coords: origin at center, +x right, +y up.
+   1 world unit = 40 px  */
+const SCALE = 40;
+function s2w(sx, sy){ return { x: (sx - W/2)/SCALE, y: -(sy - H/2)/SCALE }; }
+function w2s(x, y){ return { x: W/2 + x*SCALE, y: H/2 - y*SCALE }; }
+
+/* --- draw field arrows --- */
+function drawField(){
+  const fn = getCur();
+  const step = 36;
+  ctx.lineWidth = 1;
+  for (let sx = step/2; sx < W; sx += step){
+    for (let sy = step/2; sy < H; sy += step){
+      const w = s2w(sx, sy);
+      const v = fn(w.x, w.y);
+      const m = Math.hypot(v.vx, v.vy);
+      if (m < 1e-6) continue;
+      // log-scaling of arrow length
+      const len = Math.min(14 + 6*Math.log(1+m), 22);
+      const nx = v.vx/m, ny = v.vy/m;
+      const ex = sx + nx*len, ey = sy - ny*len;
+      const alpha = Math.min(0.2 + m*0.15, 0.75);
+      ctx.strokeStyle = `rgba(148,163,184,${alpha})`;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy); ctx.lineTo(ex, ey);
+      ctx.stroke();
+      // arrowhead
+      const ang = Math.atan2(-(ny), nx);
+      const hl = 4;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - hl*Math.cos(ang-0.5), ey - hl*Math.sin(ang-0.5));
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - hl*Math.cos(ang+0.5), ey - hl*Math.sin(ang+0.5));
+      ctx.stroke();
+    }
+  }
+}
+
+/* --- paddle wheel: torque ∝ curl_z (physics) ---
+   We evaluate F at N blade positions, sum tangential components.
+   Result = (N·R/2) · curl_z  (derivation via Taylor expansion).
+*/
+const NB = 8, WR = 28; // blades, pixel radius
+function drawWheel(dt){
+  const fn = getCur();
+  const c = s2w(mx, my);
+  const Rworld = WR/SCALE;
+
+  let torque = 0;
+  for (let i=0;i<NB;i++){
+    const a = wheelAng + i*(2*Math.PI/NB);
+    const bx = c.x + Rworld*Math.cos(a);
+    const by = c.y + Rworld*Math.sin(a);
+    const v = fn(bx, by);
+    // tangential direction (CCW positive): (-sin a, cos a)
+    const vt = -v.vx*Math.sin(a) + v.vy*Math.cos(a);
+    torque += vt;
+  }
+  // angular velocity ∝ torque / N
+  const targetVel = torque / NB * 0.8;
+  wheelVel += (targetVel - wheelVel) * Math.min(1, dt*8);
+  wheelAng += wheelVel * dt;
+
+  // colour by curl
+  const cz = curlNumerical(fn, c.x, c.y);
+  const glow = Math.min(Math.abs(cz)*0.4, 1);
+  let glowCol;
+  if (Math.abs(cz) < 0.05) glowCol = `rgba(34,197,94,${0.3+glow})`;
+  else if (cz > 0) glowCol = `rgba(56,189,248,${0.4+glow*0.5})`;
+  else glowCol = `rgba(244,63,94,${0.4+glow*0.5})`;
+
+  ctx.save();
+  ctx.translate(mx, my);
+  ctx.rotate(-wheelAng); // screen y is flipped
+  ctx.shadowBlur = 14; ctx.shadowColor = glowCol;
+  // hub
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(0,0,3.5,0,Math.PI*2); ctx.fill();
+  // blades
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+  for (let i=0;i<NB;i++){
+    const a = i*(2*Math.PI/NB);
+    const ex = Math.cos(a)*WR, ey = Math.sin(a)*WR;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(ex,ey); ctx.stroke();
+    ctx.fillStyle = glowCol;
+    ctx.beginPath(); ctx.arc(ex,ey,3,0,Math.PI*2); ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(0,0,WR,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+
+/* --- HUD update --- */
+function updateHUD(){
+  const fn = getCur();
+  const c = s2w(mx, my);
+  const v = fn(c.x, c.y);
+  const cz = curlNumerical(fn, c.x, c.y);
+  const dv = divNumerical(fn, c.x, c.y);
+  document.getElementById('posVal').textContent = `(${c.x.toFixed(2)}, ${c.y.toFixed(2)})`;
+  document.getElementById('fVal').textContent   = `(${v.vx.toFixed(2)}, ${v.vy.toFixed(2)})`;
+  const czEl = document.getElementById('curlVal');
+  czEl.textContent = cz.toFixed(3);
+  czEl.style.color = Math.abs(cz) < 0.05 ? 'var(--ok)' : (cz > 0 ? 'var(--accent)' : 'var(--bad)');
+  const dvEl = document.getElementById('divVal');
+  dvEl.textContent = dv.toFixed(3);
+  dvEl.style.color = Math.abs(dv) < 0.05 ? 'var(--muted)' : 'var(--warn)';
+}
+
+function updateCaseHUD(){
+  const C = CASES[currentId];
+  if (currentId === 7){
+    document.getElementById('fLabel').textContent = 'Custom F(x,y)';
+    document.getElementById('lineShape').textContent = '(user-defined)';
+    const t = document.getElementById('curlTag');
+    t.textContent = 'Curl computed numerically (central differences)';
+    t.className = 'tag warn';
+    document.getElementById('fDesc').textContent = 'Enter Fx(x,y) and Fy(x,y) above. The wheel torque equals the z-component of curl by construction: τ ∝ ∂Fy/∂x − ∂Fx/∂y.';
+    return;
+  }
+  document.getElementById('fLabel').textContent = C.label;
+  document.getElementById('lineShape').textContent = C.shape;
+  const t = document.getElementById('curlTag');
+  t.textContent = C.tagText;
+  t.className = 'tag ' + C.tag;
+  document.getElementById('fDesc').textContent = C.desc;
+}
+
+/* --- main loop --- */
+let last = performance.now();
+function loop(t){
+  const dt = Math.min((t-last)/1000, 0.05); last = t;
+  ctx.clearRect(0,0,W,H);
+  drawField();
+  drawWheel(dt);
+  updateHUD();
+  requestAnimationFrame(loop);
+}
+
+/* --- events --- */
+function ptr(e){
+  const r = cv.getBoundingClientRect();
+  const cx = e.touches ? e.touches[0].clientX : e.clientX;
+  const cy = e.touches ? e.touches[0].clientY : e.clientY;
+  return {x: cx - r.left, y: cy - r.top};
+}
+cv.addEventListener('mousedown', e => { dragging = true; const p = ptr(e); mx=p.x; my=p.y; });
+cv.addEventListener('mousemove', e => { if (dragging){ const p = ptr(e); mx=p.x; my=p.y; } });
+addEventListener('mouseup', () => dragging = false);
+cv.addEventListener('touchstart', e => { dragging = true; const p = ptr(e); mx=p.x; my=p.y; e.preventDefault(); }, {passive:false});
+cv.addEventListener('touchmove',  e => { if (dragging){ const p = ptr(e); mx=p.x; my=p.y; e.preventDefault(); } }, {passive:false});
+addEventListener('touchend', () => dragging = false);
+
+document.querySelectorAll('.btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    currentId = +b.dataset.id;
+    document.getElementById('customPanel').classList.toggle('show', currentId === 7);
+    wheelAng = 0; wheelVel = 0;
+    updateCaseHUD();
+  });
+});
+
+document.getElementById('applyBtn').addEventListener('click', () => {
+  const errEl = document.getElementById('customErr');
+  errEl.textContent = '';
+  try {
+    customFn = buildCustomFn(
+      document.getElementById('fxInput').value,
+      document.getElementById('fyInput').value
+    );
+    // quick sanity sample
+    customFn(0.5, 0.5);
+    updateCaseHUD();
+  } catch (e) {
+    errEl.textContent = '⚠ ' + e.message;
+    customFn = null;
+  }
+});
+
+/* boot */
+resize();
+updateCaseHUD();
+requestAnimationFrame(loop);
+</script>
+</body>
+  </html>
