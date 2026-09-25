@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Electric Field Lines</title>
+<style>
+:root{--bg:#09090b;--white:#f1f1f1}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--white);font-family:Inter,Arial,sans-serif}
+body{display:flex;justify-content:center;min-height:100vh}
+.wrap{width:min(1000px,100%);padding:28px 18px 35px}
+h1{text-align:center;margin:0;font-size:clamp(30px,4.5vw,52px);font-weight:800}
+.sub{text-align:center;color:#aaa;margin:9px auto 24px;font-size:clamp(14px,1.8vw,19px)}
+.panel{position:relative;width:100%;aspect-ratio:16/11;background:#050507;border:1px solid #18181c;border-radius:8px;overflow:hidden;box-shadow:0 0 35px rgba(0,0,0,.35)}
+canvas{display:block;width:100%;height:100%}
+.caption{text-align:center;margin-top:17px;color:#ccc;font-size:clamp(15px,2vw,21px)}
+.caption .plus{color:#ff5050}.caption .minus{color:#48a3ff}
+.controls{display:flex;justify-content:center;gap:10px;margin-top:18px}
+button{background:#111;border:1px solid #333;color:#ddd;border-radius:7px;padding:8px 14px;cursor:pointer}
+button:hover{background:#181818}
+
+
+.sliders{
+  width:min(92%,520px);
+  margin:14px auto 10px;
+  display:grid;
+  gap:10px;
+}
+.sliders label{
+  display:grid;
+  grid-template-columns:auto 58px;
+  align-items:center;
+  gap:8px;
+  color:#d8d8dc;
+  font-size:14px;
+  text-align:left;
+}
+.sliders label span{
+  color:#aaa;
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+.sliders input[type=range]{
+  grid-column:1 / -1;
+  width:100%;
+  accent-color:#55b8ff;
+  cursor:pointer;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Electric Field Lines</h1>
+<div class="sub">Field lines show the direction of the electric field between two point charges.</div>
+<div class="panel"><canvas id="field"></canvas></div>
+<div class="caption">Lines leave <span class="plus">positive</span> charge and enter <span class="minus">negative</span> charge.</div>
+<div class="sliders">
+  <label>Speed <span id="speedValue">1.0×</span>
+    <input id="speedSlider" type="range" min="0.25" max="3" step="0.05" value="1">
+  </label>
+  <label>Density <span id="densityValue">1.0×</span>
+    <input id="densitySlider" type="range" min="0.35" max="1.8" step="0.05" value="1">
+  </label>
+</div>
+<div class="controls"><button id="pause">Pause</button><button id="reset">Restart animation</button></div>
+</div>
+
+<script>
+const canvas=document.getElementById("field"),ctx=canvas.getContext("2d");
+const DPR=Math.min(devicePixelRatio||1,2),TAU=Math.PI*2;
+let paused=false, streamlines=[], dashes=[];
+let speedMultiplier=1;
+let densityMultiplier=1;
+
+function resize(){
+ const r=canvas.getBoundingClientRect();
+ canvas.width=Math.max(240,Math.floor(r.width*DPR));
+ canvas.height=Math.max(180,Math.floor(r.height*DPR));
+}
+window.addEventListener("resize",()=>{resize();buildField();});
+resize();
+
+function P(x,y){
+ // Frame the actual dipole field instead of wasting canvas space to the
+ // right of the negative charge. For an equal +/− dipole, field lines
+ // terminate on the negative charge, so there are no physical trajectories
+ // extending far beyond it.
+ if(typeof x==="object"){
+   y=x.y;
+   x=x.x;
+ }
+ const XMIN=-3.15, XMAX=3.15;
+ return {
+   x:(x-XMIN)/(XMAX-XMIN)*canvas.width,
+   y:-y*canvas.height/3.35+canvas.height/2
+ };
+}
+
+const charges=[{x:-1.55,y:0,q:1},{x:1.55,y:0,q:-1}];
+
+function E(x,y){
+ let ex=0,ey=0;
+ for(const c of charges){
+   const dx=x-c.x,dy=y-c.y;
+   const r2=Math.max(dx*dx+dy*dy,.020);
+   const r=Math.sqrt(r2);
+   const k=c.q/(r2*r);
+   ex+=k*dx;ey+=k*dy;
+ }
+ return{x:ex,y:ey};
+}
+function unit(v){
+ const m=Math.hypot(v.x,v.y)||1;
+ return{x:v.x/m,y:v.y/m};
+}
+
+
+function fieldAt(x,y){
+ let ex=0,ey=0;
+ for(const c of charges){
+   const dx=x-c.x,dy=y-c.y;
+   const r2=Math.max(dx*dx+dy*dy,.018);
+   const r=Math.sqrt(r2);
+   const k=c.q/(r2*r);
+   ex+=k*dx;ey+=k*dy;
+ }
+ return{x:ex,y:ey};
+}
+function uv(v){
+ const m=Math.hypot(v.x,v.y)||1;
+ return{x:v.x/m,y:v.y/m};
+}
+
+/* Trace complete electric-field trajectories from a seed near +q.
+   The points are stored densely enough that the dashes remain clearly visible
+   even on a phone screen. */
+function traceLine(seedX,seedY){
+ const forward=[];
+ let x=seedX,y=seedY;
+
+ for(let i=0;i<6000;i++){
+   forward.push({x,y});
+   const dn=Math.hypot(x-charges[1].x,y-charges[1].y);
+   if(dn<.070 || Math.abs(x)>14 || Math.abs(y)>14) break;
+
+   const v=uv(fieldAt(x,y));
+   const h=.013;
+   // Midpoint RK2 step gives smooth curved trajectories.
+   const mx=x+v.x*h*.5,my=y+v.y*h*.5;
+   const vm=uv(fieldAt(mx,my));
+   x+=vm.x*h;y+=vm.y*h;
+ }
+
+ return forward;
+}
+
+function resample(raw,spacing=.027){
+ if(raw.length<3)return[];
+ const out=[raw[0]];
+ let carry=0;
+
+ for(let i=1;i<raw.length;i++){
+   let ax=raw[i-1].x,ay=raw[i-1].y;
+   const bx=raw[i].x,by=raw[i].y;
+   let dx=bx-ax,dy=by-ay,seg=Math.hypot(dx,dy);
+   if(seg<1e-9)continue;
+
+   while(carry+seg>=spacing){
+     const t=(spacing-carry)/seg;
+     ax+=dx*t;ay+=dy*t;
+     out.push({x:ax,y:ay});
+     dx=bx-ax;dy=by-ay;seg=Math.hypot(dx,dy);
+     carry=0;
+     if(seg<1e-9)break;
+   }
+   carry+=seg;
+ }
+ return out;
+}
+
+function makeDash(path, kind, offsetSeed){
+ const len =
+   kind==="bright" ? 9+Math.floor(Math.random()*13) :
+   kind==="mid" ? 7+Math.floor(Math.random()*9) :
+   5+Math.floor(Math.random()*8);
+
+ return {
+   path,
+   pos:offsetSeed,
+   len,
+   speed:kind==="bright"
+      ? .52+Math.random()*.42
+      : kind==="mid"
+      ? .40+Math.random()*.34
+      : .30+Math.random()*.28,
+   alpha:kind==="bright"
+      ? .72+Math.random()*.23
+      : kind==="mid"
+      ? .30+Math.random()*.24
+      : .10+Math.random()*.14,
+   width:kind==="bright"
+      ? 1.45+Math.random()*.75
+      : kind==="mid"
+      ? .85+Math.random()*.55
+      : .52+Math.random()*.35,
+   kind,
+   phase:Math.random()*TAU
+ };
+}
+
+function buildField(){
+ streamlines=[];
+ dashes=[];
+
+ // Many closely spaced trajectories. The reference look comes from
+ // hundreds of short luminous segments riding on a smaller number of
+ // smooth field trajectories.
+ const N=Math.max(36,Math.round(144*densityMultiplier));
+ for(let i=0;i<N;i++){
+   // Uniform angular sampling keeps the dipole symmetric.
+   const angle=TAU*i/N;
+   const r=.085;
+   const sx=charges[0].x+Math.cos(angle)*r;
+   const sy=charges[0].y+Math.sin(angle)*r;
+   const raw=traceLine(sx,sy);
+   const pts=resample(raw,.012);
+   if(pts.length>30) streamlines.push(pts);
+ }
+
+ // Add outer-side trajectories by integrating backward from the
+ // negative charge. These are still exact integral curves of the same E field,
+ // just traversed from - toward + while being stored in display order + -> -.
+ const outerN=Math.max(16,Math.round(56*densityMultiplier));
+ for(let i=0;i<outerN;i++){
+   const a=-1.38 + (2.76*i)/(outerN-1);
+   const r=.085;
+   let x=charges[1].x+Math.cos(a)*r;
+   let y=charges[1].y+Math.sin(a)*r;
+   const back=[];
+   for(let k=0;k<6000;k++){
+     back.push({x,y});
+     const dp=Math.hypot(x-charges[0].x,y-charges[0].y);
+     if(dp<.070 || Math.abs(x)>14 || Math.abs(y)>14) break;
+     const v=uv(fieldAt(x,y));
+     const h=.013;
+     const mx=x-v.x*h*.5,my=y-v.y*h*.5;
+     const vm=uv(fieldAt(mx,my));
+     x-=vm.x*h;y-=vm.y*h;
+   }
+   if(back.length>30){
+     const ordered=back.reverse();
+     const pts=resample(ordered,.012);
+     // Only add genuinely useful outer paths that reach the right side
+     // of the negative charge while remaining within the scene.
+     let reachesRight=false;
+     for(const q of pts){
+       if(q.x>charges[1].x+.18 && Math.abs(q.y)<3.0){reachesRight=true;break;}
+     }
+     if(reachesRight) streamlines.push(pts);
+   }
+ }
+
+ // Put many short moving segments along every trajectory.
+ for(const path of streamlines){
+   const n=path.length;
+   const dashCount=Math.max(36,Math.floor(n/3.9));
+
+   for(let j=0;j<dashCount;j++){
+     const u=Math.random();
+     const kind =
+       u < .66 ? "faint" :
+       u < .92 ? "mid" :
+       "bright";
+
+     const len =
+       kind==="bright" ? 4.5+Math.random()*5.0 :
+       kind==="mid"    ? 3.5+Math.random()*4.5 :
+                          2.5+Math.random()*4.0;
+
+     dashes.push({
+       path,
+       pos:Math.random()*Math.max(1,n-len-1),
+       len,
+       speed:kind==="bright" ? .42+Math.random()*.42 :
+             kind==="mid"    ? .34+Math.random()*.34 :
+                                .25+Math.random()*.30,
+       alpha:kind==="bright" ? .72+Math.random()*.24 :
+             kind==="mid"    ? .28+Math.random()*.28 :
+                                .075+Math.random()*.16,
+       width:kind==="bright" ? 1.45+Math.random()*.85 :
+             kind==="mid"    ? .85+Math.random()*.55 :
+                                .48+Math.random()*.38,
+       kind
+     });
+   }
+ }
+}
+
+function moveDash(d){
+ d.pos+=d.speed*speedMultiplier;
+ const end=d.path.length+4;
+ if(d.pos>end)d.pos=-d.len-Math.random()*20;
+}
+
+function drawDash(d){
+ const pts=d.path;
+ const a=Math.max(0,Math.floor(d.pos));
+ const b=Math.min(pts.length-1,Math.floor(d.pos+d.len));
+ if(a>=b)return;
+
+ ctx.beginPath();
+ let q=P(pts[a]);
+ ctx.moveTo(q.x,q.y);
+ for(let i=a+1;i<=b;i++){
+   q=P(pts[i]);
+   ctx.lineTo(q.x,q.y);
+ }
+ ctx.globalAlpha=d.alpha;
+ ctx.strokeStyle="#eeeeee";
+ ctx.lineWidth=d.width*DPR;
+ ctx.lineCap="round";
+ ctx.stroke();
+ ctx.globalAlpha=1;
+}
+
+function drawCharge(c){
+ const q=P(c.x,c.y);
+ const R=Math.min(canvas.width,canvas.height)*.050;
+ const glow=c.q>0?"rgba(255,62,62,.58)":"rgba(65,145,255,.58)";
+
+ const g=ctx.createRadialGradient(q.x,q.y,0,q.x,q.y,R*3.2);
+ g.addColorStop(0,glow);
+ g.addColorStop(1,"rgba(0,0,0,0)");
+ ctx.fillStyle=g;ctx.beginPath();ctx.arc(q.x,q.y,R*3.2,0,TAU);ctx.fill();
+
+ ctx.beginPath();ctx.arc(q.x,q.y,R,0,TAU);
+ ctx.fillStyle=c.q>0?"#ff4040":"#287dff";ctx.fill();
+ ctx.strokeStyle="rgba(255,255,255,.72)";
+ ctx.lineWidth=1.2*DPR;ctx.stroke();
+
+ ctx.fillStyle="#fff";
+ ctx.font=`${R*1.25}px Arial`;
+ ctx.textAlign="center";ctx.textBaseline="middle";
+ ctx.fillText(c.q>0?"+":"−",q.x,q.y+1);
+}
+
+function frame(){
+ if(!paused){
+   for(const d of dashes)moveDash(d);
+ }
+
+ ctx.fillStyle="#050507";
+ ctx.fillRect(0,0,canvas.width,canvas.height);
+
+ // Only segmented streaks are drawn. No continuous skeleton lines.
+ // This is what gives the field the dense, textured appearance of the reference.
+ for(const d of dashes)if(d.kind==="faint")drawDash(d);
+ for(const d of dashes)if(d.kind==="mid")drawDash(d);
+ for(const d of dashes)if(d.kind==="bright")drawDash(d);
+
+ drawCharge(charges[0]);
+ drawCharge(charges[1]);
+
+ requestAnimationFrame(frame);
+}
+
+const speedSlider=document.getElementById("speedSlider");
+const densitySlider=document.getElementById("densitySlider");
+const speedValue=document.getElementById("speedValue");
+const densityValue=document.getElementById("densityValue");
+
+speedSlider.oninput=()=>{
+  speedMultiplier=parseFloat(speedSlider.value);
+  speedValue.textContent=speedMultiplier.toFixed(2).replace(/\\.00$/,"")+"×";
+};
+
+densitySlider.oninput=()=>{
+  densityMultiplier=parseFloat(densitySlider.value);
+  densityValue.textContent=densityMultiplier.toFixed(2).replace(/\\.00$/,"")+"×";
+  buildField();
+};
+
+document.getElementById("pause").onclick=()=>{
+ paused=!paused;
+ document.getElementById("pause").textContent=paused?"Play":"Pause";
+};
+document.getElementById("reset").onclick=()=>{
+ buildField();
+};
+
+buildField();
+frame();
+</script>
+</body>
+</html>
