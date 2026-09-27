@@ -3,120 +3,203 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reel Views Predictor - 5 Coefficients</title>
+<title>Reel Views Predictor - 5 Coefficient Model</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b0d12;color:#f5f7fb;min-height:100vh}
-.wrap{max-width:760px;margin:0 auto;padding:32px 18px 50px}
-h1{font-size:30px;margin:0 0 8px}.sub{color:#9da5b4;margin-bottom:28px}
-.card{background:#141820;border:1px solid #252b36;border-radius:18px;padding:22px;margin-bottom:16px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-label{display:block;color:#b7bfcc;font-size:14px;margin-bottom:8px}
-input{width:100%;padding:14px 15px;border-radius:12px;border:1px solid #343b48;background:#0d1016;color:#fff;font-size:18px;outline:none}
-input:focus{border-color:#718096}
-.result{text-align:center;padding:28px 18px}
-.label{color:#9da5b4;font-size:14px}.views{font-size:48px;font-weight:750;margin:8px 0}
-.small{color:#9da5b4;font-size:13px}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px}
-.stat{background:#0d1016;border-radius:12px;padding:14px}.stat b{display:block;font-size:19px;margin-top:4px}
-.formula{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.7;color:#d7dce5;font-size:13px;overflow:auto}
-.note{font-size:13px;color:#929aa9;line-height:1.55}
-@media(max-width:600px){.grid,.stats{grid-template-columns:1fr}.views{font-size:40px}}
+  :root {
+    --bg: #0b1020;
+    --card: #121a2d;
+    --card2: #0f1728;
+    --text: #eef2ff;
+    --muted: #9aa7c2;
+    --accent: #6ea8fe;
+    --border: #26324d;
+    --good: #57d38c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: linear-gradient(145deg, #080c18, var(--bg));
+    color: var(--text);
+    padding: 24px;
+  }
+  .wrap { max-width: 760px; margin: auto; }
+  h1 { margin: 0 0 8px; font-size: 28px; }
+  .sub { color: var(--muted); margin-bottom: 22px; }
+  .card {
+    background: rgba(18,26,45,.96);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  label {
+    display: block;
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 7px;
+  }
+  input {
+    width: 100%;
+    padding: 13px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card2);
+    color: var(--text);
+    font-size: 17px;
+    outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  button {
+    width: 100%;
+    margin-top: 18px;
+    padding: 14px;
+    border: 0;
+    border-radius: 11px;
+    background: var(--accent);
+    color: #07101f;
+    font-weight: 800;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .result {
+    text-align: center;
+    padding: 8px 0 4px;
+  }
+  .views {
+    font-size: clamp(38px, 9vw, 64px);
+    font-weight: 850;
+    letter-spacing: -2px;
+    margin: 8px 0;
+  }
+  .small { color: var(--muted); font-size: 13px; }
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4,1fr);
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .metric {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 12px;
+    text-align: center;
+  }
+  .metric b { display:block; font-size: 18px; margin-top: 4px; }
+  .formula {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    line-height: 1.75;
+    color: #dbe5ff;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .note {
+    color: var(--muted);
+    line-height: 1.6;
+    font-size: 14px;
+  }
+  @media (max-width: 620px) {
+    .grid, .metrics { grid-template-columns: 1fr 1fr; }
+    body { padding: 14px; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Instagram Reel Views Predictor</h1>
-  <div class="sub">5-coefficient quadratic log model</div>
+  <h1>Reel Views Predictor</h1>
+  <div class="sub">5-Coefficient Hook + Share model</div>
 
   <div class="card">
     <div class="grid">
       <div>
         <label for="hook">Hook Rate (%)</label>
-        <input id="hook" type="number" step="0.1" value="60">
+        <input id="hook" type="number" step="0.1" value="60.0" min="0">
       </div>
       <div>
         <label for="share">Share Rate (%)</label>
-        <input id="share" type="number" step="0.01" value="0.60">
+        <input id="share" type="number" step="0.01" value="0.60" min="0">
       </div>
     </div>
+    <button onclick="predict()">Predict Final Views</button>
   </div>
 
   <div class="card result">
-    <div class="label">Predicted Final Views</div>
-    <div class="views" id="views">0</div>
-    <div class="small">5-coefficient model</div>
-    <div class="stats">
-      <div class="stat"><span class="small">Standardized Hook</span><b id="h">0.00</b></div>
-      <div class="stat"><span class="small">Standardized Share</span><b id="s">0.00</b></div>
-      <div class="stat"><span class="small">Hook × Share</span><b id="hs">0.00</b></div>
+    <div class="small">Predicted final views</div>
+    <div class="views" id="views">—</div>
+    <div class="small">Based on the current 5C model</div>
+
+    <div class="metrics">
+      <div class="metric"><span class="small">h</span><b id="h">—</b></div>
+      <div class="metric"><span class="small">s</span><b id="s">—</b></div>
+      <div class="metric"><span class="small">h²</span><b id="h2">—</b></div>
+      <div class="metric"><span class="small">s²</span><b id="s2">—</b></div>
     </div>
   </div>
 
   <div class="card">
+    <h3>Model</h3>
     <div class="formula">
-      h = (H − 56.6346) / 8.9093<br>
-      s = (S − 0.611923) / 0.295310<br><br>
-      ln(V) = A + B·h + C·h² + D·s + E·h·s<br>
-      A = 12.0151<br>
-      B = 0.7239<br>
-      C = 0.1045<br>
-      D = 0.3053<br>
-      E = −0.00918<br><br>
+      h = (Hook − 56.6346) / 8.9093<br>
+      s = (Share − 0.611923) / 0.295310<br><br>
+      ln(V) = 12.06454 + 1.18133h + 0.21165h² + 0.59959s − 0.15148s²<br>
       V = exp(ln(V))
     </div>
   </div>
 
   <div class="card">
+    <h3>About the model</h3>
     <div class="note">
-      This app uses Hook Rate and Share Rate only. Like Rate is excluded.
-      The model has five fitted terms: intercept, Hook, Hook², Share,
-      and Hook × Share. Values are based on the current experimental
-      26-reel dataset.
+      Like Rate is intentionally excluded. The model uses Hook Rate and Share Rate only.
+      The coefficients come from the current 5-coefficient model selected for low-view Reel
+      prediction. Validation was performed using leave-one-out cross-validation on the
+      26-Reel dataset, with the ≤300K-view Reels as the primary evaluation group.
     </div>
   </div>
 </div>
 
 <script>
-const hook=document.getElementById('hook');
-const share=document.getElementById('share');
-const viewsEl=document.getElementById('views');
-const hEl=document.getElementById('h');
-const sEl=document.getElementById('s');
-const hsEl=document.getElementById('hs');
-
-function formatViews(v){
-  if(!Number.isFinite(v)) return '—';
-  if(v>=1e9) return (v/1e9).toFixed(2)+'B';
-  if(v>=1e6) return (v/1e6).toFixed(2)+'M';
-  if(v>=1e3) return Math.round(v/1e3)+'K';
+function fmtViews(v) {
+  if (!isFinite(v)) return "—";
+  if (v >= 1000000) return (v / 1000000).toFixed(2) + "M";
+  if (v >= 1000) return Math.round(v / 1000) + "K";
   return Math.round(v).toLocaleString();
 }
 
-function predict(){
-  const H=Number(hook.value);
-  const S=Number(share.value);
+function predict() {
+  const H = parseFloat(document.getElementById("hook").value);
+  const S = parseFloat(document.getElementById("share").value);
 
-  const h=(H-56.6346)/8.9093;
-  const s=(S-0.611923)/0.295310;
+  if (!isFinite(H) || !isFinite(S) || H < 0 || S < 0) {
+    alert("Please enter valid non-negative Hook Rate and Share Rate values.");
+    return;
+  }
 
-  const A=12.0151;
-  const B=0.7239;
-  const C=0.1045;
-  const D=0.3053;
-  const E=-0.00918;
+  const h = (H - 56.6346) / 8.9093;
+  const s = (S - 0.611923) / 0.295310;
 
-  const lnV=A+B*h+C*h*h+D*s+E*h*s;
-  const V=Math.exp(lnV);
+  const lnV =
+      12.06454
+      + 1.18133 * h
+      + 0.21165 * h * h
+      + 0.59959 * s
+      - 0.15148 * s * s;
 
-  hEl.textContent=h.toFixed(2);
-  sEl.textContent=s.toFixed(2);
-  hsEl.textContent=(h*s).toFixed(2);
-  viewsEl.textContent=formatViews(V);
+  const V = Math.exp(lnV);
+
+  document.getElementById("views").textContent = fmtViews(V);
+  document.getElementById("h").textContent = h.toFixed(3);
+  document.getElementById("s").textContent = s.toFixed(3);
+  document.getElementById("h2").textContent = (h*h).toFixed(3);
+  document.getElementById("s2").textContent = (s*s).toFixed(3);
 }
 
-hook.addEventListener('input',predict);
-share.addEventListener('input',predict);
 predict();
 </script>
 </body>
