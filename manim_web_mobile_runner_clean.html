@@ -1,0 +1,1039 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0d12" />
+  <title>Manim-Web Mobile Runner</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0d12;
+      --panel: #11151c;
+      --panel2: #171c24;
+      --border: #2a3240;
+      --text: #e9edf4;
+      --muted: #9aa5b5;
+      --accent: #65a7ff;
+      --good: #66d19e;
+      --bad: #ff7a7a;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { min-height: 100vh; }
+    header {
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(11,13,18,.94); backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 14px 10px;
+    }
+    .title { font-size: 18px; font-weight: 700; }
+    .subtitle { margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+    main { padding: 12px; display: grid; gap: 12px; max-width: 1200px; margin: 0 auto; }
+    .row { display: grid; gap: 12px; }
+    @media (min-width: 900px) {
+      .row { grid-template-columns: 1fr 420px; align-items: start; }
+      .sticky { position: sticky; top: 88px; }
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .cardhead {
+      padding: 10px 12px;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel2);
+    }
+    .cardtitle { font-size: 13px; font-weight: 700; }
+    .status { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .code-settings {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      background: #f3f4f6;
+      border-bottom: 1px solid #d9dde3;
+      color: #5f6368;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    .code-settings select {
+      appearance: none;
+      border: 1px solid #cbd1d9;
+      border-radius: 7px;
+      background: #ffffff;
+      color: #202124;
+      padding: 7px 28px 7px 9px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: #f3f4f6;
+      border: 1px solid #d9dde3;
+      border-bottom: 0;
+      border-radius: 8px 8px 0 0;
+    }
+    .editor-toolbar button {
+      min-width: 42px;
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid #cbd1d9;
+      border-radius: 7px;
+      background: #ffffff;
+      color: #202124;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .editor-toolbar button:active {
+      background: #e8eef7;
+    }
+    .editor-toolbar button:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    #editor {
+      min-height: 58vh;
+      background: #ffffff;
+    }
+    .CodeMirror {
+      height: 58vh;
+      min-height: 420px;
+      font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      background: #ffffff;
+      color: #202124;
+    }
+    .CodeMirror-gutters {
+      background: #f3f4f6;
+      border-right: 1px solid #d9dde3;
+    }
+    .CodeMirror-linenumber { color: #7b8491; }
+    .CodeMirror-cursor { border-left: 1px solid #202124; }
+    .CodeMirror-selected { background: #dbeafe; }
+    .CodeMirror-activeline-background { background: #f7f9fc; }
+    .CodeMirror-lines { padding: 18px 14px 22px; }
+    .CodeMirror pre.CodeMirror-line, .CodeMirror pre.CodeMirror-line-like { padding-left: 6px; padding-right: 10px; }
+    .cm-error-line { background: rgba(255, 80, 80, 0.16); }
+    .cm-error-gutter {
+      color: #ff6b6b !important;
+      font-weight: 700;
+    }
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px;
+      border-top: 1px solid var(--border);
+      background: var(--panel2);
+    }
+    button {
+      appearance: none; border: 1px solid var(--border);
+      background: #1a2029; color: var(--text);
+      border-radius: 10px; padding: 9px 12px; font-weight: 650; font-size: 12px;
+    }
+    button.primary { background: #1e5fae; border-color: #2b73cb; }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity: .5; }
+    .preview {
+      min-height: 400px;
+      display: grid;
+      place-items: center;
+      background: #050608;
+      padding: 18px 16px 22px;
+    }
+    #container {
+      width: min(86vw, 330px);
+      aspect-ratio: 9 / 16;
+      max-height: 72vh;
+      border: 1px solid #202633;
+      background: #000;
+      overflow: hidden;
+      position: relative;
+    }
+    #container canvas { display: block; width: 100% !important; height: 100% !important; }
+    #container > * { max-width: 100%; }
+    /* Keep manim-web's integrated Player controls usable on a phone. */
+    #container button { min-width: 30px; min-height: 30px; padding: 6px 8px; font-size: 11px; }
+    #container input[type="range"] { max-width: 100%; }
+    .log {
+      max-height: 180px;
+      overflow: auto;
+      padding: 10px 12px;
+      font: 11px/1.45 ui-monospace, monospace;
+      white-space: pre-wrap;
+      color: #b8c2cf;
+      background: #0d1117;
+      border-top: 1px solid var(--border);
+    }
+    .good { color: var(--good); }
+    .bad { color: var(--bad); }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+</head>
+<body>
+<header>
+  <div class="title">Manim-Web Mobile Runner</div>
+  <div class="subtitle">
+    Paste JavaScript or TypeScript manim-web scene code, then press Run.
+    Your code is saved locally on this device.
+  </div>
+</header>
+
+<main>
+  <div class="row">
+    <section class="card">
+      <div class="cardhead">
+        <div class="cardtitle">Code</div>
+        <div id="runtimeStatus" class="status">Runtime: not loaded</div>
+      </div>
+      <div class="code-settings">
+        <span>Resolution</span>
+        <select id="resolutionSelect" aria-label="Resolution">
+          <option value="360">360p · 360×640</option>
+          <option value="720">720p · 720×1280</option>
+          <option value="1080" selected>1080p · 1080×1920</option>
+        </select>
+      </div>
+      <div class="editor-toolbar" aria-label="Editor history controls">
+        <button id="undoBtn" type="button" title="Undo (Ctrl+Z)">↶ <span>Undo</span></button>
+        <button id="redoBtn" type="button" title="Redo (Ctrl+Y)">↷ <span>Redo</span></button>
+        <button id="copyBtn" type="button" title="Copy code to clipboard">⧉ <span>Copy</span></button>
+      </div>
+      <div id="editor"></div>
+      <div class="toolbar">
+        <button id="runBtn" class="primary">▶ Run</button>
+        <button id="clearBtn">Clear Preview</button>
+        <button id="demoBtn">Load Demo</button>
+        <button id="saveBtn">Save Code</button>
+      </div>
+    </section>
+
+    <section class="card sticky">
+      <div class="cardhead">
+        <div class="cardtitle">Preview</div>
+        <div id="runStatus" class="status">Idle</div>
+      </div>
+      <div class="preview">
+        <div id="container"></div>
+      </div>
+      <div id="log" class="log">Ready.</div>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+  const RUNTIME_VERSION = "0.3.22";
+  // 0.3.22 is intentionally pinned for stable VGroup/timeline seeking on mobile.
+  const RUNTIME_COMPAT_NOTE = "Pinned manim-web 0.3.22 for VGroup compatibility";
+  const RUNTIME_URL = `https://cdn.jsdelivr.net/npm/manim-web@${RUNTIME_VERSION}/dist/manim-web.browser.js`;
+  const TS_VERSION = "7.0.2";
+  const TS_URL = `https://cdn.jsdelivr.net/npm/typescript@${TS_VERSION}/+esm`;
+  const CACHE_NAME = `manim-web-runtime-v${RUNTIME_VERSION}`;
+  const DB_NAME = "manim-web-mobile-runner";
+  const DB_VERSION = 1;
+  const STORE = "runtime";
+
+  const editorHost = document.getElementById("editor");
+  const logEl = document.getElementById("log");
+  const runtimeStatusEl = document.getElementById("runtimeStatus");
+  const runStatusEl = document.getElementById("runStatus");
+  const container = document.getElementById("container");
+  const runBtn = document.getElementById("runBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const demoBtn = document.getElementById("demoBtn");
+  const saveBtn = document.getElementById("saveBtn");
+  const resolutionSelect = document.getElementById("resolutionSelect");
+  let activePlayer = null;
+
+  // Lightweight mobile-friendly editor. CodeMirror 5 gives us the basic IDE
+  // features we need without a build system: line numbers, syntax colors,
+  // undo/redo, brackets, and TypeScript-aware JavaScript highlighting.
+  const editor = CodeMirror(editorHost, {
+    value: "",
+    mode: { name: "javascript", typescript: true },
+    theme: "default",
+    lineNumbers: true,
+    lineWrapping: false,
+    tabSize: 2,
+    indentUnit: 2,
+    matchBrackets: true,
+    styleActiveLine: true,
+    viewportMargin: 50
+  });
+
+  const undoBtn = document.getElementById("undoBtn");
+  const redoBtn = document.getElementById("redoBtn");
+  const copyBtn = document.getElementById("copyBtn");
+
+  function updateHistoryButtons() {
+    const history = editor.getDoc().historySize();
+    undoBtn.disabled = history.undo === 0;
+    redoBtn.disabled = history.redo === 0;
+  }
+
+  undoBtn.addEventListener("click", () => {
+    editor.focus();
+    editor.getDoc().undo();
+    updateHistoryButtons();
+  });
+
+  redoBtn.addEventListener("click", () => {
+    editor.focus();
+    editor.getDoc().redo();
+    updateHistoryButtons();
+  });
+
+  function legacyCopy(text) {
+    // Important for Android when this HTML is opened from Downloads/content://:
+    // Clipboard API access may be unavailable because it is not a secure origin.
+    // Use execCommand synchronously while the button's user gesture is still active.
+    const temp = document.createElement("textarea");
+    temp.value = text;
+    temp.setAttribute("aria-hidden", "true");
+    temp.setAttribute("autocomplete", "off");
+    temp.setAttribute("autocorrect", "off");
+    temp.setAttribute("spellcheck", "false");
+    temp.style.position = "fixed";
+    temp.style.left = "8px";
+    temp.style.top = "8px";
+    temp.style.width = "1px";
+    temp.style.height = "1px";
+    temp.style.padding = "0";
+    temp.style.border = "0";
+    temp.style.margin = "0";
+    temp.style.opacity = "0.01";
+    temp.style.zIndex = "2147483647";
+    temp.style.fontSize = "16px";
+    document.body.appendChild(temp);
+
+    let copied = false;
+    try {
+      temp.focus({ preventScroll: true });
+      temp.select();
+      temp.setSelectionRange(0, temp.value.length);
+      copied = document.execCommand("copy");
+    } catch (_) {
+      copied = false;
+    } finally {
+      temp.remove();
+    }
+    return copied;
+  }
+
+  function copyCodeToClipboard() {
+    const code = getCode();
+    if (!code) throw new Error("There is no code to copy.");
+
+    // For local/content:// pages, prefer the synchronous fallback so the
+    // browser's transient user activation is not lost across an await.
+    if (!window.isSecureContext || location.protocol === "file:" || location.protocol === "content:") {
+      if (legacyCopy(code)) return Promise.resolve(true);
+
+      // As a final manual-copy fallback, select the entire CodeMirror document.
+      editor.focus();
+      editor.setSelection(
+        { line: 0, ch: 0 },
+        { line: editor.lineCount() - 1, ch: editor.getLine(editor.lineCount() - 1).length }
+      );
+      return Promise.resolve(false);
+    }
+
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+      return navigator.clipboard.writeText(code).then(() => true).catch(() => {
+        // Clipboard API can still be denied by browser policy. Try the legacy
+        // method immediately where possible, otherwise select the source.
+        if (legacyCopy(code)) return true;
+        editor.focus();
+        editor.setSelection(
+          { line: 0, ch: 0 },
+          { line: editor.lineCount() - 1, ch: editor.getLine(editor.lineCount() - 1).length }
+        );
+        return false;
+      });
+    }
+
+    return Promise.resolve(legacyCopy(code));
+  }
+
+  copyBtn.addEventListener("click", async () => {
+    try {
+      const copied = await copyCodeToClipboard();
+      const old = copyBtn.innerHTML;
+      if (copied) {
+        copyBtn.innerHTML = "✓ <span>Copied!</span>";
+        log("Code copied to clipboard.", "ok");
+      } else {
+        copyBtn.innerHTML = "⧉ <span>Copy</span>";
+        log("Clipboard access is blocked by the local content:// page. Use the text-selection fallback above.", "error");
+      }
+      setTimeout(() => { copyBtn.innerHTML = old; }, 1400);
+    } catch (err) {
+      log("Could not copy code: " + err, "error");
+    }
+  });
+
+  editor.on("change", updateHistoryButtons);
+  updateHistoryButtons();
+
+  function getCode() {
+    return editor.getValue();
+  }
+
+  function setCode(value) {
+    editor.setValue(value || "");
+  }
+
+  function clearEditorErrors() {
+    for (let i = 0; i < editor.lineCount(); i++) {
+      editor.removeLineClass(i, "background", "cm-error-line");
+      editor.removeLineClass(i, "gutter", "cm-error-gutter");
+    }
+  }
+
+  function markErrorLine(lineNumber) {
+    const line = Math.max(0, Math.min(editor.lineCount() - 1, lineNumber));
+    editor.addLineClass(line, "background", "cm-error-line");
+    editor.addLineClass(line, "gutter", "cm-error-gutter");
+    editor.scrollIntoView({ from: { line, ch: 0 }, to: { line, ch: 0 } }, 120);
+  }
+
+  function markTypeScriptDiagnostics(diagnostics) {
+    clearEditorErrors();
+    for (const d of diagnostics || []) {
+      if (typeof d.start === "number") {
+        const pos = editor.posFromIndex(Math.min(d.start, getCode().length));
+        markErrorLine(pos.line);
+      }
+    }
+  }
+
+  const DEMO = `import {
+  Circle, Square, Create, Transform,
+  FadeOut, Text, MathTex
+} from "manim-web";
+
+export async function construct(scene) {
+  const title = new Text({
+    text: "MANIM-WEB",
+    fontSize: 34,
+    color: "#ffffff"
+  });
+
+  const circle = new Circle({
+    radius: 1.45,
+    strokeColor: "#4ecdc4",
+    fillColor: "#132b2b",
+    fillOpacity: 1
+  });
+
+  const square = new Square({
+    sideLength: 2.5,
+    strokeColor: "#ff8a65",
+    fillColor: "#2a1814",
+    fillOpacity: 1
+  });
+
+  const equation = new MathTex({
+    latex: "x^2+y^2=r^2",
+    fontSize: 34
+  });
+
+  // Keep the demo objects independent. This avoids the VGroup/Create
+  // reset issue present in the older 0.3.22 Player path.
+  title.moveTo([0, 3.0, 0]);
+  circle.moveTo([0, 0, 0]);
+  equation.moveTo([0, -3.0, 0]);
+
+  scene.add(title, circle, equation);
+
+  // manim-web puts timing options on the animation itself.
+  await equation.waitForRender();
+  await scene.play(new Create(circle, { duration: 1.2 }));
+  await scene.play(new Create(equation, { duration: 1.0 }));
+  await scene.wait(0.5);
+
+  await scene.play(new Transform(circle, square, { duration: 1.2 }));
+  await scene.wait(0.4);
+
+  await scene.play(new FadeOut(square, { duration: 0.7 }));
+  await scene.wait(0.5);
+}
+`;
+
+  function log(msg, type = "normal") {
+    const prefix = type === "error" ? "ERROR: " : type === "ok" ? "OK: " : "";
+    logEl.textContent = `${prefix}${msg}`;
+    if (type === "error") logEl.classList.add("bad"); else logEl.classList.remove("bad");
+  }
+
+  function setRuntimeStatus(text, good = false) {
+    runtimeStatusEl.textContent = text;
+    runtimeStatusEl.className = "status" + (good ? " good" : "");
+  }
+
+  function setRunStatus(text) {
+    runStatusEl.textContent = text;
+  }
+
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      if (!("indexedDB" in window)) return resolve(null);
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbGet(key) {
+    const db = await openDB();
+    if (!db) return null;
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, "readonly");
+      const req = tx.objectStore(STORE).get(key);
+      req.onsuccess = () => resolve(req.result ?? null);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbPut(key, value) {
+    const db = await openDB();
+    if (!db) return false;
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).put(value, key);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async function cacheGetText() {
+    if ("caches" in window) {
+      try {
+        const cache = await caches.open(CACHE_NAME);
+        const hit = await cache.match(RUNTIME_URL);
+        if (hit) return await hit.text();
+      } catch (_) {}
+    }
+    try {
+      const hit = await idbGet("runtime");
+      if (hit && hit.version === RUNTIME_VERSION && hit.text) return hit.text;
+    } catch (_) {}
+    return null;
+  }
+
+  async function cachePutText(text) {
+    let saved = false;
+    if ("caches" in window) {
+      try {
+        const cache = await caches.open(CACHE_NAME);
+        await cache.put(
+          RUNTIME_URL,
+          new Response(text, {
+            headers: {
+              "Content-Type": "text/javascript",
+              "Cache-Control": "public, max-age=31536000, immutable"
+            }
+          })
+        );
+        saved = true;
+      } catch (_) {}
+    }
+    try {
+      saved = await idbPut("runtime", { version: RUNTIME_VERSION, text }) || saved;
+    } catch (_) {}
+    return saved;
+  }
+
+  async function downloadRuntime() {
+    setRuntimeStatus("Downloading runtime…");
+    const response = await fetch(RUNTIME_URL, { mode: "cors", cache: "force-cache" });
+    if (!response.ok) throw new Error(`Runtime download failed: HTTP ${response.status}`);
+    const text = await response.text();
+    await cachePutText(text);
+    setRuntimeStatus("Runtime downloaded + cached", true);
+    return text;
+  }
+
+  async function loadRuntime() {
+    let text = await cacheGetText();
+    if (text) {
+      setRuntimeStatus("Runtime loaded from local cache", true);
+      return text;
+    }
+    return await downloadRuntime();
+  }
+
+  async function importRuntime() {
+    // Important: do not import the cached library through a blob URL.
+    // A blob module has its own module-resolution context, which can fail on
+    // Android Chrome when the page itself was opened as file/content://.
+    //
+    // Instead, when possible, load the pinned browser bundle directly from its
+    // HTTPS URL. Chrome can then use its HTTP cache. The Cache/IndexedDB copy is
+    // retained for future offline support, but is not used as an ES-module blob.
+    try {
+      const mod = await import(RUNTIME_URL);
+      setRuntimeStatus("Runtime loaded from browser cache/CDN", true);
+      return { mod };
+    } catch (networkError) {
+      // If direct import is unavailable, load the cached source and evaluate it
+      // as a classic script. The browser bundle is an IIFE/UMD-compatible
+      // browser build in normal releases. If that fallback is not compatible,
+      // the error below will explain the issue.
+      const text = await cacheGetText();
+      if (!text) throw networkError;
+
+      const script = document.createElement("script");
+      script.type = "text/javascript";
+      script.text = text;
+      document.head.appendChild(script);
+
+      // The browser bundle may expose a global under one of these names.
+      const globalRuntime =
+        window.manimWeb ||
+        window.ManimWeb ||
+        window.MANIM_WEB ||
+        window["manim-web"];
+
+      if (!globalRuntime) {
+        throw new Error(
+          "The cached manim-web runtime could not be imported offline. " +
+          "Connect once to the internet and press Run again."
+        );
+      }
+
+      setRuntimeStatus("Runtime loaded from local cache", true);
+      return { mod: globalRuntime };
+    }
+  }
+
+  function cleanupPreview() {
+    // The Player owns the preview UI. Clearing its container removes the
+    // canvas and playback controls before the next run.
+    activePlayer = null;
+    container.innerHTML = "";
+    setRunStatus("Idle");
+  }
+
+  function prepareSource(source, runtimeImportUrl) {
+    // Allow both quote styles for the standard import.
+    return source
+      .replace(/from\\s*(['"])manim-web\\1/g, `from "${runtimeImportUrl}"`)
+      .replace(/import\\s*\\(\\s*(['"])manim-web\\1\\s*\\)/g, `import("${runtimeImportUrl}")`);
+  }
+
+  async function loadTypeScript() {
+    const mod = await import(TS_URL);
+    if (!mod.transpileModule) {
+      throw new Error("The TypeScript compiler did not expose transpileModule.");
+    }
+    return mod;
+  }
+
+  function looksLikeTypeScript(source) {
+    return /(^|\n)\s*(interface|type)\s+[A-Za-z_$]|:\s*(number|string|boolean|unknown|any|void|Scene|VGroup|Mobject)(\s*[=;,){]|$)/.test(source);
+  }
+
+  async function transpileIfNeeded(source) {
+    clearEditorErrors();
+    if (!looksLikeTypeScript(source)) return source;
+    setRunStatus("Compiling TypeScript…");
+    const ts = await loadTypeScript();
+    const result = ts.transpileModule(source, {
+      compilerOptions: {
+        target: ts.ScriptTarget.ES2022,
+        module: ts.ModuleKind.ESNext,
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
+        esModuleInterop: true
+      },
+      reportDiagnostics: true
+    });
+    const diagnostics = result.diagnostics || [];
+    if (diagnostics.length) {
+      markTypeScriptDiagnostics(diagnostics);
+      const message = diagnostics.map(d => ts.flattenDiagnosticMessageText(d.messageText, "\n")).join("\n");
+      throw new Error("TypeScript error:\n" + message);
+    }
+    return result.outputText;
+  }
+
+
+  // manim-web 0.3.22's built-in frame-by-frame exporter can hit a
+  // VGroup.setPoints mismatch while seeking through some Transform timelines.
+  // For mobile Chrome we use a safer fallback for WebM: record the actual
+  // canvas playback in real time. This avoids repeatedly seeking the timeline.
+  function getSelectedResolution() {
+    const value = Number(resolutionSelect?.value || 1080);
+    if (value === 360) return { label: "360p", width: 360, height: 640 };
+    if (value === 720) return { label: "720p", width: 720, height: 1280 };
+    return { label: "1080p", width: 1080, height: 1920 };
+  }
+
+  // Render exports on a separate canvas at the requested pixel resolution.
+  // The visible mobile preview remains 360x640, so choosing 1080p does not
+  // force the phone UI or preview to become huge.
+  function installMobileWebMExport(player, construct, Player, BLACK) {
+    const originalExport = player.scene.export.bind(player.scene);
+
+    player.scene.export = async function(filename, options = {}) {
+      const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
+
+      if (ext === ".gif") {
+        return originalExport(filename, options);
+      }
+
+      if (ext !== ".webm" && ext !== ".mp4") {
+        return originalExport(filename, options);
+      }
+
+      const resolution = getSelectedResolution();
+      const exportHost = document.createElement("div");
+      exportHost.style.cssText =
+        `position:fixed;left:-10000px;top:-10000px;width:${resolution.width}px;` +
+        `height:${resolution.height}px;overflow:hidden;opacity:0;pointer-events:none;`;
+      document.body.appendChild(exportHost);
+
+      let exportPlayer = null;
+      let exportStream = null;
+
+      try {
+        // Build a fresh Player/Scene at the selected resolution. This is a true
+        // high-resolution render, not an upscale of the 360x640 preview.
+        exportPlayer = new Player(exportHost, {
+          width: resolution.width,
+          height: resolution.height,
+          backgroundColor: BLACK ?? "#000000",
+          backgroundOpacity: 1
+        });
+
+        log(`Rendering ${resolution.label} export…`, "ok");
+        await exportPlayer.sequence(async (scene) => {
+          await construct(scene);
+        });
+
+        const canvas = exportPlayer.scene.getCanvas();
+        if (!canvas || typeof canvas.captureStream !== "function") {
+          throw new Error("This browser does not support canvas video recording.");
+        }
+        if (typeof MediaRecorder === "undefined") {
+          throw new Error("MediaRecorder is not available in this browser.");
+        }
+
+        const fps = Math.max(15, Math.min(60, options.fps ?? 30));
+        const duration = options.duration ?? exportPlayer.timeline.getDuration();
+
+        // Never label a WebM recording as MP4. Android Chrome support varies,
+        // so MP4 is offered only when the browser actually supports it.
+        const candidates = ext === ".mp4"
+          ? ["video/mp4;codecs=avc1", "video/mp4"]
+          : ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+
+        const mimeType = candidates.find(type => MediaRecorder.isTypeSupported(type));
+        if (!mimeType) {
+          throw new Error(
+            ext === ".mp4"
+              ? "True MP4 recording is not supported by this browser. Choose WebM."
+              : "WebM recording is not supported by this browser."
+          );
+        }
+
+        const wasPlaying = exportPlayer.isPlaying;
+        exportPlayer.pause();
+
+        exportStream = canvas.captureStream(fps);
+        const chunks = [];
+        const recorder = new MediaRecorder(exportStream, {
+          mimeType,
+          videoBitsPerSecond: Math.floor((options.quality ?? 0.9) * 8_000_000)
+        });
+
+        recorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) chunks.push(event.data);
+        };
+
+        const stopped = new Promise((resolve, reject) => {
+          recorder.onerror = () => reject(recorder.error || new Error("Video recording failed."));
+          recorder.onstop = resolve;
+        });
+
+        recorder.start(250);
+        exportPlayer.seek(0);
+        exportPlayer.play();
+
+        await new Promise((resolve) => {
+          const started = performance.now();
+          const maxMs = Math.max(5000, (duration + 4) * 1000);
+          function check() {
+            if (!exportPlayer.isPlaying || performance.now() - started > maxMs) {
+              resolve();
+              return;
+            }
+            requestAnimationFrame(check);
+          }
+          check();
+        });
+
+        exportPlayer.pause();
+        if (recorder.state !== "inactive") recorder.stop();
+        await stopped;
+
+        const blob = new Blob(chunks, { type: mimeType.split(";")[0] });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename.replace(/\.(webm|mp4)$/i, `_${resolution.label}.$1`);
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+        if (wasPlaying) exportPlayer.play();
+        log(`Downloaded ${resolution.label} ${a.download}.`, "ok");
+        return blob;
+      } finally {
+        if (exportStream) exportStream.getTracks().forEach(track => track.stop());
+        exportHost.remove();
+      }
+    };
+  }
+
+  function hidePlayerSpeedControl(playerRoot) {
+    // The built-in Player has a speed control. On narrow mobile screens it
+    // consumes space needed by the download/export button, so remove that
+    // control while keeping play, timeline, segment navigation, export and
+    // fullscreen available.
+    const hide = () => {
+      const nodes = playerRoot.querySelectorAll("button, select, [role=button]");
+      for (const node of nodes) {
+        const text = (node.textContent || "").trim();
+        const label = (node.getAttribute("aria-label") || "").toLowerCase();
+        const title = (node.getAttribute("title") || "").toLowerCase();
+        if (label.includes("speed") || title.includes("speed") || /^\d+(?:\.\d+)?x$/.test(text)) {
+          node.style.display = "none";
+        }
+      }
+    };
+    hide();
+    const observer = new MutationObserver(hide);
+    observer.observe(playerRoot, { childList: true, subtree: true });
+    return observer;
+  }
+
+  async function executeCode() {
+    const source = getCode().trim();
+    if (!source) {
+      log("Code box is empty.", "error");
+      return;
+    }
+
+    runBtn.disabled = true;
+    setRunStatus("Loading…");
+    log("Preparing runtime…");
+
+    try {
+      cleanupPreview();
+
+      const runtime = await importRuntime();
+      const runtimeModule = runtime.mod;
+
+      // Transpile TypeScript before stripping the normal manim-web import.
+      // This keeps the editor usable with the .ts output produced by
+      // manim-web's Python-to-TypeScript converter.
+      const preparedSource = await transpileIfNeeded(source);
+
+      const {
+        Player,
+        Scene,
+        BLACK
+      } = runtimeModule;
+
+      if (!Player) {
+        throw new Error(
+          "This manim-web runtime does not expose Player. " +
+          "Please connect once and press Run again with runtime 0.3.22."
+        );
+      }
+
+      /*
+       * Mobile-safe user-code execution:
+       *
+       * We intentionally do NOT use:
+       *   import(blobUrl)
+       *
+       * because the screenshot's error comes from Chrome trying to resolve
+       * a dynamically imported blob module while the HTML was opened through
+       * content://. Instead, expose manim-web exports as globals and execute
+       * the user's scene with Function().
+       *
+       * This supports the normal generated form:
+       *
+       *   import { Circle, Create } from "manim-web";
+       *   export async function construct(scene) { ... }
+       *
+       * The import is removed because the same objects are already available
+       * from the runtime globals.
+       */
+
+      // Expose every manim-web export to the Function scope via one object.
+      const runtimeNames = Object.keys(runtimeModule);
+      const runtimeValues = runtimeNames.map(k => runtimeModule[k]);
+
+      // Remove the standard manim-web import statement(s).
+      let prepared = preparedSource
+        .replace(
+          /import\s*\{[\s\S]*?\}\s*from\s*["']manim-web["']\s*;?/g,
+          ""
+        )
+        .replace(
+          /import\s*\*\s*as\s+\w+\s+from\s*["']manim-web["']\s*;?/g,
+          ""
+        );
+
+      // Convert `export async function construct` to a normal function and
+      // capture it in a known variable.
+      prepared = prepared.replace(
+        /\bexport\s+(async\s+function\s+construct\s*\()/,
+        "async function construct("
+      );
+
+      prepared = prepared.replace(
+        /\bexport\s+default\s+/g,
+        ""
+      );
+
+      // The generated Function gets all manim-web exports as named parameters.
+      // This means code can continue using Circle, Polygon, ValueTracker, etc.
+      const runner = new Function(
+        ...runtimeNames,
+        `"use strict";
+         ${prepared}
+         if (typeof construct !== "function") {
+           throw new Error(
+             "Your code must contain: export async function construct(scene) { ... }"
+           );
+         }
+         return construct;
+        `
+      );
+
+      const construct = runner(...runtimeValues);
+
+      // The selected resolution is the actual render resolution for both
+      // the visible player canvas and video export. CSS keeps the player
+      // physically small on the phone.
+      const resolution = getSelectedResolution();
+      const player = new Player(container, {
+        width: resolution.width,
+        height: resolution.height,
+        backgroundColor: BLACK ?? "#000000",
+        backgroundOpacity: 1
+      });
+      activePlayer = player;
+      hidePlayerSpeedControl(container);
+
+      setRunStatus("Preparing player…");
+      log("Building animation timeline…", "ok");
+
+      // Player.sequence receives the same Scene-like object used by normal
+      // manim-web code, so existing construct(scene) code remains unchanged.
+      await player.sequence(async (scene) => {
+        setRunStatus("Building");
+        await construct(scene);
+      });
+
+      // Replace only video export with the mobile-safe real-time recorder.
+      // Player controls, timeline, scrubbing, speed and fullscreen remain
+      // provided by manim-web itself.
+      installMobileWebMExport(player, construct, Player, BLACK);
+
+      setRunStatus("Ready");
+      log("Animation ready. Use the player controls below the canvas.", "ok");
+    } catch (err) {
+      setRunStatus("Error");
+      log(err?.stack || String(err), "error");
+    } finally {
+      runBtn.disabled = false;
+    }
+  }
+
+  // Local code persistence.
+  const saved = localStorage.getItem("manim-web-mobile-code");
+  setCode(saved || DEMO);
+
+  let saveTimer;
+  editor.on("change", () => {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try {
+        localStorage.setItem("manim-web-mobile-code", getCode());
+      } catch (_) {}
+    }, 250);
+  });
+
+  runBtn.addEventListener("click", executeCode);
+  clearBtn.addEventListener("click", cleanupPreview);
+
+  demoBtn.addEventListener("click", () => {
+    setCode(DEMO);
+    localStorage.setItem("manim-web-mobile-code", DEMO);
+    log("Demo loaded.");
+  });
+  saveBtn.addEventListener("click", () => {
+    try {
+      const source = getCode();
+      const looksTS = looksLikeTypeScript(source);
+      const blob = new Blob([source], {
+        type: looksTS ? "text/typescript;charset=utf-8" : "text/javascript;charset=utf-8"
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = looksTS ? "manim_scene.ts" : "manim_scene.js";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      // Also keep the latest version in local storage when the page allows it.
+      try {
+        localStorage.setItem("manim-web-mobile-code", source);
+      } catch (_) {}
+
+      log(`Saved ${a.download}.`, "ok");
+    } catch (err) {
+      log("Could not save code: " + (err?.message || err), "error");
+    }
+  });
+
+  // Warm the runtime cache in the background when the page first opens.
+  // It does not block editing.
+  (async () => {
+    try {
+      const hit = await cacheGetText();
+      if (hit) {
+        setRuntimeStatus("Runtime already cached", true);
+      } else {
+        setRuntimeStatus("Runtime will load on first Run");
+      }
+    } catch (_) {
+      setRuntimeStatus("Runtime cache check unavailable");
+    }
+  })();
+</script>
+</body>
+</html>
